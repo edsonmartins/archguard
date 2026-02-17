@@ -1,8 +1,8 @@
 // src/routes/callback.tsx
 
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useEffect, useRef } from 'react'
-import { loginCallbackFn } from '@/server/auth'
+import { useEffect, useRef, useState } from 'react'
+import { createSessionFromTokensFn } from '@/server/auth'
 
 export const Route = createFileRoute('/callback')({
   component: CallbackPage,
@@ -11,6 +11,7 @@ export const Route = createFileRoute('/callback')({
 function CallbackPage() {
   const navigate = useNavigate()
   const processed = useRef(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (processed.current) return
@@ -21,43 +22,33 @@ function CallbackPage() {
     async function handleCallback() {
       try {
         const url = new URL(window.location.href)
-        const code = url.searchParams.get('code')
-        const state = url.searchParams.get('state')
 
-        if (!code || !state) {
-          throw new Error('Missing code or state in callback URL')
+        // Handle OAuth2 error response from Kanidm
+        const errorParam = url.searchParams.get('error')
+        const errorDesc = url.searchParams.get('error_description')
+        if (errorParam) {
+          setError(`Kanidm: ${errorParam} — ${errorDesc || 'Erro desconhecido'}`)
+          return
         }
 
-        // Extract code_verifier from oidc-client-ts sessionStorage
-        // oidc-client-ts stores state as: oidc.{state} -> JSON with code_verifier
-        const storedStateKey = `oidc.${state}`
-        const storedStateRaw = sessionStorage.getItem(storedStateKey)
-        let codeVerifier = ''
+        // Use oidc-client-ts signinCallback to handle the full OIDC flow
+        // This manages state/code_verifier/token exchange internally
+        const { getUserManager } = await import('@/lib/auth/oidc-config')
+        const userManager = getUserManager()
+        const user = await userManager.signinCallback(window.location.href)
 
-        if (storedStateRaw) {
-          try {
-            const storedState = JSON.parse(storedStateRaw)
-            codeVerifier = storedState.code_verifier || ''
-          } catch {
-            // Fallback: try to find any oidc state entry with code_verifier
-          }
+        if (!user || !user.id_token) {
+          setError('OIDC signinCallback não retornou um usuário válido.')
+          return
         }
 
-        // Clean up oidc-client-ts state from sessionStorage
-        for (let i = sessionStorage.length - 1; i >= 0; i--) {
-          const key = sessionStorage.key(i)
-          if (key?.startsWith('oidc.')) {
-            sessionStorage.removeItem(key)
-          }
-        }
-
-        // Exchange code for session on server (server does the token exchange)
-        const result = await loginCallbackFn({
+        // Send tokens to server to create the session cookie
+        const result = await createSessionFromTokensFn({
           data: {
-            code,
-            state,
-            codeVerifier,
-            redirectUri: `${window.location.origin}/callback`,
+            accessToken: user.access_token,
+            idToken: user.id_token,
+            refreshToken: user.refresh_token || undefined,
+            expiresIn: user.expires_in ?? 3600,
           },
         })
 
@@ -66,14 +57,53 @@ function CallbackPage() {
         } else if (result.error === 'unauthorized') {
           navigate({ to: '/unauthorized' })
         } else {
-          navigate({ to: '/login' })
+          setError(result.error || 'Erro desconhecido no servidor')
         }
-      } catch (error) {
-        console.error('OIDC callback error:', error)
-        navigate({ to: '/login' })
+      } catch (err) {
+        console.error('OIDC callback error:', err)
+        const message = err instanceof Error ? err.message : String(err)
+
+        if (message.includes('fetch') || message.includes('NetworkError') || message.includes('Failed to fetch')) {
+          setError(
+            `Erro de rede ao trocar código OAuth2. Verifique se o certificado TLS do Kanidm foi aceito no navegador. ` +
+            `Acesse https://localhost:8443 e aceite o certificado, depois tente novamente. (${message})`
+          )
+        } else if (message.includes('No matching state')) {
+          setError(
+            'Estado OIDC não encontrado. Isso pode acontecer se a sessão expirou. Tente fazer login novamente.'
+          )
+        } else {
+          setError(`Erro no callback OIDC: ${message}`)
+        }
       }
     }
   }, [navigate])
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="mx-auto max-w-lg rounded-lg border border-destructive/50 bg-destructive/10 p-6 text-center">
+          <p className="mb-2 text-lg font-semibold text-destructive">Erro de Autenticação</p>
+          <p className="mb-4 text-sm text-muted-foreground">{error}</p>
+          <button
+            onClick={() => {
+              // Clear any stale OIDC state
+              for (let i = sessionStorage.length - 1; i >= 0; i--) {
+                const key = sessionStorage.key(i)
+                if (key?.startsWith('oidc.')) {
+                  sessionStorage.removeItem(key)
+                }
+              }
+              window.location.href = '/login'
+            }}
+            className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center">

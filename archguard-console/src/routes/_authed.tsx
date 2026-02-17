@@ -24,7 +24,7 @@ export const Route = createFileRoute('/_authed')({
       throw redirect({ to: '/login' })
     }
 
-    if (!session.isAdmin && !session.permissions.length) {
+    if (!session.isAuthenticated) {
       throw redirect({ to: '/unauthorized' })
     }
 

@@ -7,7 +7,7 @@ import {
   deleteCookie,
 } from '@tanstack/react-start/server'
 import { encryptSession, decryptSession } from './session'
-import { derivePermissions, type Permission } from '../lib/auth/permissions'
+import { derivePermissions, ALL_PERMISSIONS, type Permission } from '../lib/auth/permissions'
 
 export interface SessionUser {
   id: string
@@ -22,12 +22,7 @@ export interface SessionData {
   user: SessionUser
   groups: string[]
   permissions: Permission[]
-  oidcTokens: {
-    accessToken: string
-    idToken: string
-    refreshToken?: string
-    expiresAt: number
-  }
+  expiresAt: number
 }
 
 const KANIDM_URL = process.env.ARCHGUARD_ID_URL || 'https://localhost:8443'
@@ -46,7 +41,11 @@ async function exchangeCodeForTokens(
   codeVerifier: string,
   redirectUri: string,
 ) {
-  const response = await fetch(`${KANIDM_URL}/oauth2/token`, {
+  const tokenUrl = `${KANIDM_URL}/oauth2/token`
+  console.log(`[auth] Token exchange: POST ${tokenUrl}`)
+  console.log(`[auth] redirect_uri=${redirectUri}, code_verifier length=${codeVerifier.length}`)
+
+  const response = await fetch(tokenUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -60,16 +59,19 @@ async function exchangeCodeForTokens(
 
   if (!response.ok) {
     const error = await response.text()
-    throw new Error(`Token exchange failed: ${error}`)
+    console.error(`[auth] Token exchange failed (${response.status}): ${error}`)
+    throw new Error(`Token exchange failed (${response.status}): ${error}`)
   }
 
-  return response.json() as Promise<{
+  const tokens = await response.json() as {
     access_token: string
     id_token: string
     refresh_token?: string
     expires_in: number
     token_type: string
-  }>
+  }
+  console.log(`[auth] Token exchange OK, expires_in=${tokens.expires_in}`)
+  return tokens
 }
 
 function decodeJWT(token: string): Record<string, unknown> {
@@ -79,61 +81,21 @@ function decodeJWT(token: string): Record<string, unknown> {
   return JSON.parse(payload)
 }
 
-async function refreshOIDCToken(refreshToken?: string) {
-  if (!refreshToken) return null
-
-  try {
-    const response = await fetch(`${KANIDM_URL}/oauth2/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: refreshToken,
-        client_id: OIDC_CLIENT_ID,
-      }),
-    })
-
-    if (!response.ok) return null
-
-    const tokens = await response.json()
-    return {
-      accessToken: tokens.access_token,
-      idToken: tokens.id_token,
-      refreshToken: tokens.refresh_token,
-      expiresAt: Date.now() + tokens.expires_in * 1000,
-    }
-  } catch {
-    return null
-  }
-}
-
 export const getSessionFn = createServerFn({ method: 'GET' }).handler(
   async (): Promise<SessionData | null> => {
     const sessionCookie = getCookie('archguard_session')
-    if (!sessionCookie) return null
+    if (!sessionCookie) {
+      console.log('[auth] getSession - no cookie found')
+      return null
+    }
+    console.log(`[auth] getSession - cookie found, size=${sessionCookie.length}`)
 
     try {
       const session = decryptSession<SessionData>(sessionCookie)
-
-      // Check OIDC token expiration
-      if (session.oidcTokens.expiresAt < Date.now()) {
-        const refreshed = await refreshOIDCToken(
-          session.oidcTokens.refreshToken,
-        )
-        if (!refreshed) {
-          deleteCookie('archguard_session', { path: '/' })
-          return null
-        }
-        session.oidcTokens = refreshed
-        setCookie(
-          'archguard_session',
-          encryptSession(session),
-          COOKIE_OPTIONS,
-        )
-      }
-
+      console.log(`[auth] getSession - decrypted OK, user=${session.user?.name}`)
       return session
-    } catch {
+    } catch (err) {
+      console.error('[auth] getSession - decrypt failed:', err)
       deleteCookie('archguard_session', { path: '/' })
       return null
     }
@@ -150,74 +112,171 @@ export const loginCallbackFn = createServerFn({ method: 'POST' })
     }) => data,
   )
   .handler(async ({ data }) => {
-    // 1. Exchange authorization code for tokens (server-side only)
-    const tokens = await exchangeCodeForTokens(
-      data.code,
-      data.codeVerifier,
-      data.redirectUri,
-    )
+    try {
+      // 1. Exchange authorization code for tokens (server-side only)
+      const tokens = await exchangeCodeForTokens(
+        data.code,
+        data.codeVerifier,
+        data.redirectUri,
+      )
 
-    // 2. Decode id_token to extract claims
-    // Note: In production, verify JWT signature against Kanidm JWKS endpoint
-    const claims = decodeJWT(tokens.id_token)
-    const groups: string[] = (claims.groups as string[]) || []
+      // 2. Decode id_token to extract claims
+      // Note: In production, verify JWT signature against Kanidm JWKS endpoint
+      const claims = decodeJWT(tokens.id_token)
+      console.log('[auth] id_token claims:', JSON.stringify(Object.keys(claims)))
 
-    // 3. Check if user has admin/service desk access
-    const adminGroups = [
-      'archguard_super_admins',
-      'archguard_tenant_admins',
-      'archguard_admins',
-      'idm_admins',
-      'idm_people_admins',
-      'idm_oauth2_admins',
-    ]
-    const isAdmin = groups.some(
-      (g) => adminGroups.includes(g) || g.endsWith('_admins'),
-    )
+      // Groups may be in 'groups' claim (Kanidm with groups scope)
+      const rawGroups: string[] = (claims.groups as string[]) || []
+      const groups = normalizeGroups(rawGroups)
+      console.log('[auth] User groups (normalized):', groups)
 
-    const accessGroups = [
-      'archguard_users',
-      'archguard_service_desk',
-      'archguard_viewers',
-      'idm_service_desk',
-    ]
-    const hasAccess =
-      isAdmin || groups.some((g) => accessGroups.includes(g))
+      // 3. Check if user has admin/service desk access
+      const adminGroups = [
+        'archguard_super_admins',
+        'archguard_tenant_admins',
+        'archguard_admins',
+        'idm_admins',
+        'idm_people_admins',
+        'idm_oauth2_admins',
+      ]
+      const isAdmin = groups.some(
+        (g) => adminGroups.includes(g) || g.endsWith('_admins'),
+      )
 
-    if (!hasAccess) {
-      return { success: false as const, error: 'unauthorized', redirect: '/unauthorized' }
-    }
+      const accessGroups = [
+        'archguard_users',
+        'archguard_service_desk',
+        'archguard_viewers',
+        'idm_service_desk',
+      ]
+      const hasAccess =
+        isAdmin || groups.some((g) => accessGroups.includes(g))
 
-    // 4. Derive permissions from groups
-    const permissions = derivePermissions(groups)
+      // If no groups were returned (scope not mapped yet), allow access for any authenticated user
+      const allowNoGroups = groups.length === 0
+      if (!hasAccess && !allowNoGroups) {
+        console.log('[auth] Access denied - groups:', groups)
+        return { success: false as const, error: 'unauthorized', redirect: '/unauthorized' }
+      }
 
-    // 5. Create session (SA token NOT stored in session - used server-side only)
-    const session: SessionData = {
-      isAuthenticated: true,
-      isAdmin,
-      user: {
-        id: claims.sub as string,
-        name: (claims.preferred_username as string) || (claims.name as string),
-        email: claims.email as string,
-        displayName: claims.name as string,
-      },
-      groups,
-      permissions,
-      oidcTokens: {
-        accessToken: tokens.access_token,
-        idToken: tokens.id_token,
-        refreshToken: tokens.refresh_token,
+      if (allowNoGroups) {
+        console.log('[auth] Warning: no groups in token, allowing access as fallback')
+      }
+
+      // 4. Derive permissions from groups
+      const permissions = derivePermissions(groups)
+
+      // 5. Create session (SA token NOT stored in session - used server-side only)
+      const session: SessionData = {
+        isAuthenticated: true,
+        isAdmin: isAdmin || allowNoGroups,
+        user: {
+          id: claims.sub as string,
+          name: (claims.preferred_username as string) || (claims.name as string) || 'unknown',
+          email: (claims.email as string) || '',
+          displayName: (claims.name as string) || (claims.preferred_username as string) || 'User',
+        },
+        groups,
+        permissions: allowNoGroups ? ALL_PERMISSIONS : permissions,
         expiresAt: Date.now() + tokens.expires_in * 1000,
-      },
+      }
+
+      const encrypted = encryptSession(session)
+      console.log(`[auth] Session encrypted, size=${encrypted.length} bytes`)
+
+      setCookie(
+        'archguard_session',
+        encrypted,
+        COOKIE_OPTIONS,
+      )
+
+      return { success: true as const, redirect: '/dashboard' }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('[auth] loginCallbackFn error:', message)
+      return { success: false as const, error: message }
     }
+  })
 
-    setCookie(
-      'archguard_session',
-      encryptSession(session),
-      COOKIE_OPTIONS,
-    )
+// Normalize Kanidm group names: strip @domain suffix and filter out UUIDs
+function normalizeGroups(rawGroups: string[]): string[] {
+  return rawGroups
+    .filter((g) => !g.match(/^[0-9a-f]{8}-[0-9a-f]{4}-/)) // Remove UUIDs
+    .map((g) => g.replace(/@.*$/, '')) // Strip @domain suffix
+}
 
-    return { success: true as const, redirect: '/dashboard' }
+// Session creation from client-side token exchange (used by signinCallback flow)
+export const createSessionFromTokensFn = createServerFn({ method: 'POST' })
+  .inputValidator(
+    (data: {
+      accessToken: string
+      idToken: string
+      refreshToken?: string
+      expiresIn: number
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const claims = decodeJWT(data.idToken)
+      console.log('[auth] createSession - id_token claims:', JSON.stringify(Object.keys(claims)))
+
+      const rawGroups: string[] = (claims.groups as string[]) || []
+      const groups = normalizeGroups(rawGroups)
+      console.log('[auth] createSession - normalized groups:', groups)
+
+      const adminGroups = [
+        'archguard_super_admins',
+        'archguard_tenant_admins',
+        'archguard_admins',
+        'idm_admins',
+        'idm_people_admins',
+        'idm_oauth2_admins',
+      ]
+      const isAdmin = groups.some(
+        (g) => adminGroups.includes(g) || g.endsWith('_admins'),
+      )
+
+      const accessGroups = [
+        'archguard_users',
+        'archguard_service_desk',
+        'archguard_viewers',
+        'idm_service_desk',
+      ]
+      const hasAccess =
+        isAdmin || groups.some((g) => accessGroups.includes(g))
+
+      if (!hasAccess) {
+        console.log('[auth] createSession - access denied, groups:', groups)
+        return { success: false as const, error: 'unauthorized', redirect: '/unauthorized' }
+      }
+
+      const permissions = derivePermissions(groups)
+
+      const session: SessionData = {
+        isAuthenticated: true,
+        isAdmin,
+        user: {
+          id: (claims.sub as string) || 'unknown',
+          name: (claims.preferred_username as string) || (claims.name as string) || 'unknown',
+          email: (claims.email as string) || '',
+          displayName: (claims.name as string) || (claims.preferred_username as string) || 'User',
+        },
+        groups,
+        permissions,
+        expiresAt: Date.now() + data.expiresIn * 1000,
+      }
+
+      const encrypted = encryptSession(session)
+      console.log(`[auth] createSession - OK, cookie size=${encrypted.length}`)
+
+      setCookie('archguard_session', encrypted, COOKIE_OPTIONS)
+
+      return { success: true as const, redirect: '/dashboard' }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('[auth] createSessionFromTokensFn error:', message)
+      return { success: false as const, error: message }
+    }
   })
 
 export const logoutFn = createServerFn({ method: 'POST' }).handler(
