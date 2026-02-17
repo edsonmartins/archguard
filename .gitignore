@@ -16,3 +16,9 @@ coverage
 test-results
 playwright-report
 .claude
+
+# Docker data volumes (local dev)
+aliasvault/database/
+aliasvault/logs/
+aliasvault/secrets/
+aliasvault/certificates/

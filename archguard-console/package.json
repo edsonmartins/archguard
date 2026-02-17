@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite dev --port 3000",
+    "dev": "NODE_TLS_REJECT_UNAUTHORIZED=0 vite dev --port 3000",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run"

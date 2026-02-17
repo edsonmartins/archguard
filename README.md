@@ -4,6 +4,8 @@
 
 ArchGuard é uma plataforma administrativa web que unifica o gerenciamento de identidades (IAM) e cofre de senhas em uma interface moderna e intuitiva. O projeto resolve a complexidade de administrar sistemas de identidade descentralizados, oferecendo uma camada de gestão visual sobre engines open-source robustos.
 
+![ArchGuard - Plataforma Unificada de Controle](images/infografico.png)
+
 ---
 
 ## O Problema
@@ -111,41 +113,57 @@ AliasVault é um cofre de senhas open-source com criptografia end-to-end. ArchGu
 ## Pré-requisitos
 
 - **Node.js** >= 20
-- **Kanidm** >= 1.4 (servidor de identidade)
-- **AliasVault** (opcional, para módulo Vault)
+- **Docker** (ou OrbStack/Podman) — para os containers Kanidm e AliasVault
+- **expect** — para o script de setup (`brew install expect` no macOS)
 
-## Configuração
+## Quick Start (Desenvolvimento Local)
 
 1. Clone o repositório:
 ```bash
-git clone https://github.com/edsonmartins/archguard.git
-cd archguard/archguard-console
+git clone git@github.com:edsonmartins/archguard.git
+cd archguard
 ```
 
-2. Instale as dependências:
+2. Suba os containers backend:
 ```bash
+docker compose up -d
+```
+
+3. Inicialize o Kanidm (grupos, usuários, OAuth2, service account):
+```bash
+./scripts/setup-kanidm.sh
+```
+
+4. Instale as dependências e inicie o Console:
+```bash
+cd archguard-console
 npm install
-```
-
-3. Configure as variáveis de ambiente (`.env`):
-```env
-ARCHGUARD_ID_URL=https://kanidm.exemplo.com
-ARCHGUARD_SA_TOKEN=<service-account-token-do-kanidm>
-ARCHGUARD_VAULT_URL=https://vault.exemplo.com
-VITE_ARCHGUARD_ID_URL=https://kanidm.exemplo.com
-SESSION_SECRET=<64-char-hex-string-para-AES-256-GCM>
-```
-
-4. Inicie o servidor de desenvolvimento:
-```bash
 npm run dev
 ```
 
-O console estará disponível em `http://localhost:3000`.
+5. Acesse `http://localhost:3000` e faça login com um dos usuários de teste:
+
+| Usuário | Senha | Papel |
+|---|---|---|
+| `testadmin` | `TestAdmin123!` | Super Admin |
+| `testuser` | `TestUser123!` | Viewer |
+
+> **Nota:** Como o Kanidm usa TLS com certificado auto-assinado, aceite o certificado no browser visitando `https://localhost:8443` antes de fazer login.
+
+## Variáveis de Ambiente
+
+```env
+ARCHGUARD_ID_URL=https://localhost:8443          # URL do Kanidm
+ARCHGUARD_SA_TOKEN=<token>                       # Service account token (gerado pelo setup)
+ARCHGUARD_VAULT_URL=http://localhost:8080         # URL do AliasVault
+VITE_ARCHGUARD_ID_URL=https://localhost:8443     # URL do Kanidm (client-side)
+SESSION_SECRET=<64-char-hex>                     # Chave AES-256-GCM para sessão
+```
 
 ## Build para Produção
 
 ```bash
+cd archguard-console
 npm run build
 node .output/server/index.mjs
 ```
@@ -155,40 +173,33 @@ node .output/server/index.mjs
 ## Estrutura do Projeto
 
 ```
-archguard-console/
-├── src/
-│   ├── routes/                    # File-based routing (TanStack Router)
-│   │   ├── _authed/               # Rotas protegidas por autenticação
-│   │   │   ├── dashboard.tsx
-│   │   │   ├── identities/        # CRUD de pessoas
-│   │   │   ├── groups/            # CRUD de grupos
-│   │   │   ├── oauth2/            # Gestão OAuth2/SSO
-│   │   │   ├── service-accounts/  # Service Accounts
-│   │   │   ├── audit.tsx          # Log de auditoria
-│   │   │   ├── vault.tsx          # Dashboard do vault
-│   │   │   └── settings/          # Configurações
-│   │   ├── login.tsx              # Página de login
-│   │   ├── callback.tsx           # OIDC callback
-│   │   └── __root.tsx             # Root layout
-│   ├── server/                    # Server functions (Nitro)
-│   │   ├── auth.ts                # Sessão, login callback, logout
-│   │   ├── kanidm-proxy.ts        # Proxy seguro para API Kanidm
-│   │   └── session.ts             # Criptografia AES-256-GCM
-│   ├── components/                # Componentes React
-│   │   ├── layout/                # Shell, sidebar, header
-│   │   ├── identity/              # Módulo identidades
-│   │   ├── group/                 # Módulo grupos
-│   │   ├── oauth2/                # Módulo OAuth2
-│   │   ├── service-account/       # Módulo service accounts
-│   │   ├── shared/                # Componentes compartilhados
-│   │   └── ui/                    # Shadcn/ui components
-│   └── lib/                       # Utilitários e lógica
-│       ├── api/                   # API client, types, normalizers
-│       ├── auth/                  # OIDC config, roles, permissions
-│       ├── hooks/                 # React Query hooks
-│       ├── utils/                 # Validators, formatters, constants
-│       └── i18n/                  # Traduções PT-BR / EN
-└── documentos/                    # Especificação e ADRs
+archguard/
+├── archguard-console/           # Frontend (TanStack Start)
+│   ├── src/
+│   │   ├── routes/              # File-based routing
+│   │   │   ├── _authed/         # Rotas protegidas
+│   │   │   │   ├── dashboard.tsx
+│   │   │   │   ├── identities/  # CRUD de pessoas
+│   │   │   │   ├── groups/      # CRUD de grupos
+│   │   │   │   ├── oauth2/      # Gestão OAuth2/SSO
+│   │   │   │   ├── service-accounts/
+│   │   │   │   ├── audit.tsx
+│   │   │   │   ├── vault.tsx
+│   │   │   │   └── settings/
+│   │   │   ├── login.tsx
+│   │   │   ├── callback.tsx     # OIDC callback
+│   │   │   └── __root.tsx
+│   │   ├── server/              # Server functions (Nitro)
+│   │   │   ├── auth.ts          # Sessão, login, logout
+│   │   │   ├── kanidm-proxy.ts  # Proxy seguro (anti-SSRF)
+│   │   │   └── session.ts       # Criptografia AES-256-GCM
+│   │   ├── components/          # Componentes React
+│   │   └── lib/                 # API client, hooks, i18n, utils
+│   └── documentos/              # Especificação e ADRs
+├── docker-compose.yml           # Kanidm + AliasVault
+├── kanidm/server.toml           # Configuração do Kanidm
+├── scripts/setup-kanidm.sh      # Inicialização automatizada
+└── images/                      # Recursos visuais
 ```
 
 ---
@@ -200,6 +211,7 @@ archguard-console/
 - **Validação de path (anti-SSRF)** — whitelist de endpoints permitidos no proxy
 - **Sessão criptografada** — cookies httpOnly com AES-256-GCM
 - **RBAC granular** — 27 permissões derivadas dos grupos OIDC
+- **Separação de privilégios** — Kanidm enforces separation of duties entre admin e idm_admin por design
 
 ---
 

@@ -1,0 +1,32 @@
+services:
+  # Kanidm - Identity Provider (OIDC + Admin API)
+  kanidmd:
+    image: docker.io/kanidm/server:latest
+    container_name: kanidmd
+    restart: unless-stopped
+    ports:
+      - "8443:8443"
+    volumes:
+      - kanidm_data:/data
+
+  # AliasVault - Password/Alias Vault
+  aliasvault:
+    image: ghcr.io/aliasvault/aliasvault:latest
+    container_name: aliasvault
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./aliasvault/database:/database
+      - ./aliasvault/logs:/logs
+      - ./aliasvault/secrets:/secrets
+      - ./aliasvault/certificates:/certificates
+    environment:
+      HOSTNAME: "localhost"
+      PUBLIC_REGISTRATION_ENABLED: "true"
+      IP_LOGGING_ENABLED: "true"
+      FORCE_HTTPS_REDIRECT: "false"
+      SMTP_TLS_ENABLED: "false"
+
+volumes:
+  kanidm_data:

@@ -164,6 +164,8 @@ export const loginCallbackFn = createServerFn({ method: 'POST' })
 
     // 3. Check if user has admin/service desk access
     const adminGroups = [
+      'archguard_super_admins',
+      'archguard_tenant_admins',
       'archguard_admins',
       'idm_admins',
       'idm_people_admins',
@@ -173,8 +175,14 @@ export const loginCallbackFn = createServerFn({ method: 'POST' })
       (g) => adminGroups.includes(g) || g.endsWith('_admins'),
     )
 
+    const accessGroups = [
+      'archguard_users',
+      'archguard_service_desk',
+      'archguard_viewers',
+      'idm_service_desk',
+    ]
     const hasAccess =
-      isAdmin || groups.includes('idm_service_desk')
+      isAdmin || groups.some((g) => accessGroups.includes(g))
 
     if (!hasAccess) {
       return { success: false as const, error: 'unauthorized', redirect: '/unauthorized' }
