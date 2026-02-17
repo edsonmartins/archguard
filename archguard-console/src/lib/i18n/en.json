@@ -1,0 +1,134 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "identities": "Identities",
+    "serviceAccounts": "Service Accounts",
+    "groups": "Groups",
+    "oauth2": "OAuth2 / SSO",
+    "vault": "Vault",
+    "audit": "Audit",
+    "settings": "Settings"
+  },
+  "identities": {
+    "title": "Identities",
+    "create": "New Person",
+    "import": "Import CSV",
+    "search": "Search by name, email...",
+    "columns": {
+      "name": "Name",
+      "email": "Email",
+      "groups": "Groups",
+      "mfa": "MFA",
+      "status": "Status"
+    },
+    "form": {
+      "username": "Username",
+      "usernameHelp": "Lowercase letters, numbers, . _ - only",
+      "displayName": "Display name",
+      "legalName": "Legal name",
+      "emails": "Emails",
+      "addEmail": "Add email"
+    },
+    "status": {
+      "active": "Active",
+      "expired": "Expired",
+      "locked": "Locked",
+      "notYetValid": "Not yet valid"
+    },
+    "credential": {
+      "passkey": "Passkey",
+      "password": "Password",
+      "totp": "TOTP",
+      "backup": "Backup codes",
+      "sshKeys": "SSH Keys",
+      "resetLink": "Generate Reset Link",
+      "resetTtl": "Validity",
+      "resetWarning": "This link grants full access to credentials"
+    },
+    "actions": {
+      "block": "Block Account",
+      "delete": "Remove Person",
+      "resetCredentials": "Generate Reset Link"
+    }
+  },
+  "groups": {
+    "title": "Groups",
+    "create": "New Group",
+    "members": "Members",
+    "addMember": "Add member",
+    "removeMember": "Remove",
+    "builtin": "System",
+    "tenant": "Tenant",
+    "treeView": "Tree",
+    "listView": "List"
+  },
+  "oauth2": {
+    "title": "OAuth2 / SSO Clients",
+    "create": "New Client",
+    "types": {
+      "basic": "Basic (Confidential)",
+      "public": "Public (PKCE-only)"
+    },
+    "secret": "Client Secret",
+    "rotateSecret": "Rotate Secret",
+    "rotateWarning": "Rotating will invalidate all active tokens",
+    "scopeMap": "Scope Mapping",
+    "redirectUrls": "Redirect URLs",
+    "integration": "Integration",
+    "testFlow": "Test OIDC Flow"
+  },
+  "vault": {
+    "title": "Vault",
+    "status": "Status",
+    "online": "Online",
+    "offline": "Offline",
+    "totalVaults": "Total Vaults",
+    "activeAliases": "Active Aliases",
+    "smtp": "SMTP Status"
+  },
+  "audit": {
+    "title": "Audit",
+    "filters": "Filters",
+    "period": "Period",
+    "eventType": "Event Type",
+    "actor": "Actor",
+    "target": "Target",
+    "result": "Result",
+    "export": "Export"
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "security": "Security",
+    "backup": "Backup",
+    "system": "System"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "create": "Create",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search...",
+    "loading": "Loading...",
+    "noResults": "No results",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "showAll": "View all",
+    "export": "Export",
+    "import": "Import",
+    "actions": "Actions",
+    "showing": "Showing {{from}}-{{to}} of {{total}}",
+    "selected": "{{count}} selected"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "notFound": "Resource not found.",
+    "forbidden": "No permission for this operation.",
+    "sessionExpired": "Session expired. Please log in again.",
+    "networkError": "Connection error. Check your network."
+  }
+}

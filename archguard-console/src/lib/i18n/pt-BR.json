@@ -1,0 +1,134 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "identities": "Identidades",
+    "serviceAccounts": "Service Accounts",
+    "groups": "Grupos",
+    "oauth2": "OAuth2 / SSO",
+    "vault": "Vault",
+    "audit": "Auditoria",
+    "settings": "Configurações"
+  },
+  "identities": {
+    "title": "Identidades",
+    "create": "Nova Pessoa",
+    "import": "Importar CSV",
+    "search": "Buscar por nome, email...",
+    "columns": {
+      "name": "Nome",
+      "email": "Email",
+      "groups": "Grupos",
+      "mfa": "MFA",
+      "status": "Status"
+    },
+    "form": {
+      "username": "Username",
+      "usernameHelp": "Apenas letras minúsculas, números, . _ -",
+      "displayName": "Nome de exibição",
+      "legalName": "Nome legal",
+      "emails": "Emails",
+      "addEmail": "Adicionar email"
+    },
+    "status": {
+      "active": "Ativo",
+      "expired": "Expirado",
+      "locked": "Bloqueado",
+      "notYetValid": "Não ativo ainda"
+    },
+    "credential": {
+      "passkey": "Passkey",
+      "password": "Password",
+      "totp": "TOTP",
+      "backup": "Códigos backup",
+      "sshKeys": "Chaves SSH",
+      "resetLink": "Gerar Link de Reset",
+      "resetTtl": "Validade",
+      "resetWarning": "Este link dá acesso total às credenciais"
+    },
+    "actions": {
+      "block": "Bloquear Conta",
+      "delete": "Remover Pessoa",
+      "resetCredentials": "Gerar Link Reset"
+    }
+  },
+  "groups": {
+    "title": "Grupos",
+    "create": "Novo Grupo",
+    "members": "Membros",
+    "addMember": "Adicionar membro",
+    "removeMember": "Remover",
+    "builtin": "Sistema",
+    "tenant": "Tenant",
+    "treeView": "Árvore",
+    "listView": "Lista"
+  },
+  "oauth2": {
+    "title": "OAuth2 / SSO Clients",
+    "create": "Novo Client",
+    "types": {
+      "basic": "Basic (Confidential)",
+      "public": "Public (PKCE-only)"
+    },
+    "secret": "Client Secret",
+    "rotateSecret": "Rotacionar Secret",
+    "rotateWarning": "Rotacionar invalidará todos tokens ativos",
+    "scopeMap": "Scope Mapping",
+    "redirectUrls": "Redirect URLs",
+    "integration": "Integração",
+    "testFlow": "Testar Fluxo OIDC"
+  },
+  "vault": {
+    "title": "Vault",
+    "status": "Status",
+    "online": "Online",
+    "offline": "Offline",
+    "totalVaults": "Total de Vaults",
+    "activeAliases": "Aliases Ativos",
+    "smtp": "Status SMTP"
+  },
+  "audit": {
+    "title": "Auditoria",
+    "filters": "Filtros",
+    "period": "Período",
+    "eventType": "Tipo de Evento",
+    "actor": "Ator",
+    "target": "Alvo",
+    "result": "Resultado",
+    "export": "Exportar"
+  },
+  "settings": {
+    "title": "Configurações",
+    "general": "Geral",
+    "security": "Segurança",
+    "backup": "Backup",
+    "system": "Sistema"
+  },
+  "common": {
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "create": "Criar",
+    "edit": "Editar",
+    "delete": "Remover",
+    "confirm": "Confirmar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "search": "Buscar...",
+    "loading": "Carregando...",
+    "noResults": "Nenhum resultado",
+    "copy": "Copiar",
+    "copied": "Copiado!",
+    "showAll": "Ver todos",
+    "export": "Exportar",
+    "import": "Importar",
+    "actions": "Ações",
+    "showing": "Mostrando {{from}}-{{to}} de {{total}}",
+    "selected": "{{count}} selecionados"
+  },
+  "errors": {
+    "generic": "Algo deu errado. Tente novamente.",
+    "notFound": "Recurso não encontrado.",
+    "forbidden": "Sem permissão para esta operação.",
+    "sessionExpired": "Sessão expirada. Faça login novamente.",
+    "networkError": "Erro de conexão. Verifique sua rede."
+  }
+}
