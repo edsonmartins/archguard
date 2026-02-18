@@ -15,6 +15,7 @@ import { Route as CallbackRouteImport } from './routes/callback'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedVaultRouteImport } from './routes/_authed/vault'
+import { Route as AuthedRecycleBinRouteImport } from './routes/_authed/recycle-bin'
 import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
 import { Route as AuthedAuditRouteImport } from './routes/_authed/audit'
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
@@ -59,6 +60,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthedVaultRoute = AuthedVaultRouteImport.update({
   id: '/vault',
   path: '/vault',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedRecycleBinRoute = AuthedRecycleBinRouteImport.update({
+  id: '/recycle-bin',
+  path: '/recycle-bin',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedDashboardRoute = AuthedDashboardRouteImport.update({
@@ -153,6 +159,7 @@ export interface FileRoutesByFullPath {
   '/unauthorized': typeof UnauthorizedRoute
   '/audit': typeof AuthedAuditRoute
   '/dashboard': typeof AuthedDashboardRoute
+  '/recycle-bin': typeof AuthedRecycleBinRoute
   '/vault': typeof AuthedVaultRoute
   '/groups/$groupId': typeof AuthedGroupsGroupIdRoute
   '/groups/create': typeof AuthedGroupsCreateRoute
@@ -176,6 +183,7 @@ export interface FileRoutesByTo {
   '/unauthorized': typeof UnauthorizedRoute
   '/audit': typeof AuthedAuditRoute
   '/dashboard': typeof AuthedDashboardRoute
+  '/recycle-bin': typeof AuthedRecycleBinRoute
   '/vault': typeof AuthedVaultRoute
   '/groups/$groupId': typeof AuthedGroupsGroupIdRoute
   '/groups/create': typeof AuthedGroupsCreateRoute
@@ -201,6 +209,7 @@ export interface FileRoutesById {
   '/unauthorized': typeof UnauthorizedRoute
   '/_authed/audit': typeof AuthedAuditRoute
   '/_authed/dashboard': typeof AuthedDashboardRoute
+  '/_authed/recycle-bin': typeof AuthedRecycleBinRoute
   '/_authed/vault': typeof AuthedVaultRoute
   '/_authed/groups/$groupId': typeof AuthedGroupsGroupIdRoute
   '/_authed/groups/create': typeof AuthedGroupsCreateRoute
@@ -226,6 +235,7 @@ export interface FileRouteTypes {
     | '/unauthorized'
     | '/audit'
     | '/dashboard'
+    | '/recycle-bin'
     | '/vault'
     | '/groups/$groupId'
     | '/groups/create'
@@ -249,6 +259,7 @@ export interface FileRouteTypes {
     | '/unauthorized'
     | '/audit'
     | '/dashboard'
+    | '/recycle-bin'
     | '/vault'
     | '/groups/$groupId'
     | '/groups/create'
@@ -273,6 +284,7 @@ export interface FileRouteTypes {
     | '/unauthorized'
     | '/_authed/audit'
     | '/_authed/dashboard'
+    | '/_authed/recycle-bin'
     | '/_authed/vault'
     | '/_authed/groups/$groupId'
     | '/_authed/groups/create'
@@ -340,6 +352,13 @@ declare module '@tanstack/react-router' {
       path: '/vault'
       fullPath: '/vault'
       preLoaderRoute: typeof AuthedVaultRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/recycle-bin': {
+      id: '/_authed/recycle-bin'
+      path: '/recycle-bin'
+      fullPath: '/recycle-bin'
+      preLoaderRoute: typeof AuthedRecycleBinRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/dashboard': {
@@ -460,6 +479,7 @@ declare module '@tanstack/react-router' {
 interface AuthedRouteChildren {
   AuthedAuditRoute: typeof AuthedAuditRoute
   AuthedDashboardRoute: typeof AuthedDashboardRoute
+  AuthedRecycleBinRoute: typeof AuthedRecycleBinRoute
   AuthedVaultRoute: typeof AuthedVaultRoute
   AuthedGroupsGroupIdRoute: typeof AuthedGroupsGroupIdRoute
   AuthedGroupsCreateRoute: typeof AuthedGroupsCreateRoute
@@ -480,6 +500,7 @@ interface AuthedRouteChildren {
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedAuditRoute: AuthedAuditRoute,
   AuthedDashboardRoute: AuthedDashboardRoute,
+  AuthedRecycleBinRoute: AuthedRecycleBinRoute,
   AuthedVaultRoute: AuthedVaultRoute,
   AuthedGroupsGroupIdRoute: AuthedGroupsGroupIdRoute,
   AuthedGroupsCreateRoute: AuthedGroupsCreateRoute,

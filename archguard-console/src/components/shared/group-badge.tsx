@@ -2,7 +2,7 @@
 
 import { Badge } from '@/components/ui/badge'
 import { Building, Crown, Users, Lock } from 'lucide-react'
-import { BUILTIN_GROUPS } from '@/lib/utils/constants'
+import { extractTenantPrefix } from '@/lib/api/normalizers'
 
 interface GroupBadgeProps {
   name: string
@@ -10,10 +10,13 @@ interface GroupBadgeProps {
 }
 
 function getGroupType(name: string) {
-  if (BUILTIN_GROUPS.has(name)) return 'system'
+  if (name.startsWith('idm_') || name.startsWith('system_')) return 'system'
+  if (name.startsWith('archguard_')) return 'system'
   if (name.endsWith('_admins')) return 'admin'
   if (name.endsWith('_users')) return 'users'
-  if (!name.includes('_')) return 'tenant'
+  // Standalone name (no underscore) that resolves to a tenant = tenant root group
+  const tenant = extractTenantPrefix(name)
+  if (tenant === name) return 'tenant'
   return 'custom'
 }
 

@@ -46,11 +46,18 @@ import {
   useServiceAccounts,
   useDeleteServiceAccount,
 } from '@/lib/hooks/use-service-accounts'
+import { useTenantFilter } from '@/lib/hooks/use-tenant-filter'
 import type { ServiceAccount } from '@/lib/api/types/kanidm'
 
 export function ServiceAccountListPage() {
   const { data: accounts, isLoading } = useServiceAccounts()
   const deleteAccount = useDeleteServiceAccount()
+  const { filterServiceAccounts } = useTenantFilter()
+
+  const filteredAccounts = useMemo(
+    () => filterServiceAccounts(accounts ?? []),
+    [accounts, filterServiceAccounts],
+  )
 
   const [sorting, setSorting] = useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = useState('')
@@ -165,7 +172,7 @@ export function ServiceAccountListPage() {
   )
 
   const table = useReactTable({
-    data: accounts ?? [],
+    data: filteredAccounts,
     columns,
     state: { sorting, globalFilter },
     onSortingChange: setSorting,
@@ -212,7 +219,7 @@ export function ServiceAccountListPage() {
         />
       </div>
 
-      {!accounts || accounts.length === 0 ? (
+      {filteredAccounts.length === 0 ? (
         <EmptyState
           icon={Bot}
           title="Nenhum service account"

@@ -35,6 +35,7 @@ import {
 } from '@/lib/hooks/use-oauth2'
 import { useGroups } from '@/lib/hooks/use-groups'
 import { getIntegrationSnippets } from '@/components/oauth2/integration-snippets'
+import { AppAccessMatrix } from '@/components/oauth2/app-access-matrix'
 
 export function OAuth2DetailPage() {
   const { clientId } = Route.useParams()
@@ -117,6 +118,10 @@ export function OAuth2DetailPage() {
             <Globe className="mr-2 h-4 w-4" />
             Scope Maps
           </TabsTrigger>
+          <TabsTrigger value="access">
+            <Shield className="mr-2 h-4 w-4" />
+            Acesso
+          </TabsTrigger>
           <TabsTrigger value="snippets">
             <Code className="mr-2 h-4 w-4" />
             Integração
@@ -197,13 +202,15 @@ export function OAuth2DetailPage() {
                   Nenhum scope map configurado
                 </p>
               ) : (
-                client.scopeMaps.map((sm) => (
+                client.scopeMaps.map((sm) => {
+                  const resolvedName = groups?.find((g) => g.id === sm.groupId)?.name ?? sm.groupName || sm.groupId
+                  return (
                   <div
                     key={sm.groupId}
                     className="flex items-center justify-between rounded-lg border p-3"
                   >
                     <div>
-                      <p className="text-sm font-medium">{sm.groupName}</p>
+                      <p className="text-sm font-medium">{resolvedName}</p>
                       <div className="flex gap-1 mt-1">
                         {sm.scopes.map((s) => (
                           <Badge key={s} variant="outline" className="text-xs">
@@ -228,7 +235,8 @@ export function OAuth2DetailPage() {
                       </Button>
                     </PermissionGate>
                   </div>
-                ))
+                  )
+                })
               )}
 
               <PermissionGate require="oauth2:update">
@@ -261,6 +269,10 @@ export function OAuth2DetailPage() {
               </PermissionGate>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="access">
+          <AppAccessMatrix client={client} />
         </TabsContent>
 
         <TabsContent value="snippets">

@@ -47,12 +47,14 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { PermissionGate } from '@/components/shared/permission-gate'
 import { BulkActionsToolbar } from '@/components/identity/bulk-actions-toolbar'
 import { usePersons, useDeletePerson } from '@/lib/hooks/use-persons'
+import { useTenantFilter } from '@/lib/hooks/use-tenant-filter'
 import { initials } from '@/lib/utils/formatters'
 import type { Person } from '@/lib/api/types/kanidm'
 
 export function PersonListPage() {
   const { data: persons, isLoading } = usePersons()
   const deletePerson = useDeletePerson()
+  const { filterPersons } = useTenantFilter()
 
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -63,9 +65,10 @@ export function PersonListPage() {
 
   const filteredData = useMemo(() => {
     if (!persons) return []
-    if (statusFilter === 'all') return persons
-    return persons.filter((p) => p.status === statusFilter)
-  }, [persons, statusFilter])
+    const tenantFiltered = filterPersons(persons)
+    if (statusFilter === 'all') return tenantFiltered
+    return tenantFiltered.filter((p) => p.status === statusFilter)
+  }, [persons, statusFilter, filterPersons])
 
   const columns: ColumnDef<Person>[] = useMemo(
     () => [

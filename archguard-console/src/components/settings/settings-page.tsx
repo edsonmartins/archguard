@@ -1,24 +1,42 @@
 // src/components/settings/settings-page.tsx
 
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import {
   Settings,
   Shield,
-  Database,
   Server,
   Globe,
   Lock,
+  ExternalLink,
 } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PermissionGate } from '@/components/shared/permission-gate'
-import { CopyButton } from '@/components/shared/copy-button'
-import { systemApi } from '@/lib/api/kanidm-client'
+import { systemApi, accountPolicyApi } from '@/lib/api/kanidm-client'
 import { queryKeys } from '@/lib/utils/query-keys'
+
+const CREDENTIAL_LABELS: Record<string, string> = {
+  any: 'Qualquer (senha simples aceita)',
+  mfa: 'MFA obrigatório (senha + TOTP/WebAuthn)',
+  passkey: 'Passkey obrigatória',
+  attested_passkey: 'Passkey atestada obrigatória',
+}
+
+const CREDENTIAL_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
+  any: 'outline',
+  mfa: 'secondary',
+  passkey: 'default',
+  attested_passkey: 'default',
+}
+
+function formatSeconds(s: number | undefined): string {
+  if (!s) return '—'
+  if (s >= 86400) return `${Math.round(s / 86400)} dia(s)`
+  if (s >= 3600) return `${Math.round(s / 3600)} hora(s)`
+  return `${Math.round(s / 60)} minuto(s)`
+}
 
 export function SettingsPage() {
   const { data: systemStatus, isLoading: statusLoading } = useQuery({
@@ -30,6 +48,13 @@ export function SettingsPage() {
   const { data: domainInfo, isLoading: domainLoading } = useQuery({
     queryKey: queryKeys.system.domain,
     queryFn: () => systemApi.domain(),
+    staleTime: 60_000,
+  })
+
+  // Read account policy from idm_all_persons (global default policy group)
+  const { data: accountPolicy, isLoading: policyLoading } = useQuery({
+    queryKey: ['accountPolicy', 'idm_all_persons'],
+    queryFn: () => accountPolicyApi.get('idm_all_persons'),
     staleTime: 60_000,
   })
 
@@ -53,10 +78,6 @@ export function SettingsPage() {
           <TabsTrigger value="security">
             <Shield className="mr-2 h-4 w-4" />
             Segurança
-          </TabsTrigger>
-          <TabsTrigger value="backup">
-            <Database className="mr-2 h-4 w-4" />
-            Backup
           </TabsTrigger>
           <TabsTrigger value="system">
             <Server className="mr-2 h-4 w-4" />
@@ -82,46 +103,20 @@ export function SettingsPage() {
                 <>
                   <SettingsField
                     label="Domínio"
-                    value={
-                      domainInfo &&
-                      typeof domainInfo === 'object' &&
-                      'attrs' in (domainInfo as Record<string, unknown>)
-                        ? ((domainInfo as Record<string, Record<string, string[]>>).attrs?.['domain_name']?.[0] ?? '—')
-                        : '—'
-                    }
+                    value={getDomainAttr(domainInfo, 'domain_name')}
                   />
                   <SettingsField
                     label="Display Name"
-                    value={
-                      domainInfo &&
-                      typeof domainInfo === 'object' &&
-                      'attrs' in (domainInfo as Record<string, unknown>)
-                        ? ((domainInfo as Record<string, Record<string, string[]>>).attrs?.['domain_display_name']?.[0] ?? '—')
-                        : '—'
-                    }
+                    value={getDomainAttr(domainInfo, 'domain_display_name')}
                   />
-                  <SettingsField
-                    label="Status"
-                    value=""
-                  >
+                  <SettingsField label="Status" value="">
                     <Badge variant="default">
-                      {systemStatus &&
-                      typeof systemStatus === 'object' &&
-                      'state' in (systemStatus as Record<string, unknown>) &&
-                      (systemStatus as Record<string, string>).state === 'ok'
-                        ? 'Online'
-                        : 'Indisponível'}
+                      {getSystemState(systemStatus) === 'ok' ? 'Online' : 'Indisponível'}
                     </Badge>
                   </SettingsField>
                   <SettingsField
                     label="Versão Kanidm"
-                    value={
-                      systemStatus &&
-                      typeof systemStatus === 'object' &&
-                      'version' in (systemStatus as Record<string, unknown>)
-                        ? String((systemStatus as Record<string, string>).version)
-                        : '—'
-                    }
+                    value={getSystemProp(systemStatus, 'version')}
                   />
                 </>
               )}
@@ -134,96 +129,61 @@ export function SettingsPage() {
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <Lock className="h-4 w-4" />
-                Políticas de Autenticação
+                Política de Credenciais
               </CardTitle>
               <CardDescription>
-                Configurações de MFA e credenciais (leitura do Kanidm)
+                Política de autenticação global (grupo idm_all_persons)
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <SettingsField
-                label="Método Mínimo"
-                value=""
-              >
-                <Badge variant="secondary">password_mfa</Badge>
-              </SettingsField>
-              <SettingsField
-                label="Passkeys Habilitadas"
-                value=""
-              >
-                <Badge variant="default">Sim</Badge>
-              </SettingsField>
-              <SettingsField
-                label="TOTP Habilitado"
-                value=""
-              >
-                <Badge variant="default">Sim</Badge>
-              </SettingsField>
-              <SettingsField
-                label="Backup Codes"
-                value=""
-              >
-                <Badge variant="default">Sim</Badge>
-              </SettingsField>
+              {policyLoading ? (
+                <SettingsFieldsSkeleton count={3} />
+              ) : (
+                <>
+                  <SettingsField label="Credencial Mínima" value="">
+                    <Badge variant={CREDENTIAL_VARIANT[accountPolicy?.credentialTypeMinimum ?? 'any'] ?? 'outline'}>
+                      {CREDENTIAL_LABELS[accountPolicy?.credentialTypeMinimum ?? 'any'] ?? accountPolicy?.credentialTypeMinimum}
+                    </Badge>
+                  </SettingsField>
+                  <SettingsField
+                    label="Expiração de Sessão"
+                    value={formatSeconds(accountPolicy?.authSessionExpiry)}
+                  />
+                  <SettingsField
+                    label="Expiração de Privilégio"
+                    value={formatSeconds(accountPolicy?.privilegeExpiry)}
+                  />
+                </>
+              )}
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Políticas de Sessão</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <SettingsField label="Timeout de Sessão" value="8 horas" />
-              <SettingsField label="Lockout após" value="5 tentativas" />
-              <SettingsField label="Duração do Lockout" value="30 minutos" />
-            </CardContent>
-          </Card>
-
-          <PermissionGate require="settings:security">
+          <PermissionGate require="system:admin">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Contas Break-Glass</CardTitle>
+                <CardTitle className="text-base">Acesso Administrativo</CardTitle>
                 <CardDescription>
-                  Contas de emergência para acesso em caso de falha de autenticação
+                  Contas break-glass e recuperação de acesso
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  Configuração de contas break-glass deve ser feita via CLI do Kanidm.
-                  Consulte a documentação para mais detalhes.
+                  Contas break-glass e configurações avançadas de segurança devem ser
+                  gerenciadas via CLI do Kanidm. Consulte a{' '}
+                  <a
+                    href="https://kanidm.github.io/kanidm/stable/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-primary underline"
+                  >
+                    documentação
+                    <ExternalLink className="h-3 w-3" />
+                  </a>{' '}
+                  para detalhes.
                 </p>
               </CardContent>
             </Card>
           </PermissionGate>
-        </TabsContent>
-
-        <TabsContent value="backup" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Database className="h-4 w-4" />
-                Backup do Kanidm
-              </CardTitle>
-              <CardDescription>
-                Status e configuração de backups
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <SettingsField label="Agendamento" value="Diário às 02:00" />
-              <SettingsField label="Retenção" value="30 dias" />
-              <SettingsField
-                label="Último Backup"
-                value=""
-              >
-                <Badge variant="default">Sucesso</Badge>
-              </SettingsField>
-              <Separator />
-              <p className="text-sm text-muted-foreground">
-                Backups são gerenciados pelo servidor Kanidm. Para fazer download
-                ou restauração manual, use o CLI do Kanidm.
-              </p>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="system" className="space-y-4">
@@ -234,36 +194,59 @@ export function SettingsPage() {
             <CardContent className="space-y-3">
               <SettingsField label="ArchGuard Console" value="v1.0.0" />
               <SettingsField label="Framework" value="TanStack Start" />
-              <SettingsField label="Node.js" value="v22" />
               <SettingsField
-                label="Ambiente"
-                value={
-                  typeof process !== 'undefined' && process.env?.NODE_ENV === 'production'
-                    ? 'Produção'
-                    : 'Desenvolvimento'
-                }
+                label="Versão Kanidm"
+                value={getSystemProp(systemStatus, 'version')}
               />
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Variáveis de Ambiente</CardTitle>
+              <CardTitle className="text-base">Backup e Manutenção</CardTitle>
               <CardDescription>
-                Configurações carregadas (valores ocultados)
+                Operações de backup e restauração do Kanidm
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <SettingsField label="ARCHGUARD_ID_URL" value="***configurado***" />
-              <SettingsField label="ARCHGUARD_SA_TOKEN" value="***configurado***" />
-              <SettingsField label="ARCHGUARD_VAULT_URL" value="***configurado***" />
-              <SettingsField label="SESSION_SECRET" value="***configurado***" />
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Backups do Kanidm são gerenciados via CLI do servidor
+                (<code className="text-xs bg-muted px-1 py-0.5 rounded">kanidmd database backup</code>).
+                O Console não gerencia backups diretamente — consulte a{' '}
+                <a
+                  href="https://kanidm.github.io/kanidm/stable/server_configuration/backup_restore.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-primary underline"
+                >
+                  documentação de backup
+                  <ExternalLink className="h-3 w-3" />
+                </a>.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
     </div>
   )
+}
+
+// ── Helpers ────────────────────────────────────────
+
+function getDomainAttr(domainInfo: unknown, attr: string): string {
+  if (!domainInfo || typeof domainInfo !== 'object') return '—'
+  const entry = domainInfo as { attrs?: Record<string, string[]> }
+  return entry.attrs?.[attr]?.[0] ?? '—'
+}
+
+function getSystemState(status: unknown): string {
+  if (!status || typeof status !== 'object') return 'unknown'
+  return (status as Record<string, string>).state ?? 'unknown'
+}
+
+function getSystemProp(status: unknown, prop: string): string {
+  if (!status || typeof status !== 'object') return '—'
+  return String((status as Record<string, string>)[prop] ?? '—')
 }
 
 function SettingsField({

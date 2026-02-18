@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   FileText,
   Settings,
+  Trash2,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -23,6 +24,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
 import { usePermissions } from '@/lib/hooks/use-permissions'
+import { TenantSwitcher } from '@/components/layout/tenant-switcher'
 import type { Permission } from '@/lib/auth/permissions'
 
 interface NavItem {
@@ -76,6 +78,12 @@ const navigation: NavItem[] = [
     permission: 'audit:read',
   },
   {
+    label: 'Lixeira',
+    to: '/recycle-bin',
+    icon: Trash2,
+    permission: 'system:admin',
+  },
+  {
     label: 'Configurações',
     to: '/settings',
     icon: Settings,
@@ -102,6 +110,7 @@ export function AppSidebar() {
         </Link>
       </SidebarHeader>
       <SidebarContent>
+        <TenantSwitcher />
         <SidebarGroup>
           <SidebarGroupLabel>Navegação</SidebarGroupLabel>
           <SidebarGroupContent>

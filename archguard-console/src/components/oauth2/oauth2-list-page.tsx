@@ -26,15 +26,20 @@ import { EmptyState } from '@/components/shared/empty-state'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { PermissionGate } from '@/components/shared/permission-gate'
 import { useOAuth2Clients, useDeleteOAuth2Client } from '@/lib/hooks/use-oauth2'
+import { useGroups } from '@/lib/hooks/use-groups'
+import { useTenantFilter } from '@/lib/hooks/use-tenant-filter'
 import type { OAuth2Client } from '@/lib/api/types/kanidm'
 
 export function OAuth2ListPage() {
   const { data: clients, isLoading } = useOAuth2Clients()
+  const { data: allGroups } = useGroups()
   const deleteClient = useDeleteOAuth2Client()
+  const { filterOAuth2 } = useTenantFilter()
   const [search, setSearch] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<OAuth2Client | null>(null)
 
-  const filtered = clients?.filter(
+  const tenantFiltered = filterOAuth2(clients ?? [], allGroups)
+  const filtered = tenantFiltered.filter(
     (c) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.displayName.toLowerCase().includes(search.toLowerCase()),

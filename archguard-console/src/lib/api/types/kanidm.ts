@@ -75,7 +75,7 @@ export interface Group {
   memberOf: string[]
   memberCount: number
   isBuiltin: boolean
-  isTenant: boolean
+  tenantName: string | null
   classes: string[]
 }
 
@@ -205,3 +205,41 @@ export type AuditEventType =
   | 'account_unlocked'
   | 'token_generated'
   | 'token_revoked'
+
+// ══════════════════════════════════════════════
+// RECYCLE BIN
+// ══════════════════════════════════════════════
+
+export interface RecycleBinEntry {
+  id: string
+  name: string
+  type: string
+  classes: string[]
+  attrs: Record<string, string[]>
+}
+
+// ══════════════════════════════════════════════
+// ACTIVITY LOG (Console-side)
+// ══════════════════════════════════════════════
+
+export interface ActivityLogEntry {
+  id: string
+  timestamp: string
+  actor: string
+  action: string
+  method: string
+  path: string
+  target?: string
+  result: 'success' | 'error'
+  errorMessage?: string
+}
+
+// ══════════════════════════════════════════════
+// ACCOUNT POLICY
+// ══════════════════════════════════════════════
+
+export interface AccountPolicy {
+  credentialTypeMinimum: 'any' | 'mfa' | 'passkey' | 'attested_passkey'
+  authSessionExpiry?: number
+  privilegeExpiry?: number
+}

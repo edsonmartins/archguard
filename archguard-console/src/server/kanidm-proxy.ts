@@ -3,6 +3,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getCookie } from '@tanstack/react-start/server'
 import { decryptSession } from './session'
+import { recordActivity, getActor } from './activity-log'
 import type { SessionData } from './auth'
 
 const KANIDM_URL = process.env.ARCHGUARD_ID_URL || 'https://localhost:8443'
@@ -70,9 +71,18 @@ export const kanidmApiFn = createServerFn({ method: 'POST' })
       body: data.body ? JSON.stringify(data.body) : undefined,
     })
 
+    const isMutation = data.method !== 'GET'
+
     if (!response.ok) {
       const error = await response.text()
+      if (isMutation) {
+        recordActivity(data.method, data.path, getActor(), 'error', error)
+      }
       throw new Error(`Kanidm API ${response.status}: ${error}`)
+    }
+
+    if (isMutation) {
+      recordActivity(data.method, data.path, getActor(), 'success')
     }
 
     const text = await response.text()

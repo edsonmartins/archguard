@@ -193,6 +193,15 @@ export const oauth2Api = {
       values,
     ),
 
+  deleteSupScopeMap: (id: string, groupId: string) =>
+    api('DELETE', `/v1/oauth2/${encodeURIComponent(id)}/_sup_scopemap/${encodeURIComponent(groupId)}`),
+
+  deleteClaimMap: (id: string, claimName: string, groupId: string) =>
+    api(
+      'DELETE',
+      `/v1/oauth2/${encodeURIComponent(id)}/_claimmap/${encodeURIComponent(claimName)}/${encodeURIComponent(groupId)}`,
+    ),
+
   addRedirectUrl: (id: string, url: string) =>
     api('POST', `/v1/oauth2/${encodeURIComponent(id)}/_attr/oauth2_rs_origin`, [url]),
 
@@ -245,9 +254,81 @@ export const serviceAccountApi = {
     api('DELETE', `/v1/service_account/${encodeURIComponent(id)}/_api_token/${encodeURIComponent(tokenId)}`),
 }
 
+// ── PERSON SSH KEYS ─────────────────────────────
+
+export const sshKeyApi = {
+  list: async (personId: string): Promise<Record<string, string>> => {
+    const raw = await api('GET', `/v1/person/${encodeURIComponent(personId)}/_ssh_pubkeys`)
+    return (raw as Record<string, string>) ?? {}
+  },
+
+  add: (personId: string, tag: string, publicKey: string) =>
+    api('POST', `/v1/person/${encodeURIComponent(personId)}/_ssh_pubkeys`, {
+      tag,
+      key: publicKey,
+    }),
+
+  delete: (personId: string, tag: string) =>
+    api('DELETE', `/v1/person/${encodeURIComponent(personId)}/_ssh_pubkeys/${encodeURIComponent(tag)}`),
+}
+
+// ── RECYCLE BIN ─────────────────────────────────
+
+export const recycleBinApi = {
+  list: async (): Promise<T.RecycleBinEntry[]> => {
+    const raw = await api('GET', '/v1/recycle_bin')
+    if (!raw || !Array.isArray(raw)) return []
+    return (raw as T.KanidmEntry[]).map((entry) => ({
+      id: entry.attrs.uuid?.[0] ?? '',
+      name: entry.attrs.name?.[0] ?? entry.attrs.spn?.[0] ?? 'unknown',
+      type: (entry.attrs.class ?? []).find((c) =>
+        ['person', 'group', 'service_account', 'oauth2_resource_server'].includes(c),
+      ) ?? 'unknown',
+      classes: entry.attrs.class ?? [],
+      attrs: entry.attrs,
+    }))
+  },
+
+  revive: (id: string) =>
+    api('POST', `/v1/recycle_bin/${encodeURIComponent(id)}/_revive`),
+}
+
+// ── ACCOUNT POLICY ──────────────────────────────
+
+export const accountPolicyApi = {
+  get: async (groupId: string): Promise<T.AccountPolicy> => {
+    const raw = await api('GET', `/v1/group/${encodeURIComponent(groupId)}`)
+    const entry = raw as T.KanidmEntry
+    const a = entry.attrs
+    return {
+      credentialTypeMinimum: (a.credential_type_minimum?.[0] as T.AccountPolicy['credentialTypeMinimum']) ?? 'any',
+      authSessionExpiry: a.authsession_expiry?.[0] ? Number(a.authsession_expiry[0]) : undefined,
+      privilegeExpiry: a.privilege_expiry?.[0] ? Number(a.privilege_expiry[0]) : undefined,
+    }
+  },
+
+  setCredentialMinimum: (groupId: string, value: T.AccountPolicy['credentialTypeMinimum']) =>
+    api('PUT', `/v1/group/${encodeURIComponent(groupId)}/_attr/credential_type_minimum`, [value]),
+
+  setAuthSessionExpiry: (groupId: string, seconds: number) =>
+    api('PUT', `/v1/group/${encodeURIComponent(groupId)}/_attr/authsession_expiry`, [String(seconds)]),
+
+  setPrivilegeExpiry: (groupId: string, seconds: number) =>
+    api('PUT', `/v1/group/${encodeURIComponent(groupId)}/_attr/privilege_expiry`, [String(seconds)]),
+}
+
 // ── SYSTEM ──────────────────────────────────────
 
 export const systemApi = {
   status: () => api('GET', '/status'),
   domain: () => api('GET', '/v1/domain'),
+
+  domainAttr: async (attr: string): Promise<string[]> => {
+    const raw = await api('GET', `/v1/domain/_attr/${encodeURIComponent(attr)}`)
+    if (Array.isArray(raw)) return raw as string[]
+    return []
+  },
+
+  setDomainAttr: (attr: string, values: string[]) =>
+    api('PUT', `/v1/domain/_attr/${encodeURIComponent(attr)}`, values),
 }

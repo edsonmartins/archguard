@@ -50,6 +50,7 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { PermissionGate } from '@/components/shared/permission-gate'
 import { GroupBadge } from '@/components/shared/group-badge'
 import { useGroups, useDeleteGroup } from '@/lib/hooks/use-groups'
+import { useTenantFilter } from '@/lib/hooks/use-tenant-filter'
 import type { Group } from '@/lib/api/types/kanidm'
 
 type ViewMode = 'list' | 'tree'
@@ -57,6 +58,7 @@ type ViewMode = 'list' | 'tree'
 export function GroupListPage() {
   const { data: groups, isLoading } = useGroups()
   const deleteGroup = useDeleteGroup()
+  const { filterGroups, isFiltering } = useTenantFilter()
 
   const [sorting, setSorting] = useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = useState('')
@@ -65,8 +67,9 @@ export function GroupListPage() {
 
   const filteredData = useMemo(() => {
     if (!groups) return []
-    return groups
-  }, [groups])
+    // When tenant filter is active, show only tenant groups; otherwise show all
+    return isFiltering ? filterGroups(groups) : groups
+  }, [groups, filterGroups, isFiltering])
 
   const columns: ColumnDef<Group>[] = useMemo(
     () => [

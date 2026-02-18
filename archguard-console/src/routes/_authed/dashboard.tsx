@@ -5,18 +5,18 @@ import { useQuery } from '@tanstack/react-query'
 import { StatsCards } from '@/components/dashboard/stats-cards'
 import { SystemHealth } from '@/components/dashboard/system-health'
 import { QuickActions } from '@/components/dashboard/quick-actions'
-import { personApi } from '@/lib/api/kanidm-client'
-import { groupApi } from '@/lib/api/kanidm-client'
-import { oauth2Api } from '@/lib/api/kanidm-client'
-import { systemApi } from '@/lib/api/kanidm-client'
+import { personApi, groupApi, oauth2Api, systemApi } from '@/lib/api/kanidm-client'
 import { vaultApi } from '@/lib/api/vault-client'
 import { queryKeys } from '@/lib/utils/query-keys'
+import { useTenantFilter } from '@/lib/hooks/use-tenant-filter'
 
 export const Route = createFileRoute('/_authed/dashboard')({
   component: DashboardPage,
 })
 
 function DashboardPage() {
+  const { filterPersons, filterGroups, filterOAuth2 } = useTenantFilter()
+
   const persons = useQuery({
     queryKey: queryKeys.persons.all,
     queryFn: () => personApi.list(),
@@ -46,6 +46,10 @@ function DashboardPage() {
     queryFn: () => vaultApi.status(),
     staleTime: 30_000,
   })
+
+  const filteredPersons = filterPersons(persons.data ?? [])
+  const filteredGroups = filterGroups(groups.data ?? [])
+  const filteredOAuth2 = filterOAuth2(oauth2.data ?? [], groups.data)
 
   const isLoading =
     persons.isLoading ||
@@ -85,9 +89,9 @@ function DashboardPage() {
       </div>
 
       <StatsCards
-        personsCount={persons.data?.length}
-        groupsCount={groups.data?.length}
-        oauth2Count={oauth2.data?.length}
+        personsCount={filteredPersons.length}
+        groupsCount={filteredGroups.length}
+        oauth2Count={filteredOAuth2.length}
         vaultOnline={vault.data?.online}
         isLoading={isLoading}
       />
