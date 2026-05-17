@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { extractTenantPrefix } from '@/lib/api/normalizers'
 import { useGroups } from '@/lib/hooks/use-groups'
 import { usePersons } from '@/lib/hooks/use-persons'
-import type { OAuth2Client, Group, Person } from '@/lib/api/types/kanidm'
+import type { OAuth2Client, Group } from '@/lib/api/types/kanidm'
 
 interface AccessEntry {
   groupId: string
@@ -40,7 +40,7 @@ export function AppAccessMatrix({ client }: { client: OAuth2Client }) {
 
     return allScopeMaps.map((sm) => {
       const group = groupMap.get(sm.groupId)
-      const groupName = group?.name ?? sm.groupName || sm.groupId
+      const groupName = (group?.name ?? sm.groupName) || sm.groupId
       const tenant = extractTenantPrefix(groupName)
 
       // Find persons who are members of this group

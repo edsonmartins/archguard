@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useNavigate, Link } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { Route } from '@/routes/_authed/oauth2/$clientId'
 import {
   ArrowLeft,
@@ -12,7 +13,6 @@ import {
   Trash2,
   Plus,
   X,
-  Copy,
   AlertTriangle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -36,10 +36,12 @@ import {
 import { useGroups } from '@/lib/hooks/use-groups'
 import { getIntegrationSnippets } from '@/components/oauth2/integration-snippets'
 import { AppAccessMatrix } from '@/components/oauth2/app-access-matrix'
+import { queryKeys } from '@/lib/utils/query-keys'
 
 export function OAuth2DetailPage() {
   const { clientId } = Route.useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { data: client, isLoading } = useOAuth2Client(clientId)
   const { data: groups } = useGroups()
   const deleteClient = useDeleteOAuth2Client()
@@ -139,10 +141,10 @@ export function OAuth2DetailPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <InfoRow label="Client ID" value={client.name}>
-                <CopyButton text={client.name} />
+                <CopyButton value={client.name} />
               </InfoRow>
               <InfoRow label="ID" value={client.id}>
-                <CopyButton text={client.id} />
+                <CopyButton value={client.id} />
               </InfoRow>
               <InfoRow label="Tipo" value={client.type === 'public' ? 'Public' : 'Basic'} />
               <InfoRow label="Landing URL" value={client.landingUrl} />
@@ -161,7 +163,7 @@ export function OAuth2DetailPage() {
                   className="flex items-center justify-between rounded border p-2 text-sm"
                 >
                   <span className="font-mono">{url}</span>
-                  <CopyButton text={url} />
+                  <CopyButton value={url} />
                 </div>
               ))}
               <PermissionGate require="oauth2:update">
@@ -203,7 +205,7 @@ export function OAuth2DetailPage() {
                 </p>
               ) : (
                 client.scopeMaps.map((sm) => {
-                  const resolvedName = groups?.find((g) => g.id === sm.groupId)?.name ?? sm.groupName || sm.groupId
+                  const resolvedName = (groups?.find((g) => g.id === sm.groupId)?.name ?? sm.groupName) || sm.groupId
                   return (
                   <div
                     key={sm.groupId}
@@ -285,7 +287,7 @@ export function OAuth2DetailPage() {
                 <div key={snippet.framework} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label className="font-medium">{snippet.framework}</Label>
-                    <CopyButton text={snippet.code} />
+                    <CopyButton value={snippet.code} />
                   </div>
                   <pre className="overflow-x-auto rounded-lg border bg-muted p-4 text-xs">
                     <code>{snippet.code}</code>
@@ -334,10 +336,10 @@ export function OAuth2DetailPage() {
         confirmText={client.name}
         destructive
         isLoading={deleteClient.isPending}
-        onConfirm={() => {
-          deleteClient.mutate(client.id, {
-            onSuccess: () => navigate({ to: '/oauth2' }),
-          })
+        onConfirm={async () => {
+          await deleteClient.mutateAsync(client.id)
+          queryClient.removeQueries({ queryKey: queryKeys.oauth2.all })
+          navigate({ to: '/oauth2' })
         }}
       />
     </div>

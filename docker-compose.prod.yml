@@ -1,0 +1,91 @@
+# docker-compose.prod.yml
+#
+# Production stack:
+#   • Caddy — TLS terminator + reverse proxy (auto Let's Encrypt or local self-signed)
+#   • Kanidm — identity engine (HTTPS internal, fronted by Caddy)
+#   • AliasVault — password/alias vault
+#   • ArchGuard Console — admin UI (built from ./archguard-console)
+#
+# Required env vars (e.g. via .env at the repo root):
+#   ARCHGUARD_DOMAIN          public domain, e.g. archguard.example.com
+#   ARCHGUARD_ID_DOMAIN       OIDC issuer host, e.g. id.example.com
+#   ARCHGUARD_VAULT_DOMAIN    vault host, e.g. vault.example.com
+#   ARCHGUARD_SA_TOKEN        Kanidm service-account API token
+#   SESSION_SECRET            32-byte hex string (`openssl rand -hex 32`)
+#   ACME_EMAIL                contact email for Let's Encrypt
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: archguard-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:-}
+      ARCHGUARD_DOMAIN: ${ARCHGUARD_DOMAIN}
+      ARCHGUARD_ID_DOMAIN: ${ARCHGUARD_ID_DOMAIN}
+      ARCHGUARD_VAULT_DOMAIN: ${ARCHGUARD_VAULT_DOMAIN}
+    depends_on:
+      - kanidmd
+      - aliasvault
+      - archguard-console
+
+  kanidmd:
+    image: docker.io/kanidm/server:latest
+    container_name: kanidmd
+    restart: unless-stopped
+    expose:
+      - "8443"
+    volumes:
+      - kanidm_data:/data
+
+  aliasvault:
+    image: ghcr.io/aliasvault/aliasvault:latest
+    container_name: aliasvault
+    restart: unless-stopped
+    expose:
+      - "80"
+    volumes:
+      - ./aliasvault/database:/database
+      - ./aliasvault/logs:/logs
+      - ./aliasvault/secrets:/secrets
+      - ./aliasvault/certificates:/certificates
+    environment:
+      HOSTNAME: ${ARCHGUARD_VAULT_DOMAIN}
+      PUBLIC_REGISTRATION_ENABLED: "false"
+      IP_LOGGING_ENABLED: "true"
+      FORCE_HTTPS_REDIRECT: "false"
+      SMTP_TLS_ENABLED: "true"
+
+  archguard-console:
+    build:
+      context: ./archguard-console
+      dockerfile: Dockerfile
+    image: archguard-console:latest
+    container_name: archguard-console
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOST: "0.0.0.0"
+      ARCHGUARD_ID_URL: https://${ARCHGUARD_ID_DOMAIN}
+      VITE_ARCHGUARD_ID_URL: https://${ARCHGUARD_ID_DOMAIN}
+      ARCHGUARD_VAULT_URL: https://${ARCHGUARD_VAULT_DOMAIN}
+      ARCHGUARD_SA_TOKEN: ${ARCHGUARD_SA_TOKEN}
+      SESSION_SECRET: ${SESSION_SECRET}
+      LOG_LEVEL: info
+    depends_on:
+      - kanidmd
+
+volumes:
+  caddy_data:
+  caddy_config:
+  kanidm_data:

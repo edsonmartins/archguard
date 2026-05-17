@@ -5,10 +5,8 @@ import {
   UsersRound,
   UserMinus,
   KeySquare,
-  Lock,
   Download,
   X,
-  Loader2,
   Search,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -21,7 +19,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
 import { PermissionGate } from '@/components/shared/permission-gate'
 import { useGroups, useAddGroupMembers, useRemoveGroupMembers } from '@/lib/hooks/use-groups'
@@ -139,7 +136,7 @@ export function BulkActionsToolbar({
         <Badge variant="secondary">{selectedPersons.length} selecionado(s)</Badge>
         <div className="mx-2 h-4 w-px bg-border" />
 
-        <PermissionGate require="groups:manage">
+        <PermissionGate require="groups:members">
           <Button
             variant="ghost"
             size="sm"
@@ -175,7 +172,13 @@ export function BulkActionsToolbar({
         </Button>
 
         <div className="flex-1" />
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClearSelection}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={onClearSelection}
+          aria-label="Limpar seleção"
+        >
           <X className="h-4 w-4" />
         </Button>
       </div>

@@ -1,0 +1,48 @@
+# Caddyfile
+#
+# Edge reverse proxy with automatic HTTPS via Let's Encrypt.
+# Hostnames come from ARCHGUARD_*_DOMAIN env vars in docker-compose.prod.yml.
+
+{
+	email {$ACME_EMAIL}
+	# Comment the line below in production. Uncomment only for local self-signed certs.
+	# local_certs
+}
+
+# ArchGuard Console (admin UI)
+{$ARCHGUARD_DOMAIN} {
+	encode zstd gzip
+
+	# Strict transport, light hardening. The console itself sets cookies as
+	# Secure+HttpOnly+SameSite=Lax via auth.ts; this layer adds defense in depth.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		-Server
+	}
+
+	reverse_proxy archguard-console:3000
+}
+
+# Kanidm (OIDC issuer + admin API)
+{$ARCHGUARD_ID_DOMAIN} {
+	encode zstd gzip
+
+	# Kanidm serves HTTPS internally on 8443 with a self-signed cert; we tell
+	# the proxy to trust it. Caddy still re-encrypts to the public clients
+	# with the LE-issued cert.
+	reverse_proxy https://kanidmd:8443 {
+		transport http {
+			tls
+			tls_insecure_skip_verify
+		}
+	}
+}
+
+# AliasVault
+{$ARCHGUARD_VAULT_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy aliasvault:80
+}

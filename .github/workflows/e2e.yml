@@ -1,0 +1,79 @@
+name: E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    name: Playwright against Kanidm
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: archguard-console/.nvmrc
+          cache: npm
+          cache-dependency-path: archguard-console/package-lock.json
+
+      - name: Install expect (for setup-kanidm.sh)
+        run: sudo apt-get update && sudo apt-get install -y expect
+
+      - name: Install console deps
+        working-directory: archguard-console
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: archguard-console
+        run: npx playwright install --with-deps chromium
+
+      - name: Start Kanidm
+        run: |
+          docker run -d --name kanidmd \
+            -p 8443:8443 \
+            -v kanidm-data:/data \
+            docker.io/kanidm/server:latest
+          # Wait for /status to come up
+          for i in $(seq 1 60); do
+            if curl -ks https://localhost:8443/status >/dev/null; then
+              echo "Kanidm is up after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Kanidm failed to start"
+          docker logs kanidmd
+          exit 1
+
+      - name: Provision Kanidm (test users + OAuth2 + SA token)
+        run: ./scripts/setup-kanidm.sh
+
+      - name: Run Playwright tests
+        working-directory: archguard-console
+        env:
+          NODE_TLS_REJECT_UNAUTHORIZED: "0"
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: archguard-console/playwright-report
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces-${{ github.run_id }}
+          path: archguard-console/test-results
+          retention-days: 14
+          if-no-files-found: ignore

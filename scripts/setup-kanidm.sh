@@ -254,7 +254,8 @@ log "Created archguard-sa (managed by idm_admins)"
 # Grant API access
 api "$IDM_TOKEN" "POST" "/v1/group/idm_admins/_attr/member" '["archguard-sa@localhost"]' >/dev/null 2>&1
 api "$IDM_TOKEN" "POST" "/v1/group/idm_people_admins/_attr/member" '["archguard-sa@localhost"]' >/dev/null 2>&1
-log "Granted idm_admins + idm_people_admins membership"
+api "$IDM_TOKEN" "POST" "/v1/group/idm_recycle_bin_admins/_attr/member" '["archguard-sa@localhost"]' >/dev/null 2>&1
+log "Granted idm_admins + idm_people_admins + idm_recycle_bin_admins membership"
 
 # Generate API token (expiry: Unix timestamp for 2027-12-31)
 SA_TOKEN=$(api "$IDM_TOKEN" "POST" "/v1/service_account/archguard-sa/_api_token" \

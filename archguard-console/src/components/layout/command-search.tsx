@@ -1,6 +1,6 @@
 // src/components/layout/command-search.tsx
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import {
   Users,

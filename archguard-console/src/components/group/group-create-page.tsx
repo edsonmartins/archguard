@@ -12,12 +12,15 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
+import { useQueryClient } from '@tanstack/react-query'
 import { useCreateGroup, useAddGroupMembers } from '@/lib/hooks/use-groups'
 import { usePersons } from '@/lib/hooks/use-persons'
+import { queryKeys } from '@/lib/utils/query-keys'
 import { createGroupSchema } from '@/lib/utils/validators'
 
 export function GroupCreatePage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const createGroup = useCreateGroup()
   const addMembers = useAddGroupMembers()
   const { data: persons } = usePersons()
@@ -30,28 +33,19 @@ export function GroupCreatePage() {
       description: '',
     },
     onSubmit: async ({ value }) => {
-      createGroup.mutate(
-        {
-          name: value.name,
-          description: value.description || undefined,
-        },
-        {
-          onSuccess: (result) => {
-            if (selectedMembers.length > 0) {
-              const groupId =
-                typeof result === 'object' && result !== null && 'id' in result
-                  ? (result as { id: string }).id
-                  : value.name
-              addMembers.mutate(
-                { id: groupId, memberIds: selectedMembers },
-                { onSettled: () => navigate({ to: '/groups' }) },
-              )
-            } else {
-              navigate({ to: '/groups' })
-            }
-          },
-        },
-      )
+      const result = await createGroup.mutateAsync({
+        name: value.name,
+        description: value.description || undefined,
+      })
+      if (selectedMembers.length > 0) {
+        const groupId =
+          typeof result === 'object' && result !== null && 'id' in result
+            ? (result as { id: string }).id
+            : value.name
+        await addMembers.mutateAsync({ id: groupId, memberIds: selectedMembers })
+      }
+      queryClient.removeQueries({ queryKey: queryKeys.groups.all })
+      navigate({ to: '/groups' })
     },
   })
 

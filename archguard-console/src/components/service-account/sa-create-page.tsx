@@ -11,12 +11,15 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
+import { useQueryClient } from '@tanstack/react-query'
 import { useCreateServiceAccount } from '@/lib/hooks/use-service-accounts'
 import { useGroups } from '@/lib/hooks/use-groups'
+import { queryKeys } from '@/lib/utils/query-keys'
 import { createServiceAccountSchema } from '@/lib/utils/validators'
 
 export function ServiceAccountCreatePage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const createSA = useCreateServiceAccount()
   const { data: groups } = useGroups()
   const [groupSearch, setGroupSearch] = useState('')
@@ -29,17 +32,14 @@ export function ServiceAccountCreatePage() {
       description: '',
     },
     onSubmit: async ({ value }) => {
-      createSA.mutate(
-        {
-          name: value.name,
-          displayname: value.displayname,
-          description: value.description || undefined,
-          groups: selectedGroups.length > 0 ? selectedGroups : undefined,
-        },
-        {
-          onSuccess: () => navigate({ to: '/service-accounts' }),
-        },
-      )
+      await createSA.mutateAsync({
+        name: value.name,
+        displayname: value.displayname,
+        description: value.description || undefined,
+        groups: selectedGroups.length > 0 ? selectedGroups : undefined,
+      })
+      queryClient.removeQueries({ queryKey: queryKeys.serviceAccounts.all })
+      navigate({ to: '/service-accounts' })
     },
   })
 

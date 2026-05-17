@@ -20,8 +20,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Separator } from '@/components/ui/separator'
+import { useQueryClient } from '@tanstack/react-query'
 import { useCreatePerson } from '@/lib/hooks/use-persons'
 import { useGroups } from '@/lib/hooks/use-groups'
+import { queryKeys } from '@/lib/utils/query-keys'
 import { createPersonSchema } from '@/lib/utils/validators'
 import type { CreatePersonInput } from '@/lib/utils/validators'
 
@@ -33,6 +35,7 @@ const STEPS = [
 
 export function PersonFormWizard() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const createPerson = useCreatePerson()
   const { data: groups } = useGroups()
   const [step, setStep] = useState(0)
@@ -48,20 +51,19 @@ export function PersonFormWizard() {
       groups: [] as string[],
     } satisfies CreatePersonInput,
     onSubmit: async ({ value }) => {
-      createPerson.mutate(
-        {
-          name: value.name,
-          displayname: value.displayname,
-          legalname: value.legalname || undefined,
-          mail: value.mail,
-          groups: value.groups.length > 0 ? value.groups : undefined,
-        },
-        {
-          onSuccess: () => {
-            navigate({ to: '/identities' })
-          },
-        },
-      )
+      await createPerson.mutateAsync({
+        name: value.name,
+        displayname: value.displayname,
+        legalname: value.legalname || undefined,
+        mail: value.mail,
+        groups: value.groups.length > 0 ? value.groups : undefined,
+      })
+      // Drop the cached list so the /identities page issues a fresh
+      // fetch the moment it mounts. removeQueries is more aggressive than
+      // invalidate — it forces a cold start, which is what we want after
+      // a successful create.
+      queryClient.removeQueries({ queryKey: queryKeys.persons.all })
+      navigate({ to: '/identities' })
     },
   })
 
@@ -287,13 +289,16 @@ export function PersonFormWizard() {
               </div>
               <div className="max-h-64 space-y-2 overflow-y-auto">
                 {filteredGroups?.map((group) => (
-                  <div
+                  <button
+                    type="button"
                     key={group.id}
-                    className="flex items-center gap-3 rounded-lg border p-3"
+                    onClick={() => toggleGroup(group.name)}
+                    className="flex w-full items-center gap-3 rounded-lg border p-3 text-left hover:bg-accent"
                   >
                     <Checkbox
                       checked={form.state.values.groups.includes(group.name)}
                       onCheckedChange={() => toggleGroup(group.name)}
+                      onClick={(e) => e.stopPropagation()}
                     />
                     <div className="flex-1">
                       <p className="text-sm font-medium">{group.name}</p>
@@ -306,7 +311,7 @@ export function PersonFormWizard() {
                     <Badge variant="outline" className="text-xs">
                       {group.memberCount} membros
                     </Badge>
-                  </div>
+                  </button>
                 ))}
                 {filteredGroups?.length === 0 && (
                   <p className="py-4 text-center text-sm text-muted-foreground">

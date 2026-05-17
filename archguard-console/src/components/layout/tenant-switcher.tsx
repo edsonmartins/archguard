@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useTenantFilter, ALL_TENANTS } from '@/lib/hooks/use-tenant-filter'
+import { useTenantFilter } from '@/lib/hooks/use-tenant-filter'
 import { useGroups } from '@/lib/hooks/use-groups'
 
 export function TenantSwitcher() {
@@ -38,7 +38,7 @@ export function TenantSwitcher() {
         Tenant
       </div>
       <Select value={activeTenant} onValueChange={setActiveTenant}>
-        <SelectTrigger className="h-8 text-xs">
+        <SelectTrigger aria-label="Selecionar tenant" className="h-8 text-xs">
           <SelectValue placeholder="Selecionar tenant" />
         </SelectTrigger>
         <SelectContent>

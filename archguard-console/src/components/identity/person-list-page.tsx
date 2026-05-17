@@ -187,7 +187,12 @@ export function PersonListPage() {
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  aria-label="Ações"
+                >
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -249,6 +254,18 @@ export function PersonListPage() {
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    // The placeholder advertises "nome, email ou username" so the filter
+    // has to look beyond the visible columns (the @username isn't a
+    // column header — it shows under the displayName cell).
+    globalFilterFn: (row, _columnId, filterValue: string) => {
+      const q = String(filterValue).toLowerCase()
+      const p = row.original
+      return (
+        p.displayName.toLowerCase().includes(q) ||
+        p.username.toLowerCase().includes(q) ||
+        p.emails.some((e) => e.toLowerCase().includes(q))
+      )
+    },
     initialState: {
       pagination: { pageSize: 25 },
     },
@@ -270,13 +287,13 @@ export function PersonListPage() {
         <div className="flex gap-2">
           <PermissionGate require="persons:create">
             <Button asChild variant="outline">
-              <Link to="/identities/import" as={undefined}>
+              <Link to="/identities/import">
                 <Upload className="mr-2 h-4 w-4" />
                 Importar CSV
               </Link>
             </Button>
             <Button asChild>
-              <Link to="/identities/create" as={undefined}>
+              <Link to="/identities/create">
                 <UserPlus className="mr-2 h-4 w-4" />
                 Nova Pessoa
               </Link>
@@ -296,7 +313,7 @@ export function PersonListPage() {
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger aria-label="Filtrar por status" className="w-[150px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -371,7 +388,7 @@ export function PersonListPage() {
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
               {table.getFilteredSelectedRowModel().rows.length} de{' '}
-              {table.getFilteredRowModel().rows.length} selecionado(s)
+              {table.getFilteredRowModel().rows.length} linha(s)
             </p>
             <div className="flex items-center gap-2">
               <Button

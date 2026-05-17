@@ -136,6 +136,18 @@ export const groupApi = {
 
 // ── OAUTH2 ──────────────────────────────────────
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// Kanidm v1.9 OAuth2 endpoints expect the client slug (name), not UUID.
+// Most of our UI carries the UUID through routing — resolve to slug here
+// so callers stay uniform.
+async function resolveOAuth2Slug(id: string): Promise<string> {
+  if (!UUID_RE.test(id)) return id
+  const all = (await api('GET', '/v1/oauth2')) as T.KanidmEntry[] | null
+  const match = (all ?? []).find((e) => e.attrs.uuid?.[0] === id)
+  return match?.attrs.name?.[0] ?? id
+}
+
 export const oauth2Api = {
   list: async (): Promise<T.OAuth2Client[]> => {
     const raw = await api('GET', '/v1/oauth2')
@@ -144,8 +156,17 @@ export const oauth2Api = {
   },
 
   get: async (id: string): Promise<T.OAuth2Client> => {
+    // Kanidm v1.9 only resolves /v1/oauth2/:id when :id is the slug (name),
+    // not the UUID. Detail page links carry the UUID, so transparently
+    // fall back to a list lookup when the direct GET returns null.
     const raw = await api('GET', `/v1/oauth2/${encodeURIComponent(id)}`)
-    return normalizeOAuth2Client(raw as T.KanidmEntry)
+    if (raw) return normalizeOAuth2Client(raw as T.KanidmEntry)
+    const all = (await api('GET', '/v1/oauth2')) as T.KanidmEntry[] | null
+    const match = (all ?? []).find(
+      (e) => e.attrs.uuid?.[0] === id || e.attrs.name?.[0] === id,
+    )
+    if (!match) throw new Error(`OAuth2 client not found: ${id}`)
+    return normalizeOAuth2Client(match)
   },
 
   createBasic: (payload: T.CreateOAuth2ClientPayload) =>
@@ -166,54 +187,76 @@ export const oauth2Api = {
       },
     }),
 
-  delete: (id: string) =>
-    api('DELETE', `/v1/oauth2/${encodeURIComponent(id)}`),
+  delete: async (id: string) => {
+    const slug = await resolveOAuth2Slug(id)
+    return api('DELETE', `/v1/oauth2/${encodeURIComponent(slug)}`)
+  },
 
-  getSecret: (id: string) =>
-    api('GET', `/v1/oauth2/${encodeURIComponent(id)}/_basic_secret`),
+  getSecret: async (id: string) => {
+    const slug = await resolveOAuth2Slug(id)
+    return api('GET', `/v1/oauth2/${encodeURIComponent(slug)}/_basic_secret`)
+  },
 
-  setScopeMap: (id: string, groupId: string, scopes: string[]) =>
-    api('POST', `/v1/oauth2/${encodeURIComponent(id)}/_scopemap/${encodeURIComponent(groupId)}`, scopes),
+  setScopeMap: async (id: string, groupId: string, scopes: string[]) => {
+    const slug = await resolveOAuth2Slug(id)
+    return api('POST', `/v1/oauth2/${encodeURIComponent(slug)}/_scopemap/${encodeURIComponent(groupId)}`, scopes)
+  },
 
-  deleteScopeMap: (id: string, groupId: string) =>
-    api('DELETE', `/v1/oauth2/${encodeURIComponent(id)}/_scopemap/${encodeURIComponent(groupId)}`),
+  deleteScopeMap: async (id: string, groupId: string) => {
+    const slug = await resolveOAuth2Slug(id)
+    return api('DELETE', `/v1/oauth2/${encodeURIComponent(slug)}/_scopemap/${encodeURIComponent(groupId)}`)
+  },
 
-  setSupScopeMap: (id: string, groupId: string, scopes: string[]) =>
-    api('POST', `/v1/oauth2/${encodeURIComponent(id)}/_sup_scopemap/${encodeURIComponent(groupId)}`, scopes),
+  setSupScopeMap: async (id: string, groupId: string, scopes: string[]) => {
+    const slug = await resolveOAuth2Slug(id)
+    return api('POST', `/v1/oauth2/${encodeURIComponent(slug)}/_sup_scopemap/${encodeURIComponent(groupId)}`, scopes)
+  },
 
-  setClaimMap: (
+  setClaimMap: async (
     id: string,
     claimName: string,
     groupId: string,
     values: string[],
-  ) =>
-    api(
+  ) => {
+    const slug = await resolveOAuth2Slug(id)
+    return api(
       'POST',
-      `/v1/oauth2/${encodeURIComponent(id)}/_claimmap/${encodeURIComponent(claimName)}/${encodeURIComponent(groupId)}`,
+      `/v1/oauth2/${encodeURIComponent(slug)}/_claimmap/${encodeURIComponent(claimName)}/${encodeURIComponent(groupId)}`,
       values,
-    ),
+    )
+  },
 
-  deleteSupScopeMap: (id: string, groupId: string) =>
-    api('DELETE', `/v1/oauth2/${encodeURIComponent(id)}/_sup_scopemap/${encodeURIComponent(groupId)}`),
+  deleteSupScopeMap: async (id: string, groupId: string) => {
+    const slug = await resolveOAuth2Slug(id)
+    return api('DELETE', `/v1/oauth2/${encodeURIComponent(slug)}/_sup_scopemap/${encodeURIComponent(groupId)}`)
+  },
 
-  deleteClaimMap: (id: string, claimName: string, groupId: string) =>
-    api(
+  deleteClaimMap: async (id: string, claimName: string, groupId: string) => {
+    const slug = await resolveOAuth2Slug(id)
+    return api(
       'DELETE',
-      `/v1/oauth2/${encodeURIComponent(id)}/_claimmap/${encodeURIComponent(claimName)}/${encodeURIComponent(groupId)}`,
-    ),
+      `/v1/oauth2/${encodeURIComponent(slug)}/_claimmap/${encodeURIComponent(claimName)}/${encodeURIComponent(groupId)}`,
+    )
+  },
 
-  addRedirectUrl: (id: string, url: string) =>
-    api('POST', `/v1/oauth2/${encodeURIComponent(id)}/_attr/oauth2_rs_origin`, [url]),
+  addRedirectUrl: async (id: string, url: string) => {
+    const slug = await resolveOAuth2Slug(id)
+    return api('POST', `/v1/oauth2/${encodeURIComponent(slug)}/_attr/oauth2_rs_origin`, [url])
+  },
 
-  enableLocalhostRedirects: (id: string) =>
-    api('PUT', `/v1/oauth2/${encodeURIComponent(id)}/_attr/oauth2_allow_localhost_redirect`, [
+  enableLocalhostRedirects: async (id: string) => {
+    const slug = await resolveOAuth2Slug(id)
+    return api('PUT', `/v1/oauth2/${encodeURIComponent(slug)}/_attr/oauth2_allow_localhost_redirect`, [
       'true',
-    ]),
+    ])
+  },
 
-  preferShortUsername: (id: string) =>
-    api('PUT', `/v1/oauth2/${encodeURIComponent(id)}/_attr/oauth2_prefer_short_username`, [
+  preferShortUsername: async (id: string) => {
+    const slug = await resolveOAuth2Slug(id)
+    return api('PUT', `/v1/oauth2/${encodeURIComponent(slug)}/_attr/oauth2_prefer_short_username`, [
       'true',
-    ]),
+    ])
+  },
 }
 
 // ── SERVICE ACCOUNTS ────────────────────────────
@@ -227,14 +270,35 @@ export const serviceAccountApi = {
 
   get: async (id: string): Promise<T.ServiceAccount> => {
     const raw = await api('GET', `/v1/service_account/${encodeURIComponent(id)}`)
-    return normalizeServiceAccount(raw as T.KanidmEntry)
+    const sa = normalizeServiceAccount(raw as T.KanidmEntry)
+    const tokens = await api(
+      'GET',
+      `/v1/service_account/${encodeURIComponent(id)}/_api_token`,
+    )
+    if (Array.isArray(tokens)) {
+      sa.apiTokens = (tokens as Array<{
+        token_id: string
+        label: string
+        expiry: string | null
+        issued_at: number
+      }>).map((t) => ({
+        tokenId: t.token_id,
+        label: t.label,
+        createdAt: new Date(t.issued_at * 1000),
+        expiresAt: t.expiry ? new Date(t.expiry) : undefined,
+      }))
+    }
+    return sa
   },
 
   create: (payload: T.CreateServiceAccountPayload) =>
+    // Kanidm v1.9 requires `entry_managed_by` for token issuance to work
+    // (and silently drops `displayname` if it isn't set).
     api('POST', '/v1/service_account', {
       attrs: {
         name: [payload.name],
         displayname: [payload.displayname],
+        entry_managed_by: ['idm_admins'],
         ...(payload.description && {
           description: [payload.description],
         }),
@@ -245,9 +309,12 @@ export const serviceAccountApi = {
     api('DELETE', `/v1/service_account/${encodeURIComponent(id)}`),
 
   generateToken: (id: string, label: string, expiry?: string) =>
+    // Kanidm v1.9 requires every field on this body — `expiry` must be
+    // present (null = no expiration) and `read_write` is mandatory.
     api('POST', `/v1/service_account/${encodeURIComponent(id)}/_api_token`, {
       label,
-      expiry,
+      expiry: expiry ?? null,
+      read_write: true,
     }),
 
   revokeToken: (id: string, tokenId: string) =>

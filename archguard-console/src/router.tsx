@@ -4,7 +4,7 @@ import { createRouter as createTanStackRouter } from '@tanstack/react-router'
 import { QueryClient, MutationCache, QueryCache } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { routeTree } from './routeTree.gen'
-import { mapKanidmError } from '@/lib/utils/error-mapper'
+import { reportError } from '@/lib/utils/error-sink'
 
 export function getRouter() {
   const queryClient = new QueryClient({
@@ -42,9 +42,9 @@ export function getRouter() {
     }),
     mutationCache: new MutationCache({
       onError: (error) => {
-        // Individual mutations handle their own errors via hooks
-        // This is a fallback for unhandled mutation errors
-        console.error('[Mutation Error]', error)
+        // Individual mutations handle their own errors via hooks; this is
+        // a fallback for unhandled mutation errors.
+        reportError(error, { source: 'mutation-cache' })
       },
     }),
   })

@@ -17,3 +17,9 @@ todos.json
 coverage
 test-results
 playwright-report
+
+# Runtime sqlite (activity log, etc.)
+data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

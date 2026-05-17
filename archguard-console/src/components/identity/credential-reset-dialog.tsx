@@ -119,7 +119,7 @@ export function CredentialResetDialog({
                     value={resetToken}
                     className="font-mono text-xs"
                   />
-                  <CopyButton text={resetToken} />
+                  <CopyButton value={resetToken} />
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">

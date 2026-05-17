@@ -1,9 +1,11 @@
 // src/components/shared/route-error-boundary.tsx
 
+import { useEffect } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { reportError } from '@/lib/utils/error-sink'
 
 interface RouteErrorBoundaryProps {
   error: Error
@@ -19,6 +21,14 @@ export function RouteErrorBoundary({ error, reset }: RouteErrorBoundaryProps) {
     error.message.includes('fetch') ||
     error.message.includes('network') ||
     error.message.includes('Failed to fetch')
+
+  useEffect(() => {
+    // 401 is handled by redirect, 403 / network are user-actionable; the
+    // remaining cases are unexpected and should be surfaced.
+    if (!is401 && !is403 && !isNetwork) {
+      reportError(error, { source: 'route-error-boundary' })
+    }
+  }, [error, is401, is403, isNetwork])
 
   if (is401) {
     router.navigate({ to: '/login' })

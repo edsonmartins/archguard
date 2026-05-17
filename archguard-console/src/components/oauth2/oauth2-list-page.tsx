@@ -60,7 +60,7 @@ export function OAuth2ListPage() {
         </div>
         <PermissionGate require="oauth2:create">
           <Button asChild>
-            <Link to="/oauth2/create" as={undefined}>
+            <Link to="/oauth2/create">
               <KeyRound className="mr-2 h-4 w-4" />
               Novo Client
             </Link>
@@ -96,11 +96,24 @@ export function OAuth2ListPage() {
                   ) : (
                     <Shield className="h-5 w-5 text-green-500" />
                   )}
-                  <CardTitle className="text-base">{client.displayName}</CardTitle>
+                  <CardTitle className="text-base">
+                    <Link
+                      to="/oauth2/$clientId"
+                      params={{ clientId: client.id }}
+                      className="hover:underline"
+                    >
+                      {client.displayName}
+                    </Link>
+                  </CardTitle>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      aria-label="Ações"
+                    >
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>

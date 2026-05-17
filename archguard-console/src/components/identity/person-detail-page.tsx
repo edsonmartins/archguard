@@ -17,8 +17,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
@@ -29,12 +27,15 @@ import { GroupBadge } from '@/components/shared/group-badge'
 import { CredentialStatusCard } from '@/components/identity/credential-status'
 import { CredentialResetDialog } from '@/components/identity/credential-reset-dialog'
 import { PersonGroupAssignment } from '@/components/identity/group-assignment'
+import { useQueryClient } from '@tanstack/react-query'
 import { usePerson, useDeletePerson, usePersonCredentials } from '@/lib/hooks/use-persons'
+import { queryKeys } from '@/lib/utils/query-keys'
 import { initials } from '@/lib/utils/formatters'
 
 export function PersonDetailPage() {
   const { personId } = Route.useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { data: person, isLoading } = usePerson(personId)
   const { data: credentials } = usePersonCredentials(personId)
   const deletePerson = useDeletePerson()
@@ -110,14 +111,14 @@ export function PersonDetailPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <InfoRow label="Username" value={`@${person.username}`}>
-                  <CopyButton text={person.username} />
+                  <CopyButton value={person.username} />
                 </InfoRow>
                 <InfoRow label="Nome de Exibição" value={person.displayName} />
                 {person.legalName && (
                   <InfoRow label="Nome Legal" value={person.legalName} />
                 )}
                 <InfoRow label="ID" value={person.id}>
-                  <CopyButton text={person.id} />
+                  <CopyButton value={person.id} />
                 </InfoRow>
               </CardContent>
             </Card>
@@ -135,7 +136,7 @@ export function PersonDetailPage() {
                     >
                       <Mail className="h-4 w-4 text-muted-foreground" />
                       <span>{email}</span>
-                      <CopyButton text={email} />
+                      <CopyButton value={email} />
                     </div>
                   ))
                 ) : (
@@ -227,12 +228,12 @@ export function PersonDetailPage() {
         confirmText={person.username}
         destructive
         isLoading={deletePerson.isPending}
-        onConfirm={() => {
-          deletePerson.mutate(person.id, {
-            onSuccess: () => {
-              navigate({ to: '/identities' })
-            },
-          })
+        onConfirm={async () => {
+          await deletePerson.mutateAsync(person.id)
+          // Force /identities to do a cold fetch on mount so the removed
+          // entry is gone on the first paint, not after a hydrate flash.
+          queryClient.removeQueries({ queryKey: queryKeys.persons.all })
+          navigate({ to: '/identities' })
         }}
       />
 

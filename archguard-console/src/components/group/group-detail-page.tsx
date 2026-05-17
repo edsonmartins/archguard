@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   Users,
   Settings,
-  KeyRound,
   Trash2,
   Plus,
   X,
@@ -139,7 +138,7 @@ export function GroupDetailPage() {
               {group.memberCount} membro(s) neste grupo
             </p>
             {!group.isBuiltin && (
-              <PermissionGate require="groups:manage">
+              <PermissionGate require="groups:members">
                 <Button
                   variant="outline"
                   size="sm"
@@ -184,7 +183,7 @@ export function GroupDetailPage() {
                     </div>
                   </div>
                   {!group.isBuiltin && (
-                    <PermissionGate require="groups:manage">
+                    <PermissionGate require="groups:members">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -209,7 +208,7 @@ export function GroupDetailPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <InfoRow label="ID" value={group.id}>
-                <CopyButton text={group.id} />
+                <CopyButton value={group.id} />
               </InfoRow>
               <InfoRow label="Nome" value={group.name} />
               <InfoRow
@@ -258,31 +257,36 @@ export function GroupDetailPage() {
               />
             </div>
             <div className="max-h-64 space-y-2 overflow-y-auto">
-              {availablePersons?.slice(0, 20).map((person) => (
-                <div
-                  key={person.id}
-                  className="flex items-center gap-3 rounded-lg border p-3"
-                >
-                  <Checkbox
-                    checked={selectedToAdd.includes(person.id)}
-                    onCheckedChange={() => {
-                      setSelectedToAdd((prev) =>
-                        prev.includes(person.id)
-                          ? prev.filter((id) => id !== person.id)
-                          : [...prev, person.id],
-                      )
-                    }}
-                  />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">
-                      {person.displayName}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      @{person.username}
-                    </p>
-                  </div>
-                </div>
-              ))}
+              {availablePersons?.slice(0, 20).map((person) => {
+                const toggle = () =>
+                  setSelectedToAdd((prev) =>
+                    prev.includes(person.id)
+                      ? prev.filter((id) => id !== person.id)
+                      : [...prev, person.id],
+                  )
+                return (
+                  <button
+                    type="button"
+                    key={person.id}
+                    onClick={toggle}
+                    className="flex w-full items-center gap-3 rounded-lg border p-3 text-left hover:bg-accent"
+                  >
+                    <Checkbox
+                      checked={selectedToAdd.includes(person.id)}
+                      onCheckedChange={toggle}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">
+                        {person.displayName}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        @{person.username}
+                      </p>
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           </div>
           <DialogFooter>
@@ -290,12 +294,16 @@ export function GroupDetailPage() {
               Cancelar
             </Button>
             <Button
+              aria-label="Adicionar"
               onClick={handleAddMembers}
               disabled={selectedToAdd.length === 0 || addMembers.isPending}
             >
-              {addMembers.isPending
-                ? 'Adicionando...'
-                : `Adicionar (${selectedToAdd.length})`}
+              {addMembers.isPending ? 'Adicionando...' : 'Adicionar'}
+              {selectedToAdd.length > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  {selectedToAdd.length}
+                </Badge>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

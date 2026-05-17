@@ -15,7 +15,7 @@ export function QuickActions() {
       <CardContent className="grid gap-2 sm:grid-cols-2">
         <PermissionGate require="persons:create">
           <Button asChild variant="outline" className="justify-start gap-2">
-            <Link to="/identities/create" as={undefined}>
+            <Link to="/identities/create">
               <UserPlus className="h-4 w-4" />
               Nova Pessoa
             </Link>
@@ -23,7 +23,7 @@ export function QuickActions() {
         </PermissionGate>
         <PermissionGate require="groups:create">
           <Button asChild variant="outline" className="justify-start gap-2">
-            <Link to="/groups/create" as={undefined}>
+            <Link to="/groups/create">
               <UsersRound className="h-4 w-4" />
               Novo Grupo
             </Link>
@@ -31,7 +31,7 @@ export function QuickActions() {
         </PermissionGate>
         <PermissionGate require="oauth2:create">
           <Button asChild variant="outline" className="justify-start gap-2">
-            <Link to="/oauth2/create" as={undefined}>
+            <Link to="/oauth2/create">
               <KeyRound className="h-4 w-4" />
               Novo Client OAuth2
             </Link>
@@ -39,7 +39,7 @@ export function QuickActions() {
         </PermissionGate>
         <PermissionGate require="persons:credentials">
           <Button asChild variant="outline" className="justify-start gap-2">
-            <Link to="/identities" as={undefined}>
+            <Link to="/identities">
               <KeySquare className="h-4 w-4" />
               Reset Credencial
             </Link>

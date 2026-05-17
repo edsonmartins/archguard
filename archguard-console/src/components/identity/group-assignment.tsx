@@ -75,7 +75,7 @@ export function PersonGroupAssignment({
           <CardTitle className="text-base">
             Grupos ({person.groupNames.length})
           </CardTitle>
-          <PermissionGate require="groups:manage">
+          <PermissionGate require="groups:members">
             <Button
               variant="outline"
               size="sm"
@@ -99,7 +99,7 @@ export function PersonGroupAssignment({
                   className="flex items-center justify-between rounded-lg border p-3"
                 >
                   <GroupBadge name={groupName} />
-                  <PermissionGate require="groups:manage">
+                  <PermissionGate require="groups:members">
                     <Button
                       variant="ghost"
                       size="icon"

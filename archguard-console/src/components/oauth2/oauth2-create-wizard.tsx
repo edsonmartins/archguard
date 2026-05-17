@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { useForm } from '@tanstack/react-form'
+import { useForm, useStore } from '@tanstack/react-form'
 import {
   ArrowLeft,
   ArrowRight,
@@ -20,8 +20,10 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { useQueryClient } from '@tanstack/react-query'
 import { useCreateOAuth2Client, useSetScopeMap } from '@/lib/hooks/use-oauth2'
 import { useGroups } from '@/lib/hooks/use-groups'
+import { queryKeys } from '@/lib/utils/query-keys'
 
 const STEPS = [
   { id: 'type', label: 'Tipo', icon: Shield },
@@ -38,6 +40,7 @@ interface ScopeMapEntry {
 
 export function OAuth2CreateWizard() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const createClient = useCreateOAuth2Client()
   const setScopeMap = useSetScopeMap()
   const { data: groups } = useGroups()
@@ -57,32 +60,25 @@ export function OAuth2CreateWizard() {
       redirect_urls: [] as string[],
     },
     onSubmit: async ({ value }) => {
-      createClient.mutate(
-        {
-          name: value.name,
-          displayname: value.displayname,
-          origin_landing: value.origin_landing,
-          type: value.type,
-        },
-        {
-          onSuccess: () => {
-            // Apply scope maps if any
-            if (scopeMaps.length > 0) {
-              Promise.all(
-                scopeMaps.map((sm) =>
-                  setScopeMap.mutateAsync({
-                    clientId: value.name,
-                    groupId: sm.groupId,
-                    scopes: sm.scopes,
-                  }),
-                ),
-              ).then(() => navigate({ to: '/oauth2' }))
-            } else {
-              navigate({ to: '/oauth2' })
-            }
-          },
-        },
-      )
+      await createClient.mutateAsync({
+        name: value.name,
+        displayname: value.displayname,
+        origin_landing: value.origin_landing,
+        type: value.type,
+      })
+      if (scopeMaps.length > 0) {
+        await Promise.all(
+          scopeMaps.map((sm) =>
+            setScopeMap.mutateAsync({
+              clientId: value.name,
+              groupId: sm.groupId,
+              scopes: sm.scopes,
+            }),
+          ),
+        )
+      }
+      queryClient.removeQueries({ queryKey: queryKeys.oauth2.all })
+      navigate({ to: '/oauth2' })
     },
   })
 
@@ -116,10 +112,17 @@ export function OAuth2CreateWizard() {
     setScopeInput('')
   }
 
+  // Subscribe so the Próximo button reactively re-renders as the user
+  // types — `form.state.values` alone is read once per render, which keeps
+  // the button stuck on its initial disabled value.
+  const values = useStore(form.store, (s) => s.values)
   const canAdvance = () => {
     if (step === 1) {
-      const v = form.state.values
-      return v.name.length >= 2 && v.displayname.length >= 1 && v.origin_landing.length > 0
+      return (
+        values.name.length >= 2 &&
+        values.displayname.length >= 1 &&
+        values.origin_landing.length > 0
+      )
     }
     return true
   }

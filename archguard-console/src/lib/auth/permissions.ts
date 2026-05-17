@@ -96,6 +96,7 @@ const GROUP_PERMISSIONS: Record<string, Permission[]> = {
     'groups:members',
   ],
   archguard_admins: ['system:admin'],
+  archguard_super_admins: ['system:admin'],
 }
 
 export function derivePermissions(groups: string[]): Permission[] {

@@ -188,7 +188,7 @@ export function normalizeServiceAccount(raw: KanidmEntry): ServiceAccount {
   return {
     id: a.uuid?.[0] ?? '',
     name: a.name?.[0] ?? '',
-    displayName: a.displayname?.[0] ?? '',
+    displayName: a.displayname?.[0] ?? a.name?.[0] ?? '',
     description: a.description?.[0],
     groups: memberOf,
     groupNames: memberOf,

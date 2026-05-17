@@ -1,7 +1,7 @@
 // src/lib/hooks/use-activity-log.ts
 
 import { useQuery } from '@tanstack/react-query'
-import { getActivityLogFn } from '@/server/activity-log'
+import { getActivityLogFn } from '@/server/activity-log-fn'
 import type { ActivityLogEntry } from '@/lib/api/types/kanidm'
 
 export function useActivityLog() {

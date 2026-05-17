@@ -1,18 +1,15 @@
 // src/server/activity-log.ts
-// Server-side activity log for tracking mutations via the console.
-// Kanidm v1.9 has no public audit API, so we log mutation requests
-// made through the proxy to provide basic activity visibility.
+//
+// Persisted activity log for tracking mutations made through the console.
+// Kanidm v1.9 has no public audit API, so we record every mutation that
+// crosses our proxy. The store survives restarts (SQLite, see db.ts).
 
-import { createServerFn } from '@tanstack/react-start'
 import { getCookie } from '@tanstack/react-start/server'
+import { z } from 'zod'
 import { decryptSession } from './session'
+import { getDb } from './db'
 import type { SessionData } from './auth'
 import type { ActivityLogEntry } from '@/lib/api/types/kanidm'
-
-const MAX_ENTRIES = 500
-
-// In-memory circular buffer (persists for server lifetime)
-const entries: ActivityLogEntry[] = []
 
 function getActor(): string {
   try {
@@ -26,8 +23,8 @@ function getActor(): string {
 }
 
 /**
- * Record a mutation in the activity log.
- * Called by kanidm-proxy after successful write operations.
+ * Record a mutation in the activity log. Called by kanidm-proxy after
+ * each write operation, success or failure.
  */
 export function recordActivity(
   method: string,
@@ -35,35 +32,40 @@ export function recordActivity(
   actor: string,
   result: 'success' | 'error',
   errorMessage?: string,
-) {
-  // Derive human-readable action from method + path
-  const action = deriveAction(method, path)
-  const target = deriveTarget(path)
-
+  body?: unknown,
+): void {
+  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const entry: ActivityLogEntry = {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id,
     timestamp: new Date().toISOString(),
     actor,
-    action,
+    action: deriveAction(method, path),
     method,
     path,
-    target,
+    // POST /v1/<resource> creates carry the resource name in the body's
+    // `attrs.name`, not in the URL — fall back to that so the audit row
+    // is searchable by the new entity's identifier.
+    target: deriveTarget(path) ?? deriveTargetFromBody(body),
     result,
     errorMessage,
   }
 
-  entries.unshift(entry)
-  if (entries.length > MAX_ENTRIES) {
-    entries.length = MAX_ENTRIES
-  }
+  getDb()
+    .prepare(
+      `INSERT INTO activity_log
+         (id, timestamp, actor, action, method, path, target, result, error_message)
+       VALUES
+         (@id, @timestamp, @actor, @action, @method, @path, @target, @result, @errorMessage)`,
+    )
+    .run(entry)
 }
 
 function deriveAction(method: string, path: string): string {
   const segments = path.split('/').filter(Boolean)
-  const resource = segments[1] ?? '' // v1/person → person
+  const resource = segments[1] ?? ''
 
   if (method === 'POST' && !path.includes('/_')) return `Criar ${resource}`
-  if (method === 'DELETE') return `Excluir ${resource}`
+  if (method === 'DELETE' && !path.includes('/_')) return `Excluir ${resource}`
   if (method === 'PUT' || method === 'PATCH') return `Atualizar ${resource}`
   if (path.includes('/_attr/member') && method === 'POST') return 'Adicionar membro'
   if (path.includes('/_attr/member') && method === 'DELETE') return 'Remover membro'
@@ -77,23 +79,74 @@ function deriveAction(method: string, path: string): string {
 }
 
 function deriveTarget(path: string): string | undefined {
-  // Extract the entity ID/name from the path
-  // /v1/person/{id}/_attr/mail → {id}
   const segments = path.split('/').filter(Boolean)
   if (segments.length >= 3) {
     const id = segments[2]
-    // Skip if it looks like a sub-resource prefix (starts with _)
     if (id && !id.startsWith('_')) return decodeURIComponent(id)
   }
   return undefined
 }
 
+function deriveTargetFromBody(body: unknown): string | undefined {
+  if (!body || typeof body !== 'object') return undefined
+  const attrs = (body as { attrs?: { name?: string[] } }).attrs
+  return attrs?.name?.[0]
+}
+
 // ── Server Functions ────────────────────────────
 
-export const getActivityLogFn = createServerFn({ method: 'GET' }).handler(
-  async (): Promise<ActivityLogEntry[]> => {
-    return entries
-  },
-)
+const queryFiltersSchema = z.object({
+  limit: z.number().int().min(1).max(1000).optional(),
+  offset: z.number().int().min(0).optional(),
+  actor: z.string().max(256).optional(),
+  result: z.enum(['success', 'error']).optional(),
+  since: z.string().datetime().optional(),
+  until: z.string().datetime().optional(),
+})
+
+export type ActivityLogFilters = z.infer<typeof queryFiltersSchema>
+
+export function queryActivityLog(filters: ActivityLogFilters = {}): ActivityLogEntry[] {
+  const conditions: string[] = []
+  const params: Record<string, unknown> = {}
+  if (filters.actor) {
+    conditions.push('actor = @actor')
+    params.actor = filters.actor
+  }
+  if (filters.result) {
+    conditions.push('result = @result')
+    params.result = filters.result
+  }
+  if (filters.since) {
+    conditions.push('timestamp >= @since')
+    params.since = filters.since
+  }
+  if (filters.until) {
+    conditions.push('timestamp <= @until')
+    params.until = filters.until
+  }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+  const limit = filters.limit ?? 200
+  const offset = filters.offset ?? 0
+
+  const rows = getDb()
+    .prepare(
+      `SELECT id, timestamp, actor, action, method, path, target, result,
+              error_message AS errorMessage
+       FROM activity_log
+       ${where}
+       ORDER BY timestamp DESC, rowid DESC
+       LIMIT ${limit} OFFSET ${offset}`,
+    )
+    .all(params) as ActivityLogEntry[]
+
+  // SQLite returns null for missing optional columns; normalize to undefined
+  // so the response shape matches the in-memory format used by tests.
+  return rows.map((r) => ({
+    ...r,
+    target: r.target ?? undefined,
+    errorMessage: r.errorMessage ?? undefined,
+  }))
+}
 
 export { getActor }

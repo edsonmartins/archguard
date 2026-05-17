@@ -104,7 +104,7 @@ export function AppSidebar() {
         <Link to="/dashboard" className="flex items-center gap-2">
           <ShieldCheck className="h-6 w-6 text-primary" />
           <div>
-            <h1 className="text-base font-bold leading-none">ArchGuard</h1>
+            <span className="text-base font-bold leading-none">ArchGuard</span>
             <p className="text-xs text-muted-foreground">Console</p>
           </div>
         </Link>

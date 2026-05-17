@@ -2,12 +2,17 @@
 
 import { createServerFn } from '@tanstack/react-start'
 import { getCookie } from '@tanstack/react-start/server'
+import { z } from 'zod'
 import { decryptSession } from './session'
 import { recordActivity, getActor } from './activity-log'
+import { logger } from './logger'
+import { enforceRateLimit } from './rate-limit'
 import type { SessionData } from './auth'
 
 const KANIDM_URL = process.env.ARCHGUARD_ID_URL || 'https://localhost:8443'
 const KANIDM_SA_TOKEN = process.env.ARCHGUARD_SA_TOKEN!
+const PROXY_LIMIT = 60
+const PROXY_WINDOW_MS = 60 * 1000
 
 // Allowed API path prefixes to prevent SSRF
 const ALLOWED_PATH_PREFIXES = [
@@ -21,11 +26,22 @@ const ALLOWED_PATH_PREFIXES = [
   '/status',
 ]
 
-function isAllowedPath(path: string): boolean {
-  // Normalize: remove double slashes, trailing slash
+const proxyRequestSchema = z.object({
+  method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
+  path: z.string().min(1).max(2048).startsWith('/'),
+  body: z.unknown().optional(),
+})
+
+export function isAllowedPath(path: string): boolean {
+  // Normalize: collapse repeated slashes, strip trailing slash.
   const normalized = path.replace(/\/+/g, '/').replace(/\/$/, '')
 
-  // Must start with an allowed prefix
+  // Reject path-traversal segments that would let the request escape the
+  // allowlist after the upstream resolves them.
+  const segments = normalized.split('/')
+  if (segments.some((s) => s === '..' || s === '.')) return false
+
+  // Must start with an allowed prefix.
   return ALLOWED_PATH_PREFIXES.some(
     (prefix) =>
       normalized === prefix || normalized.startsWith(prefix + '/'),
@@ -44,21 +60,31 @@ function isAuthenticated(): boolean {
 }
 
 export const kanidmApiFn = createServerFn({ method: 'POST' })
-  .inputValidator(
-    (data: {
-      method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-      path: string
-      body?: unknown
-    }) => data,
-  )
+  .inputValidator((data: unknown) => {
+    const result = proxyRequestSchema.safeParse(data)
+    if (!result.success) {
+      throw new Error(`Invalid proxy request: ${result.error.message}`)
+    }
+    return result.data
+  })
   .handler(async ({ data }) => {
+    enforceRateLimit('proxy', PROXY_LIMIT, PROXY_WINDOW_MS)
+
     // Auth check: only authenticated users can use the proxy
     if (!isAuthenticated()) {
+      logger.warn(
+        { method: data.method, path: data.path },
+        'proxy: rejected unauthenticated request',
+      )
       throw new Error('Unauthorized: session required')
     }
 
     // SSRF prevention: validate path against allowlist
     if (!isAllowedPath(data.path)) {
+      logger.warn(
+        { actor: getActor(), method: data.method, path: data.path },
+        'proxy: rejected path not in allowlist',
+      )
       throw new Error(`Forbidden path: ${data.path}`)
     }
 
@@ -76,13 +102,36 @@ export const kanidmApiFn = createServerFn({ method: 'POST' })
     if (!response.ok) {
       const error = await response.text()
       if (isMutation) {
-        recordActivity(data.method, data.path, getActor(), 'error', error)
+        recordActivity(
+          data.method,
+          data.path,
+          getActor(),
+          'error',
+          error,
+          data.body,
+        )
       }
+      logger.error(
+        {
+          actor: getActor(),
+          method: data.method,
+          path: data.path,
+          status: response.status,
+        },
+        'proxy: kanidm api error',
+      )
       throw new Error(`Kanidm API ${response.status}: ${error}`)
     }
 
     if (isMutation) {
-      recordActivity(data.method, data.path, getActor(), 'success')
+      recordActivity(
+        data.method,
+        data.path,
+        getActor(),
+        'success',
+        undefined,
+        data.body,
+      )
     }
 
     const text = await response.text()

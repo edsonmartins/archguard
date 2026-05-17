@@ -87,7 +87,7 @@ export function GroupListPage() {
               <span className="font-medium">{group.name}</span>
               {group.isBuiltin && (
                 <Tooltip>
-                  <TooltipTrigger>
+                  <TooltipTrigger aria-label="Grupo do sistema">
                     <Lock className="h-3 w-3 text-muted-foreground" />
                   </TooltipTrigger>
                   <TooltipContent>Grupo do sistema (somente leitura)</TooltipContent>
@@ -127,7 +127,12 @@ export function GroupListPage() {
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  aria-label="Ações"
+                >
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -190,7 +195,7 @@ export function GroupListPage() {
         </div>
         <PermissionGate require="groups:create">
           <Button asChild>
-            <Link to="/groups/create" as={undefined}>
+            <Link to="/groups/create">
               <UsersRound className="mr-2 h-4 w-4" />
               Novo Grupo
             </Link>
@@ -214,6 +219,7 @@ export function GroupListPage() {
             size="icon"
             className="h-9 w-9 rounded-r-none"
             onClick={() => setViewMode('list')}
+            aria-label="Visualizar como lista"
           >
             <List className="h-4 w-4" />
           </Button>
@@ -222,6 +228,7 @@ export function GroupListPage() {
             size="icon"
             className="h-9 w-9 rounded-l-none"
             onClick={() => setViewMode('tree')}
+            aria-label="Visualizar como árvore"
           >
             <Network className="h-4 w-4" />
           </Button>

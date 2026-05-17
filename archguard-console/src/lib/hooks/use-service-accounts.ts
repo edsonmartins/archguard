@@ -90,7 +90,17 @@ export function useGenerateApiToken() {
       id: string
       label: string
       expiry?: string
-    }) => serviceAccountApi.generateToken(id, label, expiry) as Promise<{ token: string }>,
+    }) =>
+      serviceAccountApi
+        .generateToken(id, label, expiry)
+        .then((raw) => ({
+          // Kanidm returns the token as a bare JSON string; older code expected
+          // an envelope so we adapt to a uniform { token } shape.
+          token:
+            typeof raw === 'string'
+              ? raw
+              : (raw as { token?: string })?.token ?? '',
+        })),
     onSuccess: (_data, { id }) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.serviceAccounts.detail(id),

@@ -11,12 +11,10 @@ import {
   Settings,
   Trash2,
   Plus,
-  Copy,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -129,7 +127,7 @@ export function ServiceAccountDetailPage() {
             <p className="text-sm text-muted-foreground">
               {account.apiTokens.length} token(s) ativo(s)
             </p>
-            <PermissionGate require="service_accounts:manage">
+            <PermissionGate require="service_accounts:tokens">
               <Button
                 variant="outline"
                 size="sm"
@@ -173,7 +171,7 @@ export function ServiceAccountDetailPage() {
                       )}
                     </div>
                   </div>
-                  <PermissionGate require="service_accounts:manage">
+                  <PermissionGate require="service_accounts:tokens">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -225,10 +223,10 @@ export function ServiceAccountDetailPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <InfoRow label="ID" value={account.id}>
-                <CopyButton text={account.id} />
+                <CopyButton value={account.id} />
               </InfoRow>
               <InfoRow label="SPN" value={account.name}>
-                <CopyButton text={account.name} />
+                <CopyButton value={account.name} />
               </InfoRow>
               <InfoRow label="Nome" value={account.displayName} />
               <InfoRow
@@ -254,17 +252,18 @@ export function ServiceAccountDetailPage() {
             <>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label>Label do Token</Label>
+                  <Label htmlFor="token-label">Label do Token</Label>
                   <Input
+                    id="token-label"
                     value={tokenLabel}
                     onChange={(e) => setTokenLabel(e.target.value)}
                     placeholder="ci-pipeline-token"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Expiração</Label>
+                  <Label htmlFor="token-expiry">Expiração</Label>
                   <Select value={tokenExpiry} onValueChange={setTokenExpiry}>
-                    <SelectTrigger>
+                    <SelectTrigger id="token-expiry">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -302,7 +301,7 @@ export function ServiceAccountDetailPage() {
                       value={generatedToken}
                       className="font-mono text-xs"
                     />
-                    <CopyButton text={generatedToken} />
+                    <CopyButton value={generatedToken} />
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">

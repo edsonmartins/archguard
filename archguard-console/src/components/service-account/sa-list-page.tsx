@@ -138,7 +138,12 @@ export function ServiceAccountListPage() {
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  aria-label="Ações"
+                >
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -181,6 +186,17 @@ export function ServiceAccountListPage() {
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    // The SPN (`name`) isn't a visible column, but the search field should
+    // accept it — the test suite and humans both type it.
+    globalFilterFn: (row, _columnId, filterValue: string) => {
+      const q = String(filterValue).toLowerCase()
+      const sa = row.original
+      return (
+        sa.displayName.toLowerCase().includes(q) ||
+        sa.name.toLowerCase().includes(q) ||
+        (sa.description?.toLowerCase().includes(q) ?? false)
+      )
+    },
     initialState: { pagination: { pageSize: 25 } },
   })
 
@@ -201,7 +217,7 @@ export function ServiceAccountListPage() {
         </div>
         <PermissionGate require="service_accounts:create">
           <Button asChild>
-            <Link to="/service-accounts/create" as={undefined}>
+            <Link to="/service-accounts/create">
               <Plus className="mr-2 h-4 w-4" />
               Novo Service Account
             </Link>
