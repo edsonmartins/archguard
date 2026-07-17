@@ -6,7 +6,7 @@ import { StatsCards } from '@/components/dashboard/stats-cards'
 import { SystemHealth } from '@/components/dashboard/system-health'
 import { QuickActions } from '@/components/dashboard/quick-actions'
 import { personApi, groupApi, oauth2Api, systemApi } from '@/lib/api/kanidm-client'
-import { vaultApi } from '@/lib/api/vault-client'
+import { getOpenBaoStatusFn } from '@/server/openbao-fn'
 import { queryKeys } from '@/lib/utils/query-keys'
 import { useTenantFilter } from '@/lib/hooks/use-tenant-filter'
 
@@ -14,10 +14,18 @@ export const Route = createFileRoute('/_authed/dashboard')({
   component: DashboardPage,
 })
 
+/** Kanidm /status returns bare `true`, not `{ state: "ok" }`. */
+function isKanidmOnline(data: unknown): boolean {
+  if (data === true || data === 'true') return true
+  if (data && typeof data === 'object') {
+    const d = data as Record<string, unknown>
+    if (d.state === 'ok' || d.ok === true) return true
+  }
+  return false
+}
+
 function DashboardPage() {
   const { filterPersons, filterGroups, filterOAuth2 } = useTenantFilter()
-
-  // Single admin surface (ADR-006): operators use UnifiedUI; break-glass UIs optional
 
   const persons = useQuery({
     queryKey: queryKeys.persons.all,
@@ -43,9 +51,10 @@ function DashboardPage() {
     staleTime: 10_000,
   })
 
-  const vault = useQuery({
-    queryKey: queryKeys.vault.status,
-    queryFn: () => vaultApi.status(),
+  // OpenBao (ArchGate secrets) — not AliasVault
+  const openbao = useQuery({
+    queryKey: ['openbao', 'status', 'dashboard'],
+    queryFn: () => getOpenBaoStatusFn(),
     staleTime: 30_000,
   })
 
@@ -58,26 +67,44 @@ function DashboardPage() {
     groups.isLoading ||
     oauth2.isLoading
 
+  const kanidmOk = !system.isError && isKanidmOnline(system.data)
+  const baoHealth = openbao.data?.health as
+    | { sealed?: boolean; initialized?: boolean; version?: string }
+    | null
+    | undefined
+  const openbaoOk =
+    !openbao.isError &&
+    Boolean(openbao.data?.configured) &&
+    baoHealth != null &&
+    baoHealth.sealed === false
+
   const services = [
     {
       name: 'ArchGuard ID (Kanidm)',
-      status: system.data
-        ? ((system.data as Record<string, string>).state === 'ok'
-            ? 'ok'
-            : 'error')
+      status: system.isLoading
+        ? ('ok' as const)
         : system.isError
-          ? 'unreachable'
-          : ('ok' as const),
-      version: (system.data as Record<string, string>)?.version,
+          ? ('unreachable' as const)
+          : kanidmOk
+            ? ('ok' as const)
+            : ('error' as const),
+      version:
+        system.data && typeof system.data === 'object'
+          ? String((system.data as Record<string, string>).version || '')
+          : undefined,
     },
     {
-      name: 'ArchGuard Vault',
-      status: vault.data?.online
-        ? 'ok'
-        : vault.isError
-          ? 'unreachable'
-          : ('error' as const),
-      version: vault.data?.version,
+      name: 'OpenBao (segredos)',
+      status: openbao.isLoading
+        ? ('ok' as const)
+        : openbao.isError
+          ? ('unreachable' as const)
+          : openbaoOk
+            ? ('ok' as const)
+            : openbao.data?.configured
+              ? ('error' as const)
+              : ('unreachable' as const),
+      version: baoHealth?.version,
     },
   ]
 
@@ -95,14 +122,20 @@ function DashboardPage() {
         personsCount={filteredPersons.length}
         groupsCount={filteredGroups.length}
         oauth2Count={filteredOAuth2.length}
-        vaultOnline={vault.data?.online}
+        vaultOnline={openbaoOk}
         isLoading={isLoading}
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <SystemHealth
-          services={services as { name: string; status: 'ok' | 'error' | 'unreachable'; version?: string }[]}
-          isLoading={system.isLoading}
+          services={
+            services as {
+              name: string
+              status: 'ok' | 'error' | 'unreachable'
+              version?: string
+            }[]
+          }
+          isLoading={system.isLoading || openbao.isLoading}
         />
         <QuickActions />
       </div>
