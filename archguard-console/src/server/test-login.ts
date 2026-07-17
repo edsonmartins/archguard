@@ -166,7 +166,9 @@ export const testLoginFn = createServerFn({ method: 'POST' })
 
     setCookie('archguard_session', encryptSession(session), {
       httpOnly: true,
-      secure: false, // dev/test only; never reached in prod
+      // Lab HTTPS (console.archgate.com.br) needs Secure so browsers keep the cookie.
+      // Local Playwright http://localhost keeps secure=false via ARCHGUARD_E2E_INSECURE_COOKIE=1.
+      secure: process.env.ARCHGUARD_E2E_INSECURE_COOKIE !== '1',
       sameSite: 'lax',
       path: '/',
       maxAge: 86_400,
