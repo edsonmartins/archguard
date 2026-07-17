@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Activity } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface ServiceStatus {
   name: string
@@ -17,11 +18,27 @@ interface SystemHealthProps {
 
 const statusConfig: Record<
   string,
-  { label: string; variant: 'default' | 'secondary' | 'destructive' }
+  {
+    label: string
+    variant: 'default' | 'secondary' | 'destructive' | 'outline'
+    className?: string
+  }
 > = {
-  ok: { label: 'Online', variant: 'default' },
-  error: { label: 'Erro', variant: 'destructive' },
-  unreachable: { label: 'Indisponível', variant: 'secondary' },
+  ok: {
+    label: 'Online',
+    variant: 'outline',
+    // Verde semântico (não usar primary/preto)
+    className:
+      'border-transparent bg-emerald-600 text-white hover:bg-emerald-600/90 dark:bg-emerald-600 dark:text-white',
+  },
+  error: {
+    label: 'Erro',
+    variant: 'destructive',
+  },
+  unreachable: {
+    label: 'Indisponível',
+    variant: 'secondary',
+  },
 }
 
 export function SystemHealth({ services, isLoading }: SystemHealthProps) {
@@ -43,7 +60,8 @@ export function SystemHealth({ services, isLoading }: SystemHealthProps) {
                 </div>
               ))
             : services.map((service) => {
-                const config = statusConfig[service.status] ?? statusConfig.unreachable!
+                const config =
+                  statusConfig[service.status] ?? statusConfig.unreachable!
                 return (
                   <div
                     key={service.name}
@@ -57,7 +75,12 @@ export function SystemHealth({ services, isLoading }: SystemHealthProps) {
                         </p>
                       )}
                     </div>
-                    <Badge variant={config.variant}>{config.label}</Badge>
+                    <Badge
+                      variant={config.variant}
+                      className={cn(config.className)}
+                    >
+                      {config.label}
+                    </Badge>
                   </div>
                 )
               })}
