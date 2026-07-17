@@ -4,22 +4,16 @@
 // Kanidm v1.9 has no public audit API, so we record every mutation that
 // crosses our proxy. The store survives restarts (SQLite, see db.ts).
 
-import { getCookie } from '@tanstack/react-start/server'
 import { z } from 'zod'
-import { decryptSession } from './session'
 import { getDb } from './db'
-import type { SessionData } from './auth'
 import type { ActivityLogEntry } from '@/lib/api/types/kanidm'
+import { getSessionOrNull, sessionActor } from './session-guard'
+import { logger } from './logger'
 
-function getActor(): string {
-  try {
-    const sessionCookie = getCookie('archguard_session')
-    if (!sessionCookie) return 'unknown'
-    const session = decryptSession<SessionData>(sessionCookie)
-    return session.user?.name ?? 'unknown'
-  } catch {
-    return 'unknown'
-  }
+export function getActor(): string {
+  const s = getSessionOrNull()
+  if (!s) return 'unknown'
+  return sessionActor(s)
 }
 
 /**
@@ -50,19 +44,33 @@ export function recordActivity(
     errorMessage,
   }
 
-  getDb()
-    .prepare(
-      `INSERT INTO activity_log
-         (id, timestamp, actor, action, method, path, target, result, error_message)
-       VALUES
-         (@id, @timestamp, @actor, @action, @method, @path, @target, @result, @errorMessage)`,
-    )
-    .run(entry)
+  try {
+    getDb()
+      .prepare(
+        `INSERT INTO activity_log
+           (id, timestamp, actor, action, method, path, target, result, error_message)
+         VALUES
+           (@id, @timestamp, @actor, @action, @method, @path, @target, @result, @errorMessage)`,
+      )
+      .run(entry)
+  } catch (err) {
+    // Never fail the primary mutation because audit write failed (e.g. empty/corrupt sqlite).
+    logger.warn({ err: String(err), action: entry.action }, 'activity_log insert failed')
+  }
 }
 
 function deriveAction(method: string, path: string): string {
   const segments = path.split('/').filter(Boolean)
   const resource = segments[1] ?? ''
+
+  // ArchGate control plane
+  if (path.startsWith('/archgate/sites')) {
+    if (path.includes('/import')) return 'Importar site YAML'
+    if (method === 'DELETE') return 'Excluir site'
+    if (method === 'PUT' || method === 'POST') return 'Salvar site'
+  }
+  if (path.startsWith('/archgate/connector')) return 'Checklist connector'
+  if (path.includes('mentors-axis')) return 'Sync Mentors Axis'
 
   if (method === 'POST' && !path.includes('/_')) return `Criar ${resource}`
   if (method === 'DELETE' && !path.includes('/_')) return `Excluir ${resource}`
@@ -148,5 +156,3 @@ export function queryActivityLog(filters: ActivityLogFilters = {}): ActivityLogE
     errorMessage: r.errorMessage ?? undefined,
   }))
 }
-
-export { getActor }
