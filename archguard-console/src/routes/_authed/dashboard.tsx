@@ -17,6 +17,8 @@ export const Route = createFileRoute('/_authed/dashboard')({
 function DashboardPage() {
   const { filterPersons, filterGroups, filterOAuth2 } = useTenantFilter()
 
+  // Single admin surface (ADR-006): operators use UnifiedUI; break-glass UIs optional
+
   const persons = useQuery({
     queryKey: queryKeys.persons.all,
     queryFn: () => personApi.list(),
@@ -84,7 +86,8 @@ function DashboardPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground">
-          Visão geral do ArchGuard Console
+          Interface única de administração ArchGate — identidade, sites, gateways e
+          segredos. Operadores usam a UnifiedUI; UIs stock são break-glass.
         </p>
       </div>
 
