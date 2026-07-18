@@ -2,6 +2,8 @@
 
 import { useState, useMemo } from 'react'
 import { Link } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
+import { enumLabel } from '@/lib/i18n/labels'
 import {
   useReactTable,
   getCoreRowModel,
@@ -52,6 +54,7 @@ import { initials } from '@/lib/utils/formatters'
 import type { Person } from '@/lib/api/types/kanidm'
 
 export function PersonListPage() {
+  const { t } = useTranslation()
   const { data: persons, isLoading } = usePersons()
   const deletePerson = useDeletePerson()
   const { filterPersons } = useTenantFilter()
@@ -306,22 +309,27 @@ export function PersonListPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nome, email ou username..."
+            placeholder={t('identities.search')}
             value={globalFilter}
             onChange={(e) => setGlobalFilter(e.target.value)}
             className="pl-10"
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger aria-label="Filtrar por status" className="w-[150px]">
-            <SelectValue placeholder="Status" />
+          <SelectTrigger
+            aria-label={t('identities.filterStatus')}
+            className="w-[160px]"
+          >
+            <SelectValue placeholder={t('identities.columns.status')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="active">Ativos</SelectItem>
-            <SelectItem value="locked">Bloqueados</SelectItem>
-            <SelectItem value="expired">Expirados</SelectItem>
-            <SelectItem value="disabled">Desabilitados</SelectItem>
+            {(
+              ['all', 'active', 'locked', 'expired', 'disabled'] as const
+            ).map((s) => (
+              <SelectItem key={s} value={s}>
+                {enumLabel(t, 'personStatus', s)}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -338,7 +346,7 @@ export function PersonListPage() {
 
       {filteredData.length === 0 ? (
         <EmptyState
-          title="Nenhuma pessoa encontrada"
+          title={t('identities.emptyPeople')}
           description="Crie uma nova pessoa ou ajuste os filtros de busca."
           action={{ label: 'Nova Pessoa', to: '/identities/create' }}
         />
@@ -419,7 +427,7 @@ export function PersonListPage() {
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Excluir Pessoa"
+        title={t('identities.deletePerson')}
         description={`Esta ação é irreversível. Todos os dados de ${deleteTarget?.displayName} serão permanentemente removidos.`}
         confirmText={deleteTarget?.username ?? ''}
         destructive

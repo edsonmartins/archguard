@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 // src/components/identity/bulk-actions-toolbar.tsx
 
 import { useState } from 'react'
@@ -36,6 +37,7 @@ export function BulkActionsToolbar({
   selectedPersons,
   onClearSelection,
 }: BulkActionsToolbarProps) {
+  const { t } = useTranslation()
   const { data: groups } = useGroups()
   const addMembers = useAddGroupMembers()
   const removeMembers = useRemoveGroupMembers()
@@ -143,7 +145,7 @@ export function BulkActionsToolbar({
             onClick={() => setActiveAction('add-group')}
           >
             <UsersRound className="mr-2 h-4 w-4" />
-            Adicionar a Grupo
+            {t('identities.addToGroup')}
           </Button>
           <Button
             variant="ghost"
@@ -151,7 +153,7 @@ export function BulkActionsToolbar({
             onClick={() => setActiveAction('remove-group')}
           >
             <UserMinus className="mr-2 h-4 w-4" />
-            Remover de Grupo
+            {t('identities.removeFromGroup')}
           </Button>
         </PermissionGate>
 
@@ -177,7 +179,7 @@ export function BulkActionsToolbar({
           size="icon"
           className="h-8 w-8"
           onClick={onClearSelection}
-          aria-label="Limpar seleção"
+          aria-label={t('identities.clearSelection')}
         >
           <X className="h-4 w-4" />
         </Button>
@@ -192,8 +194,8 @@ export function BulkActionsToolbar({
           <DialogHeader>
             <DialogTitle>
               {activeAction === 'add-group'
-                ? 'Adicionar a Grupo'
-                : 'Remover de Grupo'}
+                ? t('identities.addToGroup')
+                : t('identities.removeFromGroup')}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -211,7 +213,7 @@ export function BulkActionsToolbar({
                   <Input
                     value={groupSearch}
                     onChange={(e) => setGroupSearch(e.target.value)}
-                    placeholder="Buscar grupos..."
+                    placeholder={t('identities.searchGroups')}
                     className="pl-10"
                   />
                 </div>

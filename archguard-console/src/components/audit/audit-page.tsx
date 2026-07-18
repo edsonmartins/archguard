@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 // src/components/audit/audit-page.tsx
 // Repurposed: Activity Log (console-side) instead of Kanidm audit (not available)
 
@@ -39,6 +40,7 @@ import { useActivityLog } from '@/lib/hooks/use-activity-log'
 import type { ActivityLogEntry } from '@/lib/api/types/kanidm'
 
 export function AuditPage() {
+  const { t, i18n } = useTranslation()
   const { data: entries, isLoading } = useActivityLog()
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'timestamp', desc: true },
@@ -49,13 +51,13 @@ export function AuditPage() {
     () => [
       {
         accessorKey: 'timestamp',
-        header: 'Data/Hora',
+        header: t('audit.columns.timestamp'),
         cell: ({ row }) => {
           const d = new Date(row.original.timestamp)
           return (
             <span className="text-sm tabular-nums">
-              {d.toLocaleDateString('pt-BR')}{' '}
-              {d.toLocaleTimeString('pt-BR')}
+              {d.toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'pt-BR')}{' '}
+              {d.toLocaleTimeString(i18n.language === 'en' ? 'en-US' : 'pt-BR')}
             </span>
           )
         },
@@ -63,21 +65,21 @@ export function AuditPage() {
       },
       {
         accessorKey: 'action',
-        header: 'Ação',
+        header: t('audit.columns.action'),
         cell: ({ row }) => (
           <span className="text-sm font-medium">{row.original.action}</span>
         ),
       },
       {
         accessorKey: 'actor',
-        header: 'Ator',
+        header: t('audit.columns.actor'),
         cell: ({ row }) => (
           <span className="font-mono text-sm">{row.original.actor}</span>
         ),
       },
       {
         accessorKey: 'target',
-        header: 'Alvo',
+        header: t('audit.columns.target'),
         cell: ({ row }) => (
           <span className="text-sm text-muted-foreground">
             {row.original.target ?? '—'}
@@ -96,7 +98,7 @@ export function AuditPage() {
       },
       {
         accessorKey: 'result',
-        header: 'Resultado',
+        header: t('audit.columns.result'),
         cell: ({ row }) => {
           const ok = row.original.result === 'success'
           return (
@@ -165,7 +167,7 @@ export function AuditPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Log de Atividades</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('audit.title')}</h1>
           <p className="text-muted-foreground">
             Registro de operações realizadas pelo console
           </p>
@@ -197,7 +199,7 @@ export function AuditPage() {
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Buscar por ator, ação ou alvo..."
+          placeholder={t('audit.search')}
           value={globalFilter}
           onChange={(e) => setGlobalFilter(e.target.value)}
           className="pl-10"
@@ -207,8 +209,8 @@ export function AuditPage() {
       {!entries || entries.length === 0 ? (
         <EmptyState
           icon={ClipboardList}
-          title="Nenhuma atividade registrada"
-          description="O log começará a ser preenchido conforme operações de escrita forem executadas pelo console."
+          title={t('audit.empty')}
+          description={t('audit.emptyHint')}
         />
       ) : (
         <>

@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { useNavigate, Link } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
+import { enumLabel } from '@/lib/i18n/labels'
 import { Route } from '@/routes/_authed/service-accounts/$accountId'
 import {
   ArrowLeft,
@@ -46,6 +48,7 @@ import {
 } from '@/lib/hooks/use-service-accounts'
 
 export function ServiceAccountDetailPage() {
+  const { t } = useTranslation()
   const { accountId } = Route.useParams()
   const navigate = useNavigate()
   const { data: account, isLoading } = useServiceAccount(accountId)
@@ -219,7 +222,7 @@ export function ServiceAccountDetailPage() {
         <TabsContent value="config">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Informações</CardTitle>
+              <CardTitle className="text-base">{t('common.info')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <InfoRow label="ID" value={account.id}>
@@ -230,8 +233,8 @@ export function ServiceAccountDetailPage() {
               </InfoRow>
               <InfoRow label="Nome" value={account.displayName} />
               <InfoRow
-                label="Descrição"
-                value={account.description ?? 'Sem descrição'}
+                label={t('common.description')}
+                value={account.description ?? t('common.noDescription')}
               />
               <InfoRow label="Status" value="">
                 <StatusBadge status={account.status as 'active' | 'expired' | 'disabled'} />
@@ -245,14 +248,14 @@ export function ServiceAccountDetailPage() {
       <Dialog open={showGenerateToken} onOpenChange={handleCloseTokenDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Gerar Token de API</DialogTitle>
+            <DialogTitle>{t('serviceAccounts.generateToken')}</DialogTitle>
           </DialogHeader>
 
           {!generatedToken ? (
             <>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="token-label">Label do Token</Label>
+                  <Label htmlFor="token-label">{t('serviceAccounts.tokenLabel')}</Label>
                   <Input
                     id="token-label"
                     value={tokenLabel}
@@ -261,30 +264,32 @@ export function ServiceAccountDetailPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="token-expiry">Expiração</Label>
+                  <Label htmlFor="token-expiry">{t('serviceAccounts.tokenExpiry')}</Label>
                   <Select value={tokenExpiry} onValueChange={setTokenExpiry}>
                     <SelectTrigger id="token-expiry">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="never">Sem expiração</SelectItem>
-                      <SelectItem value="30d">30 dias</SelectItem>
-                      <SelectItem value="90d">90 dias</SelectItem>
-                      <SelectItem value="180d">180 dias</SelectItem>
-                      <SelectItem value="365d">1 ano</SelectItem>
+                      {(
+                        ['never', '30d', '90d', '180d', '365d'] as const
+                      ).map((v) => (
+                        <SelectItem key={v} value={v}>
+                          {enumLabel(t, 'tokenExpiry', v)}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={handleCloseTokenDialog}>
-                  Cancelar
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   onClick={handleGenerateToken}
                   disabled={!tokenLabel || generateToken.isPending}
                 >
-                  {generateToken.isPending ? 'Gerando...' : 'Gerar Token'}
+                  {generateToken.isPending ? t('common.generating') : t('serviceAccounts.generate')}
                 </Button>
               </DialogFooter>
             </>
@@ -321,7 +326,7 @@ export function ServiceAccountDetailPage() {
       <ConfirmDialog
         open={showDelete}
         onOpenChange={setShowDelete}
-        title="Excluir Service Account"
+        title={t('serviceAccounts.deleteTitle')}
         description={`Esta ação é irreversível. O service account "${account.displayName}" e todos os seus tokens serão removidos.`}
         confirmText={account.name}
         destructive

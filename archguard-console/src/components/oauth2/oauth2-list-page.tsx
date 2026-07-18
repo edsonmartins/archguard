@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 // src/components/oauth2/oauth2-list-page.tsx
 
 import { useState } from 'react'
@@ -31,6 +32,7 @@ import { useTenantFilter } from '@/lib/hooks/use-tenant-filter'
 import type { OAuth2Client } from '@/lib/api/types/kanidm'
 
 export function OAuth2ListPage() {
+  const { t } = useTranslation()
   const { data: clients, isLoading } = useOAuth2Clients()
   const { data: allGroups } = useGroups()
   const deleteClient = useDeleteOAuth2Client()
@@ -53,16 +55,16 @@ export function OAuth2ListPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">OAuth2 / SSO</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('oauth2Page.title')}</h1>
           <p className="text-muted-foreground">
-            Gerencie clientes OAuth2 e integrações SSO
+            {t('oauth2Page.emptyHint')}
           </p>
         </div>
         <PermissionGate require="oauth2:create">
           <Button asChild>
             <Link to="/oauth2/create">
               <KeyRound className="mr-2 h-4 w-4" />
-              Novo Client
+              {t('oauth2Page.create')}
             </Link>
           </Button>
         </PermissionGate>
@@ -71,7 +73,7 @@ export function OAuth2ListPage() {
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Buscar clientes..."
+          placeholder={t('oauth2Page.search')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-10"
@@ -81,9 +83,9 @@ export function OAuth2ListPage() {
       {!filtered || filtered.length === 0 ? (
         <EmptyState
           icon={KeyRound}
-          title="Nenhum cliente OAuth2"
+          title={t('oauth2Page.empty')}
           description="Crie um cliente OAuth2 para integrar aplicações via SSO."
-          action={{ label: 'Novo Client', to: '/oauth2/create' }}
+          action={{ label: t('oauth2Page.create'), to: '/oauth2/create' }}
         />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -178,7 +180,7 @@ export function OAuth2ListPage() {
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Excluir Cliente OAuth2"
+        title={t('oauth2Page.deleteTitle')}
         description={`Esta ação é irreversível. O cliente "${deleteTarget?.displayName}" será removido e todas as integrações deixarão de funcionar.`}
         confirmText={deleteTarget?.name ?? ''}
         destructive

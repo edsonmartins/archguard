@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 // src/components/identity/credential-status.tsx
 
 import { KeySquare, Fingerprint, ShieldCheck, Key, Lock } from 'lucide-react'
@@ -24,6 +25,7 @@ export function CredentialStatusCard({
   credentials,
   onResetClick,
 }: CredentialStatusCardProps) {
+  const { t } = useTranslation()
   if (!credentials) {
     return (
       <Card>
@@ -55,7 +57,7 @@ export function CredentialStatusCard({
     },
     {
       icon: Key,
-      label: 'Códigos de Backup',
+      label: t('identities.backupCodes'),
       active: credentials.hasBackupCodes,
     },
   ]
@@ -94,7 +96,7 @@ export function CredentialStatusCard({
               <Badge
                 variant={item.active ? 'default' : 'outline'}
               >
-                {item.active ? 'Configurado' : 'Não configurado'}
+                {item.active ? t('identities.configured') : t('identities.notConfigured')}
               </Badge>
             </div>
           ))}

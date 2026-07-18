@@ -2,6 +2,7 @@
 
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { StatsCards } from '@/components/dashboard/stats-cards'
 import { SystemHealth } from '@/components/dashboard/system-health'
 import { QuickActions } from '@/components/dashboard/quick-actions'
@@ -25,6 +26,7 @@ function isKanidmOnline(data: unknown): boolean {
 }
 
 function DashboardPage() {
+  const { t } = useTranslation()
   const { filterPersons, filterGroups, filterOAuth2 } = useTenantFilter()
 
   const persons = useQuery({
@@ -80,7 +82,7 @@ function DashboardPage() {
 
   const services = [
     {
-      name: 'ArchGuard ID (Kanidm)',
+      name: t('dashboard.health.kanidm'),
       status: system.isLoading
         ? ('ok' as const)
         : system.isError
@@ -94,7 +96,7 @@ function DashboardPage() {
           : undefined,
     },
     {
-      name: 'OpenBao (segredos)',
+      name: t('dashboard.health.openbao'),
       status: openbao.isLoading
         ? ('ok' as const)
         : openbao.isError
@@ -111,11 +113,8 @@ function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Interface única de administração ArchGate — identidade, sites, gateways e
-          segredos. Operadores usam a UnifiedUI; UIs stock são break-glass.
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight">{t('dashboard.title')}</h1>
+        <p className="text-muted-foreground">{t('dashboard.subtitle')}</p>
       </div>
 
       <StatsCards

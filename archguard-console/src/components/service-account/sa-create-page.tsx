@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 // src/components/service-account/sa-create-page.tsx
 
 import { useState } from 'react'
@@ -18,6 +19,7 @@ import { queryKeys } from '@/lib/utils/query-keys'
 import { createServiceAccountSchema } from '@/lib/utils/validators'
 
 export function ServiceAccountCreatePage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const createSA = useCreateServiceAccount()
@@ -140,7 +142,7 @@ export function ServiceAccountCreatePage() {
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
-                  placeholder="Descrição opcional"
+                  placeholder={t('serviceAccounts.descriptionPlaceholder')}
                   rows={3}
                 />
               </div>
@@ -161,7 +163,7 @@ export function ServiceAccountCreatePage() {
             <Input
               value={groupSearch}
               onChange={(e) => setGroupSearch(e.target.value)}
-              placeholder="Buscar grupos..."
+              placeholder={t('serviceAccounts.searchGroups')}
               className="pl-10"
             />
           </div>
@@ -206,7 +208,7 @@ export function ServiceAccountCreatePage() {
           onClick={() => form.handleSubmit()}
           disabled={createSA.isPending}
         >
-          {createSA.isPending ? 'Criando...' : 'Criar Service Account'}
+          {createSA.isPending ? 'Criando...' : t('serviceAccounts.createSa')}
         </Button>
       </div>
     </div>

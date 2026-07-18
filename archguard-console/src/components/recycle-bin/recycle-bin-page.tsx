@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 // src/components/recycle-bin/recycle-bin-page.tsx
 
 import { useState } from 'react'
@@ -20,13 +21,14 @@ import { useRecycleBin, useReviveEntry } from '@/lib/hooks/use-recycle-bin'
 import type { RecycleBinEntry } from '@/lib/api/types/kanidm'
 
 const TYPE_CONFIG: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; variant: 'default' | 'secondary' | 'outline' }> = {
-  person: { label: 'Pessoa', icon: User, variant: 'default' },
+  person: { label: 'person', icon: User, variant: 'default' },
   group: { label: 'Grupo', icon: UsersRound, variant: 'secondary' },
   service_account: { label: 'Service Account', icon: Bot, variant: 'outline' },
   oauth2_resource_server: { label: 'OAuth2', icon: KeyRound, variant: 'outline' },
 }
 
 export function RecycleBinPage() {
+  const { t } = useTranslation()
   const { data: entries, isLoading } = useRecycleBin()
   const reviveEntry = useReviveEntry()
   const [search, setSearch] = useState('')
@@ -44,7 +46,7 @@ export function RecycleBinPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Lixeira</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t('recycleBin.title')}</h1>
         <p className="text-muted-foreground">
           Itens excluídos recentemente. Restaure antes que sejam removidos permanentemente.
         </p>
@@ -53,7 +55,7 @@ export function RecycleBinPage() {
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Buscar na lixeira..."
+          placeholder={t('recycleBin.search')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-10"
@@ -63,8 +65,8 @@ export function RecycleBinPage() {
       {filtered.length === 0 ? (
         <EmptyState
           icon={Trash2}
-          title="Lixeira vazia"
-          description="Nenhum item excluído encontrado."
+          title={t('recycleBin.empty')}
+          description={t('recycleBin.emptyHint')}
         />
       ) : (
         <div className="rounded-md border">
@@ -118,7 +120,7 @@ export function RecycleBinPage() {
       <ConfirmDialog
         open={!!reviveTarget}
         onOpenChange={(open) => !open && setReviveTarget(null)}
-        title="Restaurar Item"
+        title={t('recycleBin.restoreTitle')}
         description={`Deseja restaurar "${reviveTarget?.name}" (${reviveTarget?.type})? O item será reativado no sistema.`}
         confirmText={reviveTarget?.name ?? ''}
         isLoading={reviveEntry.isPending}

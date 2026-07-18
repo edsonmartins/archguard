@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 // src/components/group/group-create-page.tsx
 
 import { useState } from 'react'
@@ -19,6 +20,7 @@ import { queryKeys } from '@/lib/utils/query-keys'
 import { createGroupSchema } from '@/lib/utils/validators'
 
 export function GroupCreatePage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const createGroup = useCreateGroup()
@@ -119,7 +121,7 @@ export function GroupCreatePage() {
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
-                  placeholder="Descrição opcional do grupo"
+                  placeholder={t('groupsPage.descriptionPlaceholder')}
                   rows={3}
                 />
               </div>
@@ -140,7 +142,7 @@ export function GroupCreatePage() {
             <Input
               value={memberSearch}
               onChange={(e) => setMemberSearch(e.target.value)}
-              placeholder="Buscar pessoas..."
+              placeholder={t('groupsPage.searchPeople')}
               className="pl-10"
             />
           </div>
@@ -188,7 +190,7 @@ export function GroupCreatePage() {
           onClick={() => form.handleSubmit()}
           disabled={createGroup.isPending || addMembers.isPending}
         >
-          {createGroup.isPending ? 'Criando...' : 'Criar Grupo'}
+          {createGroup.isPending ? 'Criando...' : t('groupsPage.createGroup')}
         </Button>
       </div>
     </div>

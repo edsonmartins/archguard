@@ -1,5 +1,6 @@
 // src/components/dashboard/stats-cards.tsx
 
+import { useTranslation } from 'react-i18next'
 import { Users, UsersRound, KeyRound, ShieldCheck } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -19,30 +20,33 @@ export function StatsCards({
   vaultOnline,
   isLoading,
 }: StatsCardsProps) {
+  const { t } = useTranslation()
   const cards = [
     {
-      title: 'Pessoas',
+      title: t('dashboard.stats.people'),
       value: personsCount ?? 0,
       icon: Users,
-      description: 'Identidades registradas',
+      description: t('dashboard.stats.peopleDesc'),
     },
     {
-      title: 'Grupos',
+      title: t('dashboard.stats.groups'),
       value: groupsCount ?? 0,
       icon: UsersRound,
-      description: 'Grupos ativos',
+      description: t('dashboard.stats.groupsDesc'),
     },
     {
-      title: 'OAuth2 Clients',
+      title: t('dashboard.stats.oauth2'),
       value: oauth2Count ?? 0,
       icon: KeyRound,
-      description: 'Aplicações registradas',
+      description: t('dashboard.stats.oauth2Desc'),
     },
     {
-      title: 'Vault',
-      value: vaultOnline ? 'Online' : 'Offline',
+      title: t('dashboard.stats.vault'),
+      value: vaultOnline ? t('common.online') : t('common.offline'),
       icon: ShieldCheck,
-      description: vaultOnline ? 'Serviço operacional' : 'Serviço indisponível',
+      description: vaultOnline
+        ? t('dashboard.stats.vaultOnlineDesc')
+        : t('dashboard.stats.vaultOfflineDesc'),
     },
   ]
 
@@ -51,9 +55,7 @@ export function StatsCards({
       {cards.map((card) => (
         <Card key={card.title}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {card.title}
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
             <card.icon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -65,9 +67,7 @@ export function StatsCards({
             ) : (
               <>
                 <div className="text-2xl font-bold">{card.value}</div>
-                <p className="text-xs text-muted-foreground">
-                  {card.description}
-                </p>
+                <p className="text-xs text-muted-foreground">{card.description}</p>
               </>
             )}
           </CardContent>

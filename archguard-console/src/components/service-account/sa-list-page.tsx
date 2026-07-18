@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 // src/components/service-account/sa-list-page.tsx
 
 import { useState, useMemo } from 'react'
@@ -50,6 +51,7 @@ import { useTenantFilter } from '@/lib/hooks/use-tenant-filter'
 import type { ServiceAccount } from '@/lib/api/types/kanidm'
 
 export function ServiceAccountListPage() {
+  const { t } = useTranslation()
   const { data: accounts, isLoading } = useServiceAccounts()
   const deleteAccount = useDeleteServiceAccount()
   const { filterServiceAccounts } = useTenantFilter()
@@ -87,7 +89,7 @@ export function ServiceAccountListPage() {
       },
       {
         accessorKey: 'description',
-        header: 'Descrição',
+        header: t('serviceAccounts.columns.description'),
         cell: ({ row }) => (
           <span className="text-sm text-muted-foreground">
             {row.original.description ?? '—'}
@@ -228,7 +230,7 @@ export function ServiceAccountListPage() {
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Buscar service accounts..."
+          placeholder={t('serviceAccounts.search')}
           value={globalFilter}
           onChange={(e) => setGlobalFilter(e.target.value)}
           className="pl-10"
@@ -238,9 +240,9 @@ export function ServiceAccountListPage() {
       {filteredAccounts.length === 0 ? (
         <EmptyState
           icon={Bot}
-          title="Nenhum service account"
-          description="Crie um service account para integrações máquina-a-máquina."
-          action={{ label: 'Novo Service Account', to: '/service-accounts/create' }}
+          title={t('serviceAccounts.empty')}
+          description={t('serviceAccounts.emptyHint')}
+          action={{ label: t('serviceAccounts.create'), to: '/service-accounts/create' }}
         />
       ) : (
         <>
@@ -300,7 +302,7 @@ export function ServiceAccountListPage() {
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Excluir Service Account"
+        title={t('serviceAccounts.deleteTitle')}
         description={`Esta ação é irreversível. O service account "${deleteTarget?.displayName}" e todos os seus tokens serão removidos.`}
         confirmText={deleteTarget?.name ?? ''}
         destructive

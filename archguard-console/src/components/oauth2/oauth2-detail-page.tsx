@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 // src/components/oauth2/oauth2-detail-page.tsx
 
 import { useState } from 'react'
@@ -39,6 +40,7 @@ import { AppAccessMatrix } from '@/components/oauth2/app-access-matrix'
 import { queryKeys } from '@/lib/utils/query-keys'
 
 export function OAuth2DetailPage() {
+  const { t } = useTranslation()
   const { clientId } = Route.useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -106,7 +108,7 @@ export function OAuth2DetailPage() {
           </div>
         </div>
         <Badge variant={client.type === 'public' ? 'outline' : 'secondary'}>
-          {client.type === 'public' ? 'Public (PKCE)' : 'Basic (Confidential)'}
+          {client.type === 'public' ? t('oauth2Page.public') : t('oauth2Page.basic')}
         </Badge>
       </div>
 
@@ -118,7 +120,7 @@ export function OAuth2DetailPage() {
           </TabsTrigger>
           <TabsTrigger value="scopes">
             <Globe className="mr-2 h-4 w-4" />
-            Scope Maps
+            {t('oauth2Page.scopeMaps')}
           </TabsTrigger>
           <TabsTrigger value="access">
             <Shield className="mr-2 h-4 w-4" />
@@ -137,24 +139,24 @@ export function OAuth2DetailPage() {
         <TabsContent value="config" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Informações</CardTitle>
+              <CardTitle className="text-base">{t('oauth2Page.info')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <InfoRow label="Client ID" value={client.name}>
+              <InfoRow label={t('oauth2Page.clientId')} value={client.name}>
                 <CopyButton value={client.name} />
               </InfoRow>
               <InfoRow label="ID" value={client.id}>
                 <CopyButton value={client.id} />
               </InfoRow>
               <InfoRow label="Tipo" value={client.type === 'public' ? 'Public' : 'Basic'} />
-              <InfoRow label="Landing URL" value={client.landingUrl} />
-              <InfoRow label="PKCE" value={client.isPkceEnabled ? 'Habilitado' : 'Desabilitado'} />
+              <InfoRow label={t('oauth2Page.landingUrl')} value={client.landingUrl} />
+              <InfoRow label="PKCE" value={client.isPkceEnabled ? t('common.enabled') : t('common.disabled')} />
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base">Redirect URLs</CardTitle>
+              <CardTitle className="text-base">{t('oauth2Page.redirectUrls')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {client.redirectUrls.map((url) => (
@@ -196,7 +198,7 @@ export function OAuth2DetailPage() {
         <TabsContent value="scopes" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Scope Maps</CardTitle>
+              <CardTitle className="text-base">{t('oauth2Page.scopeMaps')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {client.scopeMaps.length === 0 ? (
@@ -249,7 +251,7 @@ export function OAuth2DetailPage() {
                     value={scopeGroupId}
                     onChange={(e) => setScopeGroupId(e.target.value)}
                   >
-                    <option value="">Selecione grupo</option>
+                    <option value="">{t('oauth2Page.selectGroup')}</option>
                     {groups
                       ?.filter((g) => !g.isBuiltin)
                       .map((g) => (
@@ -280,7 +282,7 @@ export function OAuth2DetailPage() {
         <TabsContent value="snippets">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Snippets de Integração</CardTitle>
+              <CardTitle className="text-base">{t('oauth2Page.integrationSnippets')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {snippets.map((snippet) => (
@@ -309,7 +311,7 @@ export function OAuth2DetailPage() {
               <PermissionGate require="oauth2:delete">
                 <div className="flex items-center justify-between rounded-lg border border-destructive/50 p-4">
                   <div>
-                    <p className="font-medium">Excluir Client</p>
+                    <p className="font-medium">{t('oauth2Page.deleteClient')}</p>
                     <p className="text-sm text-muted-foreground">
                       Remove permanentemente este cliente. Integrações deixarão de funcionar.
                     </p>
@@ -331,8 +333,8 @@ export function OAuth2DetailPage() {
       <ConfirmDialog
         open={showDelete}
         onOpenChange={setShowDelete}
-        title="Excluir Cliente OAuth2"
-        description={`Esta ação é irreversível. O cliente "${client.displayName}" será removido.`}
+        title={t('oauth2Page.deleteTitle')}
+        description={`${client.displayName}`}
         confirmText={client.name}
         destructive
         isLoading={deleteClient.isPending}

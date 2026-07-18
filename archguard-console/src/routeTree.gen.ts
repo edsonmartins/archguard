@@ -19,20 +19,28 @@ import { Route as AuthedVaultRouteImport } from './routes/_authed/vault'
 import { Route as AuthedRecycleBinRouteImport } from './routes/_authed/recycle-bin'
 import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
 import { Route as AuthedAuditRouteImport } from './routes/_authed/audit'
+import { Route as AuthedSitesIndexRouteImport } from './routes/_authed/sites/index'
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
 import { Route as AuthedServiceAccountsIndexRouteImport } from './routes/_authed/service-accounts/index'
+import { Route as AuthedSecretsIndexRouteImport } from './routes/_authed/secrets/index'
+import { Route as AuthedPlatformIndexRouteImport } from './routes/_authed/platform/index'
 import { Route as AuthedOauth2IndexRouteImport } from './routes/_authed/oauth2/index'
 import { Route as AuthedIdentitiesIndexRouteImport } from './routes/_authed/identities/index'
 import { Route as AuthedGroupsIndexRouteImport } from './routes/_authed/groups/index'
+import { Route as AuthedGatewaysIndexRouteImport } from './routes/_authed/gateways/index'
+import { Route as AuthedSitesCreateRouteImport } from './routes/_authed/sites/create'
+import { Route as AuthedSitesSlugRouteImport } from './routes/_authed/sites/$slug'
 import { Route as AuthedServiceAccountsCreateRouteImport } from './routes/_authed/service-accounts/create'
 import { Route as AuthedServiceAccountsAccountIdRouteImport } from './routes/_authed/service-accounts/$accountId'
 import { Route as AuthedOauth2CreateRouteImport } from './routes/_authed/oauth2/create'
 import { Route as AuthedOauth2ClientIdRouteImport } from './routes/_authed/oauth2/$clientId'
+import { Route as AuthedIntegrationsMentorsAxisRouteImport } from './routes/_authed/integrations/mentors-axis'
 import { Route as AuthedIdentitiesImportRouteImport } from './routes/_authed/identities/import'
 import { Route as AuthedIdentitiesCreateRouteImport } from './routes/_authed/identities/create'
 import { Route as AuthedIdentitiesPersonIdRouteImport } from './routes/_authed/identities/$personId'
 import { Route as AuthedGroupsCreateRouteImport } from './routes/_authed/groups/create'
 import { Route as AuthedGroupsGroupIdRouteImport } from './routes/_authed/groups/$groupId'
+import { Route as AuthedSitesSlugEditRouteImport } from './routes/_authed/sites/$slug.edit'
 
 const UnauthorizedRoute = UnauthorizedRouteImport.update({
   id: '/unauthorized',
@@ -83,6 +91,11 @@ const AuthedAuditRoute = AuthedAuditRouteImport.update({
   path: '/audit',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedSitesIndexRoute = AuthedSitesIndexRouteImport.update({
+  id: '/sites/',
+  path: '/sites/',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedSettingsIndexRoute = AuthedSettingsIndexRouteImport.update({
   id: '/settings/',
   path: '/settings/',
@@ -94,6 +107,16 @@ const AuthedServiceAccountsIndexRoute =
     path: '/service-accounts/',
     getParentRoute: () => AuthedRoute,
   } as any)
+const AuthedSecretsIndexRoute = AuthedSecretsIndexRouteImport.update({
+  id: '/secrets/',
+  path: '/secrets/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedPlatformIndexRoute = AuthedPlatformIndexRouteImport.update({
+  id: '/platform/',
+  path: '/platform/',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedOauth2IndexRoute = AuthedOauth2IndexRouteImport.update({
   id: '/oauth2/',
   path: '/oauth2/',
@@ -107,6 +130,21 @@ const AuthedIdentitiesIndexRoute = AuthedIdentitiesIndexRouteImport.update({
 const AuthedGroupsIndexRoute = AuthedGroupsIndexRouteImport.update({
   id: '/groups/',
   path: '/groups/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedGatewaysIndexRoute = AuthedGatewaysIndexRouteImport.update({
+  id: '/gateways/',
+  path: '/gateways/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedSitesCreateRoute = AuthedSitesCreateRouteImport.update({
+  id: '/sites/create',
+  path: '/sites/create',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedSitesSlugRoute = AuthedSitesSlugRouteImport.update({
+  id: '/sites/$slug',
+  path: '/sites/$slug',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedServiceAccountsCreateRoute =
@@ -131,6 +169,12 @@ const AuthedOauth2ClientIdRoute = AuthedOauth2ClientIdRouteImport.update({
   path: '/oauth2/$clientId',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedIntegrationsMentorsAxisRoute =
+  AuthedIntegrationsMentorsAxisRouteImport.update({
+    id: '/integrations/mentors-axis',
+    path: '/integrations/mentors-axis',
+    getParentRoute: () => AuthedRoute,
+  } as any)
 const AuthedIdentitiesImportRoute = AuthedIdentitiesImportRouteImport.update({
   id: '/identities/import',
   path: '/identities/import',
@@ -157,6 +201,11 @@ const AuthedGroupsGroupIdRoute = AuthedGroupsGroupIdRouteImport.update({
   path: '/groups/$groupId',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedSitesSlugEditRoute = AuthedSitesSlugEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => AuthedSitesSlugRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -173,15 +222,23 @@ export interface FileRoutesByFullPath {
   '/identities/$personId': typeof AuthedIdentitiesPersonIdRoute
   '/identities/create': typeof AuthedIdentitiesCreateRoute
   '/identities/import': typeof AuthedIdentitiesImportRoute
+  '/integrations/mentors-axis': typeof AuthedIntegrationsMentorsAxisRoute
   '/oauth2/$clientId': typeof AuthedOauth2ClientIdRoute
   '/oauth2/create': typeof AuthedOauth2CreateRoute
   '/service-accounts/$accountId': typeof AuthedServiceAccountsAccountIdRoute
   '/service-accounts/create': typeof AuthedServiceAccountsCreateRoute
+  '/sites/$slug': typeof AuthedSitesSlugRouteWithChildren
+  '/sites/create': typeof AuthedSitesCreateRoute
+  '/gateways/': typeof AuthedGatewaysIndexRoute
   '/groups/': typeof AuthedGroupsIndexRoute
   '/identities/': typeof AuthedIdentitiesIndexRoute
   '/oauth2/': typeof AuthedOauth2IndexRoute
+  '/platform/': typeof AuthedPlatformIndexRoute
+  '/secrets/': typeof AuthedSecretsIndexRoute
   '/service-accounts/': typeof AuthedServiceAccountsIndexRoute
   '/settings/': typeof AuthedSettingsIndexRoute
+  '/sites/': typeof AuthedSitesIndexRoute
+  '/sites/$slug/edit': typeof AuthedSitesSlugEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -198,15 +255,23 @@ export interface FileRoutesByTo {
   '/identities/$personId': typeof AuthedIdentitiesPersonIdRoute
   '/identities/create': typeof AuthedIdentitiesCreateRoute
   '/identities/import': typeof AuthedIdentitiesImportRoute
+  '/integrations/mentors-axis': typeof AuthedIntegrationsMentorsAxisRoute
   '/oauth2/$clientId': typeof AuthedOauth2ClientIdRoute
   '/oauth2/create': typeof AuthedOauth2CreateRoute
   '/service-accounts/$accountId': typeof AuthedServiceAccountsAccountIdRoute
   '/service-accounts/create': typeof AuthedServiceAccountsCreateRoute
+  '/sites/$slug': typeof AuthedSitesSlugRouteWithChildren
+  '/sites/create': typeof AuthedSitesCreateRoute
+  '/gateways': typeof AuthedGatewaysIndexRoute
   '/groups': typeof AuthedGroupsIndexRoute
   '/identities': typeof AuthedIdentitiesIndexRoute
   '/oauth2': typeof AuthedOauth2IndexRoute
+  '/platform': typeof AuthedPlatformIndexRoute
+  '/secrets': typeof AuthedSecretsIndexRoute
   '/service-accounts': typeof AuthedServiceAccountsIndexRoute
   '/settings': typeof AuthedSettingsIndexRoute
+  '/sites': typeof AuthedSitesIndexRoute
+  '/sites/$slug/edit': typeof AuthedSitesSlugEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -225,15 +290,23 @@ export interface FileRoutesById {
   '/_authed/identities/$personId': typeof AuthedIdentitiesPersonIdRoute
   '/_authed/identities/create': typeof AuthedIdentitiesCreateRoute
   '/_authed/identities/import': typeof AuthedIdentitiesImportRoute
+  '/_authed/integrations/mentors-axis': typeof AuthedIntegrationsMentorsAxisRoute
   '/_authed/oauth2/$clientId': typeof AuthedOauth2ClientIdRoute
   '/_authed/oauth2/create': typeof AuthedOauth2CreateRoute
   '/_authed/service-accounts/$accountId': typeof AuthedServiceAccountsAccountIdRoute
   '/_authed/service-accounts/create': typeof AuthedServiceAccountsCreateRoute
+  '/_authed/sites/$slug': typeof AuthedSitesSlugRouteWithChildren
+  '/_authed/sites/create': typeof AuthedSitesCreateRoute
+  '/_authed/gateways/': typeof AuthedGatewaysIndexRoute
   '/_authed/groups/': typeof AuthedGroupsIndexRoute
   '/_authed/identities/': typeof AuthedIdentitiesIndexRoute
   '/_authed/oauth2/': typeof AuthedOauth2IndexRoute
+  '/_authed/platform/': typeof AuthedPlatformIndexRoute
+  '/_authed/secrets/': typeof AuthedSecretsIndexRoute
   '/_authed/service-accounts/': typeof AuthedServiceAccountsIndexRoute
   '/_authed/settings/': typeof AuthedSettingsIndexRoute
+  '/_authed/sites/': typeof AuthedSitesIndexRoute
+  '/_authed/sites/$slug/edit': typeof AuthedSitesSlugEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -252,15 +325,23 @@ export interface FileRouteTypes {
     | '/identities/$personId'
     | '/identities/create'
     | '/identities/import'
+    | '/integrations/mentors-axis'
     | '/oauth2/$clientId'
     | '/oauth2/create'
     | '/service-accounts/$accountId'
     | '/service-accounts/create'
+    | '/sites/$slug'
+    | '/sites/create'
+    | '/gateways/'
     | '/groups/'
     | '/identities/'
     | '/oauth2/'
+    | '/platform/'
+    | '/secrets/'
     | '/service-accounts/'
     | '/settings/'
+    | '/sites/'
+    | '/sites/$slug/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -277,15 +358,23 @@ export interface FileRouteTypes {
     | '/identities/$personId'
     | '/identities/create'
     | '/identities/import'
+    | '/integrations/mentors-axis'
     | '/oauth2/$clientId'
     | '/oauth2/create'
     | '/service-accounts/$accountId'
     | '/service-accounts/create'
+    | '/sites/$slug'
+    | '/sites/create'
+    | '/gateways'
     | '/groups'
     | '/identities'
     | '/oauth2'
+    | '/platform'
+    | '/secrets'
     | '/service-accounts'
     | '/settings'
+    | '/sites'
+    | '/sites/$slug/edit'
   id:
     | '__root__'
     | '/'
@@ -303,15 +392,23 @@ export interface FileRouteTypes {
     | '/_authed/identities/$personId'
     | '/_authed/identities/create'
     | '/_authed/identities/import'
+    | '/_authed/integrations/mentors-axis'
     | '/_authed/oauth2/$clientId'
     | '/_authed/oauth2/create'
     | '/_authed/service-accounts/$accountId'
     | '/_authed/service-accounts/create'
+    | '/_authed/sites/$slug'
+    | '/_authed/sites/create'
+    | '/_authed/gateways/'
     | '/_authed/groups/'
     | '/_authed/identities/'
     | '/_authed/oauth2/'
+    | '/_authed/platform/'
+    | '/_authed/secrets/'
     | '/_authed/service-accounts/'
     | '/_authed/settings/'
+    | '/_authed/sites/'
+    | '/_authed/sites/$slug/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -395,6 +492,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedAuditRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/sites/': {
+      id: '/_authed/sites/'
+      path: '/sites'
+      fullPath: '/sites/'
+      preLoaderRoute: typeof AuthedSitesIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/settings/': {
       id: '/_authed/settings/'
       path: '/settings'
@@ -407,6 +511,20 @@ declare module '@tanstack/react-router' {
       path: '/service-accounts'
       fullPath: '/service-accounts/'
       preLoaderRoute: typeof AuthedServiceAccountsIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/secrets/': {
+      id: '/_authed/secrets/'
+      path: '/secrets'
+      fullPath: '/secrets/'
+      preLoaderRoute: typeof AuthedSecretsIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/platform/': {
+      id: '/_authed/platform/'
+      path: '/platform'
+      fullPath: '/platform/'
+      preLoaderRoute: typeof AuthedPlatformIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/oauth2/': {
@@ -428,6 +546,27 @@ declare module '@tanstack/react-router' {
       path: '/groups'
       fullPath: '/groups/'
       preLoaderRoute: typeof AuthedGroupsIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/gateways/': {
+      id: '/_authed/gateways/'
+      path: '/gateways'
+      fullPath: '/gateways/'
+      preLoaderRoute: typeof AuthedGatewaysIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/sites/create': {
+      id: '/_authed/sites/create'
+      path: '/sites/create'
+      fullPath: '/sites/create'
+      preLoaderRoute: typeof AuthedSitesCreateRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/sites/$slug': {
+      id: '/_authed/sites/$slug'
+      path: '/sites/$slug'
+      fullPath: '/sites/$slug'
+      preLoaderRoute: typeof AuthedSitesSlugRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/service-accounts/create': {
@@ -456,6 +595,13 @@ declare module '@tanstack/react-router' {
       path: '/oauth2/$clientId'
       fullPath: '/oauth2/$clientId'
       preLoaderRoute: typeof AuthedOauth2ClientIdRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/integrations/mentors-axis': {
+      id: '/_authed/integrations/mentors-axis'
+      path: '/integrations/mentors-axis'
+      fullPath: '/integrations/mentors-axis'
+      preLoaderRoute: typeof AuthedIntegrationsMentorsAxisRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/identities/import': {
@@ -493,8 +639,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedGroupsGroupIdRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/sites/$slug/edit': {
+      id: '/_authed/sites/$slug/edit'
+      path: '/edit'
+      fullPath: '/sites/$slug/edit'
+      preLoaderRoute: typeof AuthedSitesSlugEditRouteImport
+      parentRoute: typeof AuthedSitesSlugRoute
+    }
   }
 }
+
+interface AuthedSitesSlugRouteChildren {
+  AuthedSitesSlugEditRoute: typeof AuthedSitesSlugEditRoute
+}
+
+const AuthedSitesSlugRouteChildren: AuthedSitesSlugRouteChildren = {
+  AuthedSitesSlugEditRoute: AuthedSitesSlugEditRoute,
+}
+
+const AuthedSitesSlugRouteWithChildren = AuthedSitesSlugRoute._addFileChildren(
+  AuthedSitesSlugRouteChildren,
+)
 
 interface AuthedRouteChildren {
   AuthedAuditRoute: typeof AuthedAuditRoute
@@ -506,15 +671,22 @@ interface AuthedRouteChildren {
   AuthedIdentitiesPersonIdRoute: typeof AuthedIdentitiesPersonIdRoute
   AuthedIdentitiesCreateRoute: typeof AuthedIdentitiesCreateRoute
   AuthedIdentitiesImportRoute: typeof AuthedIdentitiesImportRoute
+  AuthedIntegrationsMentorsAxisRoute: typeof AuthedIntegrationsMentorsAxisRoute
   AuthedOauth2ClientIdRoute: typeof AuthedOauth2ClientIdRoute
   AuthedOauth2CreateRoute: typeof AuthedOauth2CreateRoute
   AuthedServiceAccountsAccountIdRoute: typeof AuthedServiceAccountsAccountIdRoute
   AuthedServiceAccountsCreateRoute: typeof AuthedServiceAccountsCreateRoute
+  AuthedSitesSlugRoute: typeof AuthedSitesSlugRouteWithChildren
+  AuthedSitesCreateRoute: typeof AuthedSitesCreateRoute
+  AuthedGatewaysIndexRoute: typeof AuthedGatewaysIndexRoute
   AuthedGroupsIndexRoute: typeof AuthedGroupsIndexRoute
   AuthedIdentitiesIndexRoute: typeof AuthedIdentitiesIndexRoute
   AuthedOauth2IndexRoute: typeof AuthedOauth2IndexRoute
+  AuthedPlatformIndexRoute: typeof AuthedPlatformIndexRoute
+  AuthedSecretsIndexRoute: typeof AuthedSecretsIndexRoute
   AuthedServiceAccountsIndexRoute: typeof AuthedServiceAccountsIndexRoute
   AuthedSettingsIndexRoute: typeof AuthedSettingsIndexRoute
+  AuthedSitesIndexRoute: typeof AuthedSitesIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
@@ -527,15 +699,22 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedIdentitiesPersonIdRoute: AuthedIdentitiesPersonIdRoute,
   AuthedIdentitiesCreateRoute: AuthedIdentitiesCreateRoute,
   AuthedIdentitiesImportRoute: AuthedIdentitiesImportRoute,
+  AuthedIntegrationsMentorsAxisRoute: AuthedIntegrationsMentorsAxisRoute,
   AuthedOauth2ClientIdRoute: AuthedOauth2ClientIdRoute,
   AuthedOauth2CreateRoute: AuthedOauth2CreateRoute,
   AuthedServiceAccountsAccountIdRoute: AuthedServiceAccountsAccountIdRoute,
   AuthedServiceAccountsCreateRoute: AuthedServiceAccountsCreateRoute,
+  AuthedSitesSlugRoute: AuthedSitesSlugRouteWithChildren,
+  AuthedSitesCreateRoute: AuthedSitesCreateRoute,
+  AuthedGatewaysIndexRoute: AuthedGatewaysIndexRoute,
   AuthedGroupsIndexRoute: AuthedGroupsIndexRoute,
   AuthedIdentitiesIndexRoute: AuthedIdentitiesIndexRoute,
   AuthedOauth2IndexRoute: AuthedOauth2IndexRoute,
+  AuthedPlatformIndexRoute: AuthedPlatformIndexRoute,
+  AuthedSecretsIndexRoute: AuthedSecretsIndexRoute,
   AuthedServiceAccountsIndexRoute: AuthedServiceAccountsIndexRoute,
   AuthedSettingsIndexRoute: AuthedSettingsIndexRoute,
+  AuthedSitesIndexRoute: AuthedSitesIndexRoute,
 }
 
 const AuthedRouteWithChildren =
@@ -552,12 +731,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

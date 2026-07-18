@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 // src/components/oauth2/oauth2-create-wizard.tsx
 
 import { useState } from 'react'
@@ -25,13 +26,6 @@ import { useCreateOAuth2Client, useSetScopeMap } from '@/lib/hooks/use-oauth2'
 import { useGroups } from '@/lib/hooks/use-groups'
 import { queryKeys } from '@/lib/utils/query-keys'
 
-const STEPS = [
-  { id: 'type', label: 'Tipo', icon: Shield },
-  { id: 'config', label: 'Configuração', icon: Settings },
-  { id: 'scopes', label: 'Scope Maps', icon: Globe },
-  { id: 'review', label: 'Revisão', icon: ClipboardCheck },
-] as const
-
 interface ScopeMapEntry {
   groupId: string
   groupName: string
@@ -39,11 +33,19 @@ interface ScopeMapEntry {
 }
 
 export function OAuth2CreateWizard() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const createClient = useCreateOAuth2Client()
   const setScopeMap = useSetScopeMap()
   const { data: groups } = useGroups()
+
+  const STEPS = [
+    { id: 'type', label: t('common.type'), icon: Shield },
+    { id: 'config', label: t('oauth2Page.config'), icon: Settings },
+    { id: 'scopes', label: t('oauth2Page.scopeMaps'), icon: Globe },
+    { id: 'review', label: t('oauth2Page.review'), icon: ClipboardCheck },
+  ] as const
 
   const [step, setStep] = useState(0)
   const [redirectInput, setRedirectInput] = useState('')
@@ -442,7 +444,7 @@ export function OAuth2CreateWizard() {
             onClick={() => form.handleSubmit()}
             disabled={createClient.isPending}
           >
-            {createClient.isPending ? 'Criando...' : 'Criar Client'}
+            {createClient.isPending ? 'Criando...' : t('oauth2Page.createClient')}
             <Check className="ml-2 h-4 w-4" />
           </Button>
         )}

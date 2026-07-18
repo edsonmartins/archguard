@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 // src/components/identity/person-form-wizard.tsx
 
 import { useState } from 'react'
@@ -27,13 +28,8 @@ import { queryKeys } from '@/lib/utils/query-keys'
 import { createPersonSchema } from '@/lib/utils/validators'
 import type { CreatePersonInput } from '@/lib/utils/validators'
 
-const STEPS = [
-  { id: 'basic', label: 'Dados Básicos', icon: User },
-  { id: 'groups', label: 'Grupos', icon: UsersRound },
-  { id: 'review', label: 'Revisão', icon: ClipboardCheck },
-] as const
-
 export function PersonFormWizard() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const createPerson = useCreatePerson()
@@ -41,6 +37,12 @@ export function PersonFormWizard() {
   const [step, setStep] = useState(0)
   const [emailInput, setEmailInput] = useState('')
   const [groupSearch, setGroupSearch] = useState('')
+
+  const STEPS = [
+    { id: 'basic', label: t('identities.basicData'), icon: User },
+    { id: 'groups', label: t('nav.groups'), icon: UsersRound },
+    { id: 'review', label: t('identities.review'), icon: ClipboardCheck },
+  ] as const
 
   const form = useForm({
     defaultValues: {

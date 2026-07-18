@@ -1,6 +1,7 @@
 // src/components/layout/user-menu.tsx
 
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { LogOut, User } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -17,19 +18,13 @@ import { initials } from '@/lib/utils/formatters'
 import { usePermissions } from '@/lib/hooks/use-permissions'
 import { deriveRole } from '@/lib/auth/roles'
 
-const roleLabels: Record<string, string> = {
-  SUPER_ADMIN: 'Super Admin',
-  TENANT_ADMIN: 'Tenant Admin',
-  SERVICE_DESK: 'Service Desk',
-  VIEWER: 'Visualizador',
-}
-
 interface UserMenuProps {
   user: SessionUser
 }
 
 export function UserMenu({ user }: UserMenuProps) {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const { groups } = usePermissions()
   const role = deriveRole(groups)
 
@@ -66,19 +61,19 @@ export function UserMenu({ user }: UserMenuProps) {
               {user.email}
             </p>
             <p className="text-xs leading-none text-muted-foreground">
-              {roleLabels[role] ?? role}
+              {t(`roles.${role}`, { defaultValue: role })}
             </p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem>
           <User className="mr-2 h-4 w-4" />
-          <span>Meu Perfil</span>
+          <span>{t('userMenu.profile')}</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />
-          <span>Sair</span>
+          <span>{t('userMenu.logout')}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

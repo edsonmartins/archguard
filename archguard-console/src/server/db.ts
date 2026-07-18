@@ -71,6 +71,7 @@ function migrate(db: Database.Database): void {
       connector_id    TEXT,
       subnets_json    TEXT NOT NULL DEFAULT '[]',
       stack_meta_json TEXT NOT NULL DEFAULT '{}',
+      connectors_json TEXT NOT NULL DEFAULT '[]',
       targets_json    TEXT NOT NULL DEFAULT '[]',
       warpgate_roles_json TEXT NOT NULL DEFAULT '[]',
       notas           TEXT,
@@ -83,6 +84,17 @@ function migrate(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_sites_stack ON sites (stack);
     CREATE INDEX IF NOT EXISTS idx_sites_tenant ON sites (tenant_group);
   `)
+  // Migrate older DBs that lack multi-connector column
+  try {
+    const cols = db.prepare(`PRAGMA table_info(sites)`).all() as { name: string }[]
+    if (cols.length && !cols.some((c) => c.name === 'connectors_json')) {
+      db.exec(
+        `ALTER TABLE sites ADD COLUMN connectors_json TEXT NOT NULL DEFAULT '[]'`,
+      )
+    }
+  } catch {
+    /* ignore race / fresh create */
+  }
 }
 
 export function getDb(): Database.Database {

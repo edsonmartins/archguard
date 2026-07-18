@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 // src/components/identity/csv-import-wizard.tsx
 
 import { useState, useRef } from 'react'
@@ -48,13 +49,6 @@ import {
   type ValidationResult,
 } from '@/lib/utils/csv-parser'
 
-const STEPS = [
-  { id: 'upload', label: 'Upload', icon: Upload },
-  { id: 'mapping', label: 'Mapeamento', icon: Columns },
-  { id: 'validate', label: 'Validação', icon: CheckCircle2 },
-  { id: 'progress', label: 'Importação', icon: Loader2 },
-] as const
-
 interface ImportStatus {
   total: number
   completed: number
@@ -64,9 +58,17 @@ interface ImportStatus {
 }
 
 export function CsvImportWizard() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [step, setStep] = useState(0)
+
+  const STEPS = [
+    { id: 'upload', label: t('identities.upload'), icon: Upload },
+    { id: 'mapping', label: t('identities.mapping'), icon: Columns },
+    { id: 'validate', label: t('identities.validation'), icon: CheckCircle2 },
+    { id: 'progress', label: t('identities.importing'), icon: Loader2 },
+  ] as const
 
   // Step 1: Upload
   const [csvData, setCsvData] = useState<CsvParseResult | null>(null)
@@ -368,7 +370,7 @@ export function CsvImportWizard() {
               {validation.errors.length > 0 && (
                 <div>
                   <Label className="mb-2 block text-sm font-medium">
-                    Erros de Validação
+                    Erros de {t('identities.validation')}
                   </Label>
                   <ScrollArea className="h-48 rounded-md border">
                     <div className="p-4 space-y-2">
@@ -445,8 +447,8 @@ export function CsvImportWizard() {
                 )}
                 <p className="text-lg font-medium">
                   {isImporting
-                    ? `Importando... ${importStatus.completed}/${importStatus.total}`
-                    : 'Importação concluída'}
+                    ? `${t('identities.importing')}... ${importStatus.completed}/${importStatus.total}`
+                    : t('identities.importDone')}
                 </p>
               </div>
 

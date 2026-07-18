@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 // src/components/group/group-detail-page.tsx
 
 import { useState } from 'react'
@@ -42,6 +43,7 @@ import { usePersons } from '@/lib/hooks/use-persons'
 import { initials } from '@/lib/utils/formatters'
 
 export function GroupDetailPage() {
+  const { t } = useTranslation()
   const { groupId } = Route.useParams()
   const navigate = useNavigate()
   const { data: group, isLoading } = useGroup(groupId)
@@ -145,7 +147,7 @@ export function GroupDetailPage() {
                   onClick={() => setShowAddMembers(true)}
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Adicionar Membros
+                  {t('groupsPage.addMembers')}
                 </Button>
               </PermissionGate>
             )}
@@ -204,7 +206,7 @@ export function GroupDetailPage() {
         <TabsContent value="config">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Informações do Grupo</CardTitle>
+              <CardTitle className="text-base">{t('groupsPage.info')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <InfoRow label="ID" value={group.id}>
@@ -212,8 +214,8 @@ export function GroupDetailPage() {
               </InfoRow>
               <InfoRow label="Nome" value={group.name} />
               <InfoRow
-                label="Descrição"
-                value={group.description ?? 'Sem descrição'}
+                label={t('common.description')}
+                value={group.description ?? t('common.noDescription')}
               />
               <InfoRow label="Tipo" value="">
                 <GroupBadge name={group.name} />
@@ -225,7 +227,7 @@ export function GroupDetailPage() {
               <InfoRow label="Membros" value={String(group.memberCount)} />
               {group.memberOf.length > 0 && (
                 <div className="text-sm">
-                  <span className="text-muted-foreground">Membro de: </span>
+                  <span className="text-muted-foreground">{t('groupsPage.memberOf')} </span>
                   <div className="mt-1 flex flex-wrap gap-1">
                     {group.memberOf.map((g) => (
                       <Badge key={g} variant="outline">
@@ -244,7 +246,7 @@ export function GroupDetailPage() {
       <Dialog open={showAddMembers} onOpenChange={setShowAddMembers}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Adicionar Membros</DialogTitle>
+            <DialogTitle>{t('groupsPage.addMembers')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="relative">
@@ -252,7 +254,7 @@ export function GroupDetailPage() {
               <Input
                 value={memberSearch}
                 onChange={(e) => setMemberSearch(e.target.value)}
-                placeholder="Buscar pessoas..."
+                placeholder={t('groupsPage.searchPeople')}
                 className="pl-10"
               />
             </div>
@@ -294,11 +296,11 @@ export function GroupDetailPage() {
               Cancelar
             </Button>
             <Button
-              aria-label="Adicionar"
+              aria-label={t('common.add')}
               onClick={handleAddMembers}
               disabled={selectedToAdd.length === 0 || addMembers.isPending}
             >
-              {addMembers.isPending ? 'Adicionando...' : 'Adicionar'}
+              {addMembers.isPending ? t('common.adding') : t('common.add')}
               {selectedToAdd.length > 0 && (
                 <Badge variant="secondary" className="ml-2">
                   {selectedToAdd.length}
@@ -313,7 +315,7 @@ export function GroupDetailPage() {
       <ConfirmDialog
         open={showDelete}
         onOpenChange={setShowDelete}
-        title="Excluir Grupo"
+        title={t('groupsPage.deleteTitle')}
         description={`Esta ação é irreversível. O grupo "${group.name}" será permanentemente removido.`}
         confirmText={group.name}
         destructive

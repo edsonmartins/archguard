@@ -8,24 +8,24 @@ import type { Person, Group, OAuth2Client, ServiceAccount } from '@/lib/api/type
 const STORAGE_KEY = 'archguard_active_tenant'
 
 export type TenantOption = {
-  value: string       // tenant prefix (e.g. "acme") or "__all__"
-  label: string       // display name
-  count?: number      // optional entity count
+  value: string // tenant id (e.g. "tenant_rio_quality" or "acme") or "__all__"
+  label: string
+  count?: number
 }
 
 export const ALL_TENANTS = '__all__'
 
 /**
- * Hook that provides multi-tenant filtering for list pages.
+ * Multi-tenant filtering for list pages (5.3 / 5.4).
  *
- * - SUPER_ADMIN: sees all tenants, can switch between them
- * - TENANT_ADMIN: sees only their own tenant(s)
- * - Others: no filtering applied (see all that permissions allow)
+ * - SUPER_ADMIN: all tenants; optional switcher
+ * - TENANT_ADMIN: only own tenant(s); forced scope
+ * - Operator/Viewer with tenant_* membership: only own tenant(s) (read)
+ * - No tenant claim + not system admin: empty lists (safe isolation)
  */
 export function useTenantFilter() {
-  const { isSystemAdmin, isTenantAdmin, tenants } = usePermissions()
+  const { isSystemAdmin, tenants } = usePermissions()
 
-  // Restore last selection from sessionStorage
   const [activeTenant, setActiveTenantState] = useState<string>(() => {
     if (typeof window === 'undefined') return ALL_TENANTS
     try {
@@ -44,134 +44,157 @@ export function useTenantFilter() {
     }
   }, [])
 
-  // Available tenants for the switcher
   const availableTenants = useMemo((): TenantOption[] => {
     if (isSystemAdmin) {
-      // Super Admin sees "All" + any known tenants
       return [
         { value: ALL_TENANTS, label: 'Todos os Tenants' },
         ...tenants.map((t) => ({ value: t, label: t })),
       ]
     }
-    if (isTenantAdmin && tenants.length > 0) {
-      // Tenant Admin: only their tenants (no "All" option)
+    if (tenants.length > 0) {
       return tenants.map((t) => ({ value: t, label: t }))
     }
     return []
-  }, [isSystemAdmin, isTenantAdmin, tenants])
+  }, [isSystemAdmin, tenants])
 
-  // Effective tenant: for Tenant Admin with single tenant, always filter by it
   const effectiveTenant = useMemo(() => {
     if (isSystemAdmin) return activeTenant
-    if (isTenantAdmin && tenants.length === 1) return tenants[0]!
-    if (isTenantAdmin && tenants.includes(activeTenant)) return activeTenant
+    if (tenants.length === 1) return tenants[0]!
+    if (tenants.includes(activeTenant)) return activeTenant
+    // multi-tenant non-admin: union mode
     return ALL_TENANTS
-  }, [isSystemAdmin, isTenantAdmin, tenants, activeTenant])
+  }, [isSystemAdmin, tenants, activeTenant])
 
-  const isFiltering = effectiveTenant !== ALL_TENANTS
+  // Non-system-admin is always scoped (even when "all my tenants")
+  const isScoped = !isSystemAdmin
+  const isFiltering =
+    effectiveTenant !== ALL_TENANTS || (isScoped && tenants.length > 0)
 
-  // ── Filter Functions ──────────────────────────────
-
-  /**
-   * Check if a person belongs to a tenant.
-   * A person belongs to tenant "acme" if any of their groups starts with "acme_" or equals "acme".
-   */
   const personBelongsToTenant = useCallback(
     (person: Person, tenant: string): boolean => {
-      return person.groups.some((g) => {
-        const prefix = extractTenantPrefix(g)
-        return prefix === tenant
-      })
+      const names = [...person.groups, ...person.groupNames]
+      return names.some((g) => extractTenantPrefix(g) === tenant)
     },
     [],
+  )
+
+  const personBelongsToAny = useCallback(
+    (person: Person, allowed: string[]): boolean => {
+      if (allowed.length === 0) return false
+      return allowed.some((t) => personBelongsToTenant(person, t))
+    },
+    [personBelongsToTenant],
   )
 
   const filterPersons = useCallback(
     (persons: Person[]): Person[] => {
-      if (!isFiltering) return persons
-      return persons.filter((p) => personBelongsToTenant(p, effectiveTenant))
-    },
-    [isFiltering, effectiveTenant, personBelongsToTenant],
-  )
-
-  /**
-   * Check if a group belongs to a tenant.
-   * Uses the normalized tenantName from the Group object.
-   */
-  const filterGroups = useCallback(
-    (groups: Group[]): Group[] => {
-      if (!isFiltering) return groups
-      return groups.filter((g) => g.tenantName === effectiveTenant)
-    },
-    [isFiltering, effectiveTenant],
-  )
-
-  /**
-   * Filter OAuth2 clients by tenant.
-   * A client belongs to a tenant if any of its scope map groups belong to that tenant.
-   */
-  const filterOAuth2 = useCallback(
-    (clients: OAuth2Client[], allGroups?: Group[]): OAuth2Client[] => {
-      if (!isFiltering) return clients
-      // Build a set of group IDs that belong to the active tenant
-      const tenantGroupIds = new Set(
-        (allGroups ?? [])
-          .filter((g) => g.tenantName === effectiveTenant)
-          .map((g) => g.id),
-      )
-      return clients.filter((c) =>
-        c.scopeMaps.some((sm) => tenantGroupIds.has(sm.groupId)) ||
-        c.supplementalScopeMaps.some((sm) => tenantGroupIds.has(sm.groupId)),
-      )
-    },
-    [isFiltering, effectiveTenant],
-  )
-
-  /**
-   * Filter service accounts by tenant.
-   * A SA belongs to a tenant if any of its groups belong to that tenant.
-   */
-  const filterServiceAccounts = useCallback(
-    (accounts: ServiceAccount[]): ServiceAccount[] => {
-      if (!isFiltering) return accounts
-      return accounts.filter((sa) =>
-        sa.groups.some((g) => {
-          const prefix = extractTenantPrefix(g)
-          return prefix === effectiveTenant
-        }),
-      )
-    },
-    [isFiltering, effectiveTenant],
-  )
-
-  /**
-   * Discover all tenant prefixes from a list of groups.
-   * Useful for populating the TenantSwitcher dynamically.
-   */
-  const discoverTenants = useCallback(
-    (groups: Group[]): TenantOption[] => {
-      const tenantMap = new Map<string, number>()
-      for (const g of groups) {
-        if (g.tenantName) {
-          tenantMap.set(g.tenantName, (tenantMap.get(g.tenantName) ?? 0) + 1)
-        }
+      if (isSystemAdmin && effectiveTenant === ALL_TENANTS) return persons
+      if (effectiveTenant !== ALL_TENANTS) {
+        return persons.filter((p) => personBelongsToTenant(p, effectiveTenant))
       }
-      return Array.from(tenantMap.entries())
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([name, count]) => ({ value: name, label: name, count }))
+      // Scoped non-admin + "all my tenants"
+      if (isScoped) {
+        if (tenants.length === 0) return []
+        return persons.filter((p) => personBelongsToAny(p, tenants))
+      }
+      return persons
+    },
+    [
+      isSystemAdmin,
+      isScoped,
+      effectiveTenant,
+      tenants,
+      personBelongsToTenant,
+      personBelongsToAny,
+    ],
+  )
+
+  const groupBelongsToTenant = useCallback(
+    (group: Group, tenant: string): boolean => {
+      if (group.tenantName === tenant) return true
+      return extractTenantPrefix(group.name) === tenant
     },
     [],
   )
 
+  const filterGroups = useCallback(
+    (groups: Group[]): Group[] => {
+      if (isSystemAdmin && effectiveTenant === ALL_TENANTS) return groups
+      if (effectiveTenant !== ALL_TENANTS) {
+        return groups.filter((g) => groupBelongsToTenant(g, effectiveTenant))
+      }
+      if (isScoped) {
+        if (tenants.length === 0) return []
+        return groups.filter((g) =>
+          tenants.some((t) => groupBelongsToTenant(g, t)),
+        )
+      }
+      return groups
+    },
+    [isSystemAdmin, isScoped, effectiveTenant, tenants, groupBelongsToTenant],
+  )
+
+  const filterOAuth2 = useCallback(
+    (clients: OAuth2Client[], allGroups?: Group[]): OAuth2Client[] => {
+      if (isSystemAdmin && effectiveTenant === ALL_TENANTS) return clients
+      const scopeTenants =
+        effectiveTenant !== ALL_TENANTS ? [effectiveTenant] : tenants
+      if (!isSystemAdmin && scopeTenants.length === 0) return []
+      const tenantGroupIds = new Set(
+        (allGroups ?? [])
+          .filter((g) =>
+            scopeTenants.some((t) => groupBelongsToTenant(g, t)),
+          )
+          .map((g) => g.id),
+      )
+      return clients.filter(
+        (c) =>
+          c.scopeMaps.some((sm) => tenantGroupIds.has(sm.groupId)) ||
+          c.supplementalScopeMaps.some((sm) =>
+            tenantGroupIds.has(sm.groupId),
+          ),
+      )
+    },
+    [isSystemAdmin, effectiveTenant, tenants, groupBelongsToTenant],
+  )
+
+  const filterServiceAccounts = useCallback(
+    (accounts: ServiceAccount[]): ServiceAccount[] => {
+      if (isSystemAdmin && effectiveTenant === ALL_TENANTS) return accounts
+      const scopeTenants =
+        effectiveTenant !== ALL_TENANTS ? [effectiveTenant] : tenants
+      if (!isSystemAdmin && scopeTenants.length === 0) return []
+      return accounts.filter((sa) => {
+        const names = [...sa.groups, ...sa.groupNames]
+        return names.some((g) => {
+          const prefix = extractTenantPrefix(g)
+          return prefix !== null && scopeTenants.includes(prefix)
+        })
+      })
+    },
+    [isSystemAdmin, effectiveTenant, tenants],
+  )
+
+  const discoverTenants = useCallback((groups: Group[]): TenantOption[] => {
+    const tenantMap = new Map<string, number>()
+    for (const g of groups) {
+      const t = g.tenantName ?? extractTenantPrefix(g.name)
+      if (t) {
+        tenantMap.set(t, (tenantMap.get(t) ?? 0) + 1)
+      }
+    }
+    return Array.from(tenantMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([name, count]) => ({ value: name, label: name, count }))
+  }, [])
+
   return {
-    // State
     activeTenant: effectiveTenant,
     setActiveTenant,
     isFiltering,
     availableTenants,
-    canSwitchTenant: isSystemAdmin || (isTenantAdmin && tenants.length > 1),
+    canSwitchTenant: isSystemAdmin || tenants.length > 1,
 
-    // Filter functions
     filterPersons,
     filterGroups,
     filterOAuth2,

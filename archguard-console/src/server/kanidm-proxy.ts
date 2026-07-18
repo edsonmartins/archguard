@@ -1,13 +1,11 @@
 // src/server/kanidm-proxy.ts
 
 import { createServerFn } from '@tanstack/react-start'
-import { getCookie } from '@tanstack/react-start/server'
 import { z } from 'zod'
-import { decryptSession } from './session'
 import { recordActivity, getActor } from './activity-log'
 import { logger } from './logger'
 import { enforceRateLimit } from './rate-limit'
-import type { SessionData } from './auth'
+import { requireSession } from './session-guard'
 
 const KANIDM_URL = process.env.ARCHGUARD_ID_URL || 'https://localhost:8443'
 const KANIDM_SA_TOKEN = process.env.ARCHGUARD_SA_TOKEN!
@@ -48,17 +46,6 @@ export function isAllowedPath(path: string): boolean {
   )
 }
 
-function isAuthenticated(): boolean {
-  try {
-    const sessionCookie = getCookie('archguard_session')
-    if (!sessionCookie) return false
-    const session = decryptSession<SessionData>(sessionCookie)
-    return session.isAuthenticated === true
-  } catch {
-    return false
-  }
-}
-
 export const kanidmApiFn = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) => {
     const result = proxyRequestSchema.safeParse(data)
@@ -71,7 +58,9 @@ export const kanidmApiFn = createServerFn({ method: 'POST' })
     enforceRateLimit('proxy', PROXY_LIMIT, PROXY_WINDOW_MS)
 
     // Auth check: only authenticated users can use the proxy
-    if (!isAuthenticated()) {
+    try {
+      requireSession()
+    } catch {
       logger.warn(
         { method: data.method, path: data.path },
         'proxy: rejected unauthenticated request',

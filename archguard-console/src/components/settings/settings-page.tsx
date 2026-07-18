@@ -9,6 +9,7 @@ import {
   ExternalLink,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
@@ -16,13 +17,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { PermissionGate } from '@/components/shared/permission-gate'
 import { systemApi, accountPolicyApi } from '@/lib/api/kanidm-client'
 import { queryKeys } from '@/lib/utils/query-keys'
-
-const CREDENTIAL_LABELS: Record<string, string> = {
-  any: 'Qualquer (senha simples aceita)',
-  mfa: 'MFA obrigatório (senha + TOTP/WebAuthn)',
-  passkey: 'Passkey obrigatória',
-  attested_passkey: 'Passkey atestada obrigatória',
-}
+import { LanguageSwitcher } from '@/components/layout/language-switcher'
+import { enumLabel } from '@/lib/i18n/labels'
 
 const CREDENTIAL_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
   any: 'outline',
@@ -39,6 +35,7 @@ function formatSeconds(s: number | undefined): string {
 }
 
 export function SettingsPage() {
+  const { t } = useTranslation()
   const { data: systemStatus, isLoading: statusLoading } = useQuery({
     queryKey: queryKeys.system.status,
     queryFn: () => systemApi.status(),
@@ -63,25 +60,23 @@ export function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
-        <p className="text-muted-foreground">
-          Visualize configurações do sistema e políticas de segurança
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight">{t('settings.title')}</h1>
+        <p className="text-muted-foreground">{t('settings.subtitle')}</p>
       </div>
 
       <Tabs defaultValue="general">
         <TabsList>
           <TabsTrigger value="general">
             <Settings className="mr-2 h-4 w-4" />
-            Geral
+            {t('settings.general')}
           </TabsTrigger>
           <TabsTrigger value="security">
             <Shield className="mr-2 h-4 w-4" />
-            Segurança
+            {t('settings.security')}
           </TabsTrigger>
           <TabsTrigger value="system">
             <Server className="mr-2 h-4 w-4" />
-            Sistema
+            {t('settings.system')}
           </TabsTrigger>
         </TabsList>
 
@@ -90,10 +85,23 @@ export function SettingsPage() {
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <Globe className="h-4 w-4" />
-                Informações do Domínio
+                {t('settings.language')}
+              </CardTitle>
+              <CardDescription>{t('settings.languageHint')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LanguageSwitcher compact={false} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                {t('settings.domainInfo')}
               </CardTitle>
               <CardDescription>
-                Configurações do domínio Kanidm
+                {t('settings.domainHint')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -102,20 +110,20 @@ export function SettingsPage() {
               ) : (
                 <>
                   <SettingsField
-                    label="Domínio"
+                    label={t('common.domain')}
                     value={getDomainAttr(domainInfo, 'domain_name')}
                   />
                   <SettingsField
-                    label="Display Name"
+                    label={t('common.displayName')}
                     value={getDomainAttr(domainInfo, 'domain_display_name')}
                   />
-                  <SettingsField label="Status" value="">
+                  <SettingsField label={t('common.status')} value="">
                     <Badge variant="default">
-                      {getSystemState(systemStatus) === 'ok' ? 'Online' : 'Indisponível'}
+                      {getSystemState(systemStatus) === 'ok' ? t('common.online') : t('common.unavailable')}
                     </Badge>
                   </SettingsField>
                   <SettingsField
-                    label="Versão Kanidm"
+                    label={t('settings.kanidmVersion')}
                     value={getSystemProp(systemStatus, 'version')}
                   />
                 </>
@@ -140,17 +148,21 @@ export function SettingsPage() {
                 <SettingsFieldsSkeleton count={3} />
               ) : (
                 <>
-                  <SettingsField label="Credencial Mínima" value="">
+                  <SettingsField label={t('settings.credMin')} value="">
                     <Badge variant={CREDENTIAL_VARIANT[accountPolicy?.credentialTypeMinimum ?? 'any'] ?? 'outline'}>
-                      {CREDENTIAL_LABELS[accountPolicy?.credentialTypeMinimum ?? 'any'] ?? accountPolicy?.credentialTypeMinimum}
+                      {enumLabel(
+                        t,
+                        'credentialPolicy',
+                        accountPolicy?.credentialTypeMinimum ?? 'any',
+                      )}
                     </Badge>
                   </SettingsField>
                   <SettingsField
-                    label="Expiração de Sessão"
+                    label={t('settings.sessionExpiry')}
                     value={formatSeconds(accountPolicy?.authSessionExpiry)}
                   />
                   <SettingsField
-                    label="Expiração de Privilégio"
+                    label={t('settings.privilegeExpiry')}
                     value={formatSeconds(accountPolicy?.privilegeExpiry)}
                   />
                 </>
@@ -195,7 +207,7 @@ export function SettingsPage() {
               <SettingsField label="ArchGuard Console" value="v1.0.0" />
               <SettingsField label="Framework" value="TanStack Start" />
               <SettingsField
-                label="Versão Kanidm"
+                label={t('settings.kanidmVersion')}
                 value={getSystemProp(systemStatus, 'version')}
               />
             </CardContent>

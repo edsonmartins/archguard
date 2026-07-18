@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 // src/components/shared/route-error-boundary.tsx
 
 import { useEffect } from 'react'
@@ -13,6 +14,7 @@ interface RouteErrorBoundaryProps {
 }
 
 export function RouteErrorBoundary({ error, reset }: RouteErrorBoundaryProps) {
+  const { t } = useTranslation()
   const router = useRouter()
 
   const is401 = error.message.includes('401')
@@ -44,14 +46,14 @@ export function RouteErrorBoundary({ error, reset }: RouteErrorBoundaryProps) {
             {is403
               ? 'Acesso Negado'
               : isNetwork
-                ? 'Erro de Conexão'
+                ? t('routeError.connection')
                 : 'Algo deu errado'}
           </h2>
           <p className="mb-4 text-sm text-muted-foreground">
             {is403
-              ? 'Você não tem permissão para acessar este recurso.'
+              ? t('routeError.forbidden')
               : isNetwork
-                ? 'Não foi possível conectar ao servidor. Verifique sua conexão.'
+                ? t('routeError.network')
                 : error.message || 'Ocorreu um erro inesperado.'}
           </p>
           <div className="flex justify-center gap-2">

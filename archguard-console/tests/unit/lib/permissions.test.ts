@@ -81,6 +81,42 @@ describe('derivePermissions', () => {
   it('unknown groups produce no permissions', () => {
     expect(derivePermissions(['random_group'])).toEqual([])
   })
+
+  it('archguard_super_admins elevates to ALL_PERMISSIONS', () => {
+    expect(derivePermissions(['archguard_super_admins'])).toEqual(
+      ALL_PERMISSIONS,
+    )
+  })
+
+  it('archguard_tenant_admins gets tenant-admin perms without system:admin', () => {
+    const perms = derivePermissions(['archguard_tenant_admins'])
+    expect(perms).toContain('persons:create')
+    expect(perms).toContain('groups:members')
+    expect(perms).toContain('audit:read')
+    expect(perms).not.toContain('system:admin')
+    expect(perms).not.toContain('oauth2:delete')
+  })
+
+  it('archguard_users (operator) is read-only', () => {
+    const perms = derivePermissions(['archguard_users'])
+    expect(perms).toContain('persons:read')
+    expect(perms).toContain('groups:read')
+    expect(perms).not.toContain('persons:create')
+    expect(perms).not.toContain('persons:delete')
+  })
+
+  it('archguard_viewers is read-only', () => {
+    const perms = derivePermissions(['archguard_viewers', 'tenant_rio_quality'])
+    expect(perms).toContain('persons:read')
+    expect(perms).not.toContain('persons:create')
+  })
+
+  it('does not treat archguard_tenant_admins as {tenant}_admins fallback name', () => {
+    // If mistaken as tenant "archguard_tenant", would still get tenant perms —
+    // ensure explicit mapping is used and no oauth2 leak.
+    const perms = derivePermissions(['archguard_tenant_admins'])
+    expect(perms).not.toContain('oauth2:create')
+  })
 })
 
 describe('hasPermission', () => {

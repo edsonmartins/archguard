@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 // src/components/identity/group-assignment.tsx
 
 import { useState } from 'react'
@@ -28,6 +29,7 @@ export function PersonGroupAssignment({
   personId,
   person,
 }: PersonGroupAssignmentProps) {
+  const { t } = useTranslation()
   const { data: allGroups } = useGroups()
   const addMembers = useAddGroupMembers()
   const removeMembers = useRemoveGroupMembers()
@@ -128,7 +130,7 @@ export function PersonGroupAssignment({
               <Input
                 value={groupSearch}
                 onChange={(e) => setGroupSearch(e.target.value)}
-                placeholder="Buscar grupos..."
+                placeholder={t('identities.searchGroups')}
                 className="pl-10"
               />
             </div>

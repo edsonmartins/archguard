@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 // src/components/identity/person-detail-page.tsx
 
 import { useState } from 'react'
@@ -33,6 +34,7 @@ import { queryKeys } from '@/lib/utils/query-keys'
 import { initials } from '@/lib/utils/formatters'
 
 export function PersonDetailPage() {
+  const { t } = useTranslation()
   const { personId } = Route.useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -113,7 +115,7 @@ export function PersonDetailPage() {
                 <InfoRow label="Username" value={`@${person.username}`}>
                   <CopyButton value={person.username} />
                 </InfoRow>
-                <InfoRow label="Nome de Exibição" value={person.displayName} />
+                <InfoRow label={t('identities.displayName')} value={person.displayName} />
                 {person.legalName && (
                   <InfoRow label="Nome Legal" value={person.legalName} />
                 )}
@@ -223,7 +225,7 @@ export function PersonDetailPage() {
       <ConfirmDialog
         open={showDelete}
         onOpenChange={setShowDelete}
-        title="Excluir Pessoa"
+        title={t('identities.deletePerson')}
         description={`Esta ação é irreversível. Todos os dados de ${person.displayName} serão permanentemente removidos.`}
         confirmText={person.username}
         destructive

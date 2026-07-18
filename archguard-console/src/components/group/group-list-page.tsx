@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 // src/components/group/group-list-page.tsx
 
 import { useState, useMemo } from 'react'
@@ -56,6 +57,7 @@ import type { Group } from '@/lib/api/types/kanidm'
 type ViewMode = 'list' | 'tree'
 
 export function GroupListPage() {
+  const { t } = useTranslation()
   const { data: groups, isLoading } = useGroups()
   const deleteGroup = useDeleteGroup()
   const { filterGroups, isFiltering } = useTenantFilter()
@@ -87,10 +89,10 @@ export function GroupListPage() {
               <span className="font-medium">{group.name}</span>
               {group.isBuiltin && (
                 <Tooltip>
-                  <TooltipTrigger aria-label="Grupo do sistema">
+                  <TooltipTrigger aria-label={t('groupsPage.systemGroup')}>
                     <Lock className="h-3 w-3 text-muted-foreground" />
                   </TooltipTrigger>
-                  <TooltipContent>Grupo do sistema (somente leitura)</TooltipContent>
+                  <TooltipContent>{t('groupsPage.systemGroupHint')}</TooltipContent>
                 </Tooltip>
               )}
             </Link>
@@ -99,7 +101,7 @@ export function GroupListPage() {
       },
       {
         accessorKey: 'description',
-        header: 'Descrição',
+        header: t('groupsPage.columns.description'),
         cell: ({ row }) => (
           <span className="text-sm text-muted-foreground">
             {row.original.description ?? '—'}
@@ -207,7 +209,7 @@ export function GroupListPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar grupos..."
+            placeholder={t('groupsPage.search')}
             value={globalFilter}
             onChange={(e) => setGlobalFilter(e.target.value)}
             className="pl-10"
@@ -219,7 +221,7 @@ export function GroupListPage() {
             size="icon"
             className="h-9 w-9 rounded-r-none"
             onClick={() => setViewMode('list')}
-            aria-label="Visualizar como lista"
+            aria-label={t('groupsPage.listView')}
           >
             <List className="h-4 w-4" />
           </Button>
@@ -228,7 +230,7 @@ export function GroupListPage() {
             size="icon"
             className="h-9 w-9 rounded-l-none"
             onClick={() => setViewMode('tree')}
-            aria-label="Visualizar como árvore"
+            aria-label={t('groupsPage.treeView')}
           >
             <Network className="h-4 w-4" />
           </Button>
@@ -238,9 +240,9 @@ export function GroupListPage() {
       {filteredData.length === 0 ? (
         <EmptyState
           icon={UsersRound}
-          title="Nenhum grupo encontrado"
-          description="Crie um novo grupo para organizar identidades."
-          action={{ label: 'Novo Grupo', to: '/groups/create' }}
+          title={t('groupsPage.empty')}
+          description={t('groupsPage.emptyHint')}
+          action={{ label: t('groupsPage.create'), to: '/groups/create' }}
         />
       ) : viewMode === 'list' ? (
         <>
@@ -311,7 +313,7 @@ export function GroupListPage() {
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Excluir Grupo"
+        title={t('groupsPage.deleteTitle')}
         description={`Esta ação é irreversível. O grupo "${deleteTarget?.name}" será permanentemente removido.`}
         confirmText={deleteTarget?.name ?? ''}
         destructive

@@ -37,7 +37,11 @@ export interface SessionData {
 const REFRESH_THRESHOLD_MS = 60 * 1000
 
 const KANIDM_URL = process.env.ARCHGUARD_ID_URL || 'https://localhost:8443'
-const OIDC_CLIENT_ID = 'archguard-console'
+/** Default admin console client; UnifiedUI may override via OIDC_CLIENT_ID / UNIFIED_OIDC_CLIENT_ID. */
+const OIDC_CLIENT_ID =
+  process.env.UNIFIED_OIDC_CLIENT_ID ||
+  process.env.OIDC_CLIENT_ID ||
+  'archguard-console'
 const IS_PROD = process.env.NODE_ENV === 'production'
 
 if (IS_PROD && !KANIDM_URL.startsWith('https://')) {
@@ -103,7 +107,7 @@ function evaluateAccess(groups: string[]) {
   return { isAdmin, hasAccess }
 }
 
-async function exchangeCodeForTokens(
+export async function exchangeCodeForTokens(
   code: string,
   codeVerifier: string,
   redirectUri: string,
@@ -159,7 +163,7 @@ async function exchangeRefreshTokenForTokens(
  * id_token and re-derives groups/permissions, so any group changes upstream
  * propagate on every refresh.
  */
-async function sessionFromTokens(
+export async function sessionFromTokens(
   tokens: TokenResponse,
 ): Promise<SessionData | null> {
   const claims = await verifyIdToken(tokens.id_token)

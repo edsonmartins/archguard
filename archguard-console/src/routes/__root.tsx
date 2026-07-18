@@ -11,6 +11,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import { RouteErrorBoundary } from '@/components/shared/route-error-boundary'
 import { NotFound } from '@/components/shared/not-found'
+import '@/lib/i18n/config'
 
 import appCss from '../styles.css?url'
 

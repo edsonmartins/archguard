@@ -1,7 +1,7 @@
-// src/components/layout/app-sidebar.tsx
 // Control plane navigation (AWS Console–style modules)
 
 import { Link } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import {
   LayoutDashboard,
   Users,
@@ -34,29 +34,29 @@ import { TenantSwitcher } from '@/components/layout/tenant-switcher'
 import type { Permission } from '@/lib/auth/permissions'
 
 interface NavItem {
-  label: string
+  labelKey: string
   to: string
   icon: React.ComponentType<{ className?: string }>
   permission: Permission | null
 }
 
 interface NavGroup {
-  label: string
+  labelKey: string
   items: NavItem[]
 }
 
 const navGroups: NavGroup[] = [
   {
-    label: 'Visão geral',
+    labelKey: 'nav.overview',
     items: [
       {
-        label: 'Dashboard',
+        labelKey: 'nav.dashboard',
         to: '/dashboard',
         icon: LayoutDashboard,
         permission: null,
       },
       {
-        label: 'Plataforma',
+        labelKey: 'nav.platform',
         to: '/platform',
         icon: Gauge,
         permission: 'sites:read',
@@ -64,34 +64,34 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: 'Identidade',
+    labelKey: 'nav.identity',
     items: [
       {
-        label: 'Identidades',
+        labelKey: 'nav.identities',
         to: '/identities',
         icon: Users,
         permission: 'persons:read',
       },
       {
-        label: 'Grupos',
+        labelKey: 'nav.groups',
         to: '/groups',
         icon: UsersRound,
         permission: 'groups:read',
       },
       {
-        label: 'Service Accounts',
+        labelKey: 'nav.serviceAccounts',
         to: '/service-accounts',
         icon: Bot,
         permission: 'service_accounts:read',
       },
       {
-        label: 'OAuth2 / SSO',
+        labelKey: 'nav.oauth2',
         to: '/oauth2',
         icon: KeyRound,
         permission: 'oauth2:read',
       },
       {
-        label: 'Vault',
+        labelKey: 'nav.vault',
         to: '/vault',
         icon: ShieldCheck,
         permission: 'vault:read',
@@ -99,28 +99,28 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: 'Acesso (ArchGate)',
+    labelKey: 'nav.access',
     items: [
       {
-        label: 'Clientes / Sites',
+        labelKey: 'nav.sites',
         to: '/sites',
         icon: Building2,
         permission: 'sites:read',
       },
       {
-        label: 'Gateways',
+        labelKey: 'nav.gateways',
         to: '/gateways',
         icon: Server,
         permission: 'gateways:read',
       },
       {
-        label: 'Segredos',
+        labelKey: 'nav.secrets',
         to: '/secrets',
         icon: KeyRoundIcon,
         permission: 'secrets:read',
       },
       {
-        label: 'Mentors Axis',
+        labelKey: 'nav.mentorsAxis',
         to: '/integrations/mentors-axis',
         icon: Cloud,
         permission: 'sites:update',
@@ -128,22 +128,22 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: 'Governança',
+    labelKey: 'nav.governance',
     items: [
       {
-        label: 'Auditoria',
+        labelKey: 'nav.audit',
         to: '/audit',
         icon: FileText,
         permission: 'audit:read',
       },
       {
-        label: 'Lixeira',
+        labelKey: 'nav.recycleBin',
         to: '/recycle-bin',
         icon: Trash2,
         permission: 'system:admin',
       },
       {
-        label: 'Configurações',
+        labelKey: 'nav.settings',
         to: '/settings',
         icon: Settings,
         permission: 'settings:read',
@@ -153,6 +153,7 @@ const navGroups: NavGroup[] = [
 ]
 
 export function AppSidebar() {
+  const { t } = useTranslation()
   const { can } = usePermissions()
 
   return (
@@ -162,7 +163,7 @@ export function AppSidebar() {
           <ShieldCheck className="h-6 w-6 text-primary" />
           <div>
             <span className="text-base font-bold leading-none">ArchGate</span>
-            <p className="text-xs text-muted-foreground">Admin unificado</p>
+            <p className="text-xs text-muted-foreground">Admin</p>
           </div>
         </Link>
       </SidebarHeader>
@@ -174,8 +175,8 @@ export function AppSidebar() {
           )
           if (items.length === 0) return null
           return (
-            <SidebarGroup key={group.label}>
-              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarGroup key={group.labelKey}>
+              <SidebarGroupLabel>{t(group.labelKey)}</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {items.map((item) => (
@@ -183,7 +184,7 @@ export function AppSidebar() {
                       <SidebarMenuButton asChild>
                         <Link to={item.to}>
                           <item.icon className="h-4 w-4" />
-                          <span>{item.label}</span>
+                          <span>{t(item.labelKey)}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 // src/components/identity/credential-reset-dialog.tsx
 
 import { useState } from 'react'
@@ -42,6 +43,7 @@ export function CredentialResetDialog({
   personId,
   personName,
 }: CredentialResetDialogProps) {
+  const { t } = useTranslation()
   const resetCredential = useResetPersonCredential()
   const [ttl, setTtl] = useState(3600)
   const [resetToken, setResetToken] = useState<string | null>(null)
@@ -102,7 +104,7 @@ export function CredentialResetDialog({
                 onClick={handleReset}
                 disabled={resetCredential.isPending}
               >
-                {resetCredential.isPending ? 'Gerando...' : 'Gerar Link'}
+                {resetCredential.isPending ? 'Gerando...' : t('identities.generateLink')}
               </Button>
             </DialogFooter>
           </>

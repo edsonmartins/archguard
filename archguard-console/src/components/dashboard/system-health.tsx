@@ -1,5 +1,6 @@
 // src/components/dashboard/system-health.tsx
 
+import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Activity } from 'lucide-react'
@@ -16,38 +17,38 @@ interface SystemHealthProps {
   isLoading: boolean
 }
 
-const statusConfig: Record<
-  string,
-  {
-    label: string
-    variant: 'default' | 'secondary' | 'destructive' | 'outline'
-    className?: string
-  }
-> = {
-  ok: {
-    label: 'Online',
-    variant: 'outline',
-    // Verde semântico (não usar primary/preto)
-    className:
-      'border-transparent bg-emerald-600 text-white hover:bg-emerald-600/90 dark:bg-emerald-600 dark:text-white',
-  },
-  error: {
-    label: 'Erro',
-    variant: 'destructive',
-  },
-  unreachable: {
-    label: 'Indisponível',
-    variant: 'secondary',
-  },
-}
-
 export function SystemHealth({ services, isLoading }: SystemHealthProps) {
+  const { t } = useTranslation()
+  const statusConfig: Record<
+    string,
+    {
+      label: string
+      variant: 'default' | 'secondary' | 'destructive' | 'outline'
+      className?: string
+    }
+  > = {
+    ok: {
+      label: t('dashboard.health.online'),
+      variant: 'outline',
+      className:
+        'border-transparent bg-emerald-600 text-white hover:bg-emerald-600/90 dark:bg-emerald-600 dark:text-white',
+    },
+    error: {
+      label: t('dashboard.health.error'),
+      variant: 'destructive',
+    },
+    unreachable: {
+      label: t('dashboard.health.unreachable'),
+      variant: 'secondary',
+    },
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Activity className="h-4 w-4" />
-          Status dos Serviços
+          {t('dashboard.health.title')}
         </CardTitle>
       </CardHeader>
       <CardContent>

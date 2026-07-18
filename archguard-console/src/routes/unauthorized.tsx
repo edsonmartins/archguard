@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 // src/routes/unauthorized.tsx
 
 import { createFileRoute, Link } from '@tanstack/react-router'
@@ -10,6 +11,7 @@ export const Route = createFileRoute('/unauthorized')({
 })
 
 function UnauthorizedPage() {
+  const { t } = useTranslation()
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <Card className="w-full max-w-md text-center">

@@ -99,38 +99,65 @@ export function normalizeCredentialStatus(raw: unknown): CredentialStatus {
 }
 
 /**
- * Extract tenant prefix from a group name using the naming convention:
- *   {tenant}_admins, {tenant}_users, {tenant}_* → tenant
- *   idm_*, system_*, archguard_* → null (builtin)
- *   standalone name without _ → could be tenant root group
+ * Normalize group name: strip SPN domain (`name@domain` → `name`).
+ * Kanidm list APIs often return memberof as SPNs.
+ */
+export function stripGroupSpn(groupName: string): string {
+  if (!groupName.includes('@')) return groupName
+  return groupName.split('@')[0] ?? groupName
+}
+
+/**
+ * Extract tenant identifier from a group name.
+ *
+ * Conventions:
+ *   tenant_{slug}              → tenant_{slug}   (ArchGate)
+ *   {tenant}_admins|_users|…  → {tenant}        (legacy console)
+ *   idm_*, system_*, archguard_*, archgate_* → null (platform)
+ *   standalone name (no _)    → name            (tenant root group)
  */
 export function extractTenantPrefix(groupName: string): string | null {
+  const name = stripGroupSpn(groupName)
+
   // Builtin groups are never tenants
-  if (BUILTIN_GROUPS.has(groupName)) return null
-  // idm_ and system_ prefixed groups are Kanidm internal
-  if (groupName.startsWith('idm_') || groupName.startsWith('system_')) return null
-  // archguard_ prefixed groups are platform-level
-  if (groupName.startsWith('archguard_')) return null
-
-  // Groups with suffixes: {tenant}_{role} → extract tenant
-  const suffixes = ['_admins', '_users', '_service_desk', '_viewers', '_developers', '_operators']
-  for (const suffix of suffixes) {
-    if (groupName.endsWith(suffix)) {
-      return groupName.slice(0, -suffix.length)
-    }
-  }
-
-  // Group without known suffix but containing underscore: try to extract prefix
-  // e.g., "acme_custom_role" → "acme" (first segment before _)
-  if (groupName.includes('_')) {
-    // Check if first segment is a known tenant by looking at naming pattern
-    // For safety, return null — only well-known suffixes identify tenants
+  if (BUILTIN_GROUPS.has(name)) return null
+  // idm_ / system_ / archguard_ / archgate_ are platform-level
+  if (
+    name.startsWith('idm_') ||
+    name.startsWith('system_') ||
+    name.startsWith('archguard_') ||
+    name.startsWith('archgate_')
+  ) {
     return null
   }
 
-  // Standalone name (no underscore): this is a tenant root group
-  // e.g., "acme" is the root group for tenant "acme"
-  return groupName
+  // ArchGate tenant membership group: tenant_rio_quality → tenant_rio_quality
+  if (name.startsWith('tenant_') && name.length > 'tenant_'.length) {
+    return name
+  }
+
+  // Groups with suffixes: {tenant}_{role} → extract tenant
+  const suffixes = [
+    '_admins',
+    '_users',
+    '_service_desk',
+    '_viewers',
+    '_developers',
+    '_operators',
+  ]
+  for (const suffix of suffixes) {
+    if (name.endsWith(suffix)) {
+      return name.slice(0, -suffix.length)
+    }
+  }
+
+  // Ambiguous compound names (no known suffix)
+  if (name.includes('_')) {
+    return null
+  }
+
+  // Standalone name (no underscore): tenant root group e.g. "acme"
+  return name
 }
 
 export function normalizeGroup(raw: KanidmEntry): Group {

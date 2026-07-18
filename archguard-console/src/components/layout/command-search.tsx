@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 // src/components/layout/command-search.tsx
 
 import { useEffect } from 'react'
@@ -27,6 +28,7 @@ interface CommandSearchProps {
 }
 
 export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -47,10 +49,10 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput placeholder="Buscar pessoas, grupos, apps..." />
+      <CommandInput placeholder={t('commandSearch.placeholder')} />
       <CommandList>
         <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
-        <CommandGroup heading="Páginas">
+        <CommandGroup heading={t('commandSearch.pages')}>
           <CommandItem onSelect={() => goTo('/dashboard')}>
             <LayoutDashboard className="mr-2 h-4 w-4" />
             Dashboard
@@ -77,7 +79,7 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
           </CommandItem>
         </CommandGroup>
         <CommandSeparator />
-        <CommandGroup heading="Ações rápidas">
+        <CommandGroup heading={t('commandSearch.quickActions')}>
           <CommandItem onSelect={() => goTo('/identities/create')}>
             <Plus className="mr-2 h-4 w-4" />
             Nova Pessoa

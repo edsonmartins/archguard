@@ -2,6 +2,7 @@
 // Hub da admin unificada — preferir rotas do console a UIs stock externas
 
 import { Link } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import {
   UserPlus,
   UsersRound,
@@ -16,13 +17,13 @@ import { Button } from '@/components/ui/button'
 import { PermissionGate } from '@/components/shared/permission-gate'
 
 export function QuickActions() {
+  const { t } = useTranslation()
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Admin unificado</CardTitle>
+        <CardTitle className="text-base">{t('dashboard.quickActions.title')}</CardTitle>
         <p className="text-xs text-muted-foreground font-normal">
-          Use o console para identidade, gateways e segredos. UIs stock (Warpgate /
-          Guac / OpenBao) são break-glass.
+          {t('dashboard.quickActions.subtitle')}
         </p>
       </CardHeader>
       <CardContent className="grid gap-2 sm:grid-cols-2">
@@ -30,7 +31,7 @@ export function QuickActions() {
           <Button asChild variant="outline" className="justify-start gap-2">
             <Link to="/platform">
               <Gauge className="h-4 w-4" />
-              Saúde da plataforma
+              {t('dashboard.quickActions.platformHealth')}
             </Link>
           </Button>
         </PermissionGate>
@@ -38,7 +39,7 @@ export function QuickActions() {
           <Button asChild variant="outline" className="justify-start gap-2">
             <Link to="/gateways">
               <Server className="h-4 w-4" />
-              Gateways (WG / Guac)
+              {t('dashboard.quickActions.gateways')}
             </Link>
           </Button>
         </PermissionGate>
@@ -46,7 +47,7 @@ export function QuickActions() {
           <Button asChild variant="outline" className="justify-start gap-2">
             <Link to="/sites">
               <Building2 className="h-4 w-4" />
-              Clientes / Sites
+              {t('dashboard.quickActions.sites')}
             </Link>
           </Button>
         </PermissionGate>
@@ -54,7 +55,7 @@ export function QuickActions() {
           <Button asChild variant="outline" className="justify-start gap-2">
             <Link to="/secrets">
               <KeySquare className="h-4 w-4" />
-              Segredos (OpenBao)
+              {t('dashboard.quickActions.secrets')}
             </Link>
           </Button>
         </PermissionGate>
@@ -62,7 +63,7 @@ export function QuickActions() {
           <Button asChild variant="outline" className="justify-start gap-2">
             <Link to="/identities/create">
               <UserPlus className="h-4 w-4" />
-              Nova pessoa
+              {t('dashboard.quickActions.newPerson')}
             </Link>
           </Button>
         </PermissionGate>
@@ -70,7 +71,7 @@ export function QuickActions() {
           <Button asChild variant="outline" className="justify-start gap-2">
             <Link to="/groups/create">
               <UsersRound className="h-4 w-4" />
-              Novo grupo
+              {t('dashboard.quickActions.newGroup')}
             </Link>
           </Button>
         </PermissionGate>
@@ -78,7 +79,7 @@ export function QuickActions() {
           <Button asChild variant="outline" className="justify-start gap-2">
             <Link to="/oauth2/create">
               <KeyRound className="h-4 w-4" />
-              Client OAuth2
+              {t('dashboard.quickActions.oauth2Client')}
             </Link>
           </Button>
         </PermissionGate>

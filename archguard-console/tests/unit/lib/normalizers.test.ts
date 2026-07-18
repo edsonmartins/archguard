@@ -239,8 +239,15 @@ describe('extractTenantPrefix', () => {
     ['acme_users', 'acme'],
     ['acme_service_desk', 'acme'],
     ['acme_developers', 'acme'],
-    ['globex', 'globex'],          // standalone tenant root
-  ])('returns "%s" for %s', (group, tenant) => {
+    ['globex', 'globex'], // standalone tenant root
+    ['tenant_rio_quality', 'tenant_rio_quality'], // ArchGate
+    ['tenant_grupo_marra', 'tenant_grupo_marra'],
+    // SPN form from Kanidm memberof
+    [
+      'tenant_rio_quality@id.archgate.com.br',
+      'tenant_rio_quality',
+    ],
+  ])('returns tenant for %s', (group, tenant) => {
     expect(extractTenantPrefix(group)).toBe(tenant)
   })
 
@@ -249,8 +256,11 @@ describe('extractTenantPrefix', () => {
     'idm_people_admins',
     'system_admins',
     'archguard_admins',
+    'archguard_super_admins',
+    'archguard_users',
     'idm_all_persons',
-  ])('returns null for builtin %s', (group) => {
+    'archgate_tenants',
+  ])('returns null for platform %s', (group) => {
     expect(extractTenantPrefix(group)).toBeNull()
   })
 

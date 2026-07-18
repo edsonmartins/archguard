@@ -1,5 +1,7 @@
 // src/lib/auth/permissions.ts
 
+import { PLATFORM_ADMIN_GROUPS } from './roles'
+
 export type Permission =
   // Identidades
   | 'persons:read'
@@ -31,6 +33,17 @@ export type Permission =
   // Auditoria
   | 'audit:read'
   | 'audit:export'
+  // Sites / clientes ArchGate (conectividade + inventário)
+  | 'sites:read'
+  | 'sites:create'
+  | 'sites:update'
+  | 'sites:delete'
+  // Gateways (Warpgate / Guacamole control plane)
+  | 'gateways:read'
+  | 'gateways:manage'
+  // OpenBao / secrets control plane
+  | 'secrets:read'
+  | 'secrets:manage'
   // Sistema
   | 'settings:read'
   | 'settings:update'
@@ -61,9 +74,40 @@ export const ALL_PERMISSIONS: Permission[] = [
   'vault:admin',
   'audit:read',
   'audit:export',
+  'sites:read',
+  'sites:create',
+  'sites:update',
+  'sites:delete',
+  'gateways:read',
+  'gateways:manage',
+  'secrets:read',
+  'secrets:manage',
   'settings:read',
   'settings:update',
   'system:admin',
+]
+
+/** Tenant Admin: manage users/groups of own tenant (5.3). No OAuth2/SA/system. */
+const TENANT_ADMIN_PERMS: Permission[] = [
+  'persons:read',
+  'persons:create',
+  'persons:update',
+  'persons:credentials',
+  'persons:import',
+  'groups:read',
+  'groups:members',
+  'audit:read',
+  'sites:read',
+  'sites:update',
+  'gateways:read',
+  'secrets:read',
+]
+
+/** Operator / Viewer: read-only authorized scope (5.4). */
+const OPERATOR_READ_PERMS: Permission[] = [
+  'persons:read',
+  'groups:read',
+  'sites:read',
 ]
 
 const GROUP_PERMISSIONS: Record<string, Permission[]> = {
@@ -97,30 +141,41 @@ const GROUP_PERMISSIONS: Record<string, Permission[]> = {
   ],
   archguard_admins: ['system:admin'],
   archguard_super_admins: ['system:admin'],
+  // Global Tenant Admin role (scoped in UI by tenant_* membership)
+  archguard_tenant_admins: TENANT_ADMIN_PERMS,
+  // Operator (Fase 1 ArchGate)
+  archguard_users: OPERATOR_READ_PERMS,
+  archguard_viewers: OPERATOR_READ_PERMS,
+  archguard_service_desk: [
+    'persons:read',
+    'persons:credentials',
+    'groups:read',
+    'sites:read',
+  ],
 }
+
+// Super admins get gateways via system:admin → ALL_PERMISSIONS.
+// Explicit grant for tenant admins already includes gateways:read.
 
 export function derivePermissions(groups: string[]): Permission[] {
   const perms = new Set<Permission>()
 
   for (const group of groups) {
-    const direct = GROUP_PERMISSIONS[group]
+    const name = group.includes('@') ? group.split('@')[0]! : group
+    const direct = GROUP_PERMISSIONS[name]
     if (direct) {
       direct.forEach((p) => perms.add(p))
+      continue
     }
 
-    // Tenant admin: {tenant}_admins
-    if (group.endsWith('_admins') && !GROUP_PERMISSIONS[group]) {
-      ;(
-        [
-          'persons:read',
-          'persons:create',
-          'persons:update',
-          'persons:credentials',
-          'groups:read',
-          'groups:members',
-          'audit:read',
-        ] as Permission[]
-      ).forEach((p) => perms.add(p))
+    // Legacy tenant admin: {tenant}_admins (not platform)
+    if (
+      name.endsWith('_admins') &&
+      !PLATFORM_ADMIN_GROUPS.has(name) &&
+      !name.startsWith('idm_') &&
+      !name.startsWith('archguard_')
+    ) {
+      TENANT_ADMIN_PERMS.forEach((p) => perms.add(p))
     }
   }
 
