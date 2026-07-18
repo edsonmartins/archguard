@@ -359,3 +359,58 @@ function pickSecretField(data: Record<string, unknown>): string | undefined {
   }
   return undefined
 }
+
+/**
+ * Write password (and optional fields) to OpenBao KV v2.
+ * Returns the canonical secret_ref path used for later reads.
+ *
+ * Default mount: `secret` → path `secret/data/archgate/targets/<name>`
+ */
+export async function writeTargetSecret(input: {
+  /** Logical name, usually target name */
+  name: string
+  password: string
+  username?: string
+  /** Override full KV path without leading slash, e.g. secret/data/archgate/targets/x */
+  path?: string
+  extra?: Record<string, string>
+}): Promise<{ secret_ref: string; path: string }> {
+  if (!tokenConfigured()) {
+    throw new Error('OPENBAO_APP_TOKEN (ou TOKEN) ausente para gravar secret')
+  }
+  const safeName = input.name
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+  if (!safeName) throw new Error('nome de secret inválido')
+
+  let path = (input.path || `secret/data/archgate/targets/${safeName}`).replace(
+    /^\//,
+    '',
+  )
+  // Ensure KV v2 has /data/
+  if (!path.includes('/data/')) {
+    const m = path.match(/^([^/]+)\/(.+)$/)
+    if (m) path = `${m[1]}/data/${m[2]}`
+    else path = `secret/data/${path}`
+  }
+
+  const data: Record<string, string> = {
+    password: input.password,
+    ...(input.username ? { username: input.username } : {}),
+    ...(input.extra || {}),
+  }
+
+  const { status, data: resp } = await api('POST', `/${path}`, { data })
+  if (status >= 400) {
+    // Try PUT for some mounts
+    const r2 = await api('PUT', `/${path}`, { data })
+    if (r2.status >= 400) {
+      throw new Error(
+        `OpenBao write failed HTTP ${status}: ${JSON.stringify(resp).slice(0, 200)}`,
+      )
+    }
+  }
+
+  return { secret_ref: path, path }
+}

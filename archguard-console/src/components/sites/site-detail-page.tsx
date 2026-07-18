@@ -2,11 +2,28 @@ import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Pencil, Building2, RefreshCw, Download } from 'lucide-react'
+import {
+  ArrowLeft,
+  Pencil,
+  Building2,
+  RefreshCw,
+  Download,
+  KeyRound,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { enumLabel } from '@/lib/i18n/labels'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { storeTargetSecretFn } from '@/server/target-secret-fn'
 import {
   Card,
   CardContent,
@@ -37,6 +54,9 @@ export function SiteDetailPage({ slug }: { slug: string }) {
   const qc = useQueryClient()
   const exportOne = useExportSiteYaml()
   const [applyLog, setApplyLog] = useState<string>('')
+  const [secretTarget, setSecretTarget] = useState<string | null>(null)
+  const [secretPass, setSecretPass] = useState('')
+  const [secretUser, setSecretUser] = useState('')
   const apply = useMutation({
     mutationFn: () => applySiteTargetsFn({ data: { slug } }),
     onSuccess: (res) => {
@@ -52,6 +72,37 @@ export function SiteDetailPage({ slug }: { slug: string }) {
         void qc.invalidateQueries({ queryKey: ['guacamole'] })
       } else {
         toast.error('Alguns targets falharam — veja o log')
+      }
+    },
+    onError: (e) => toast.error((e as Error).message),
+  })
+
+  const storeSecret = useMutation({
+    mutationFn: () =>
+      storeTargetSecretFn({
+        data: {
+          slug,
+          target_name: secretTarget!,
+          password: secretPass,
+          username: secretUser || undefined,
+          apply: true,
+        },
+      }),
+    onSuccess: (res) => {
+      toast.success(res.message)
+      setSecretTarget(null)
+      setSecretPass('')
+      setSecretUser('')
+      void qc.invalidateQueries({ queryKey: siteKeys.detail(slug) })
+      if (res.apply?.results) {
+        setApplyLog(
+          res.apply.results
+            .map(
+              (r) =>
+                `${r.ok ? 'OK' : 'FAIL'} ${r.name}${r.error ? ': ' + r.error : ''}`,
+            )
+            .join('\n'),
+        )
       }
     },
     onError: (e) => toast.error((e as Error).message),
@@ -207,9 +258,8 @@ export function SiteDetailPage({ slug }: { slug: string }) {
             <CardHeader>
               <CardTitle>Targets ({site.targets.length})</CardTitle>
               <CardDescription>
-                Inventário do site. Use <strong>{t('sites.syncGateways')}</strong> para
-                materializar targets Warpgate e conexões Guacamole (senhas via
-                TARGET_SECRET_&lt;NOME&gt; ou one-shot).
+                Senha → OpenBao (secret_ref no inventário, sem secret no SQLite).
+                Depois apply nos gateways. Também: {t('sites.syncGateways')}.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -223,7 +273,9 @@ export function SiteDetailPage({ slug }: { slug: string }) {
                       <TableHead>Engine</TableHead>
                       <TableHead>Protocolo</TableHead>
                       <TableHead>Host:port</TableHead>
+                      <TableHead>secret_ref</TableHead>
                       <TableHead>Roles</TableHead>
+                      <TableHead />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -235,8 +287,33 @@ export function SiteDetailPage({ slug }: { slug: string }) {
                         <TableCell className="font-mono text-xs">
                           {t.host}:{t.port}
                         </TableCell>
+                        <TableCell className="font-mono text-[10px] max-w-[140px] truncate">
+                          {t.secret_ref ? (
+                            <Badge variant="secondary">OpenBao</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-xs">
                           {(t.roles || []).join(', ')}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {(can('sites:update') ||
+                            can('secrets:manage') ||
+                            can('system:admin')) && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSecretTarget(t.nome)
+                                setSecretUser(t.username || '')
+                                setSecretPass('')
+                              }}
+                            >
+                              <KeyRound className="h-3.5 w-3.5 mr-1" />
+                              Secret
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -252,6 +329,53 @@ export function SiteDetailPage({ slug }: { slug: string }) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog
+        open={!!secretTarget}
+        onOpenChange={(o) => !o && setSecretTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Secret do target {secretTarget}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Grava em OpenBao (
+            <span className="font-mono text-xs">
+              secret/data/archgate/targets/…
+            </span>
+            ), associa secret_ref no site e aplica no gateway. A senha não fica
+            no inventário.
+          </p>
+          <div className="space-y-2">
+            <Label>Username (opcional)</Label>
+            <Input
+              className="font-mono"
+              value={secretUser}
+              onChange={(e) => setSecretUser(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Password (one-shot)</Label>
+            <Input
+              type="password"
+              autoComplete="new-password"
+              value={secretPass}
+              onChange={(e) => setSecretPass(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSecretTarget(null)}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={!secretPass || storeSecret.isPending}
+              onClick={() => storeSecret.mutate()}
+            >
+              Gravar e apply
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

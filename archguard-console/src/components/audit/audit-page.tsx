@@ -1,9 +1,7 @@
 import { useTranslation } from 'react-i18next'
-// src/components/audit/audit-page.tsx
-// Repurposed: Activity Log (console-side) instead of Kanidm audit (not available)
+// Unified audit timeline — console activity + best-effort Warpgate sessions
 
-import { useState, useMemo } from 'react'
-import { Link } from '@tanstack/react-router'
+import { useMemo, useState } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -17,12 +15,12 @@ import {
 import {
   ClipboardList,
   Search,
-  Download,
   CheckCircle2,
   XCircle,
-  Trash2,
   Info,
+  RefreshCw,
 } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -36,18 +34,37 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/shared/empty-state'
-import { useActivityLog } from '@/lib/hooks/use-activity-log'
-import type { ActivityLogEntry } from '@/lib/api/types/kanidm'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  listUnifiedAuditFn,
+  type TimelineEvent,
+} from '@/server/unified-audit-fn'
 
 export function AuditPage() {
   const { t, i18n } = useTranslation()
-  const { data: entries, isLoading } = useActivityLog()
+  const [source, setSource] = useState<'all' | 'console' | 'warpgate'>('all')
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'timestamp', desc: true },
   ])
   const [globalFilter, setGlobalFilter] = useState('')
 
-  const columns: ColumnDef<ActivityLogEntry>[] = useMemo(
+  const q = useQuery({
+    queryKey: ['unifiedAudit', source],
+    queryFn: () =>
+      listUnifiedAuditFn({ data: { limit: 250, source } }),
+    staleTime: 10_000,
+    refetchInterval: 30_000,
+  })
+
+  const entries = q.data?.events || []
+
+  const columns: ColumnDef<TimelineEvent>[] = useMemo(
     () => [
       {
         accessorKey: 'timestamp',
@@ -62,6 +79,25 @@ export function AuditPage() {
           )
         },
         size: 160,
+      },
+      {
+        accessorKey: 'source',
+        header: 'Fonte',
+        cell: ({ row }) => (
+          <Badge
+            variant={
+              row.original.source === 'console'
+                ? 'default'
+                : row.original.source === 'warpgate'
+                  ? 'secondary'
+                  : 'outline'
+            }
+            className="text-xs"
+          >
+            {row.original.source}
+          </Badge>
+        ),
+        size: 90,
       },
       {
         accessorKey: 'action',
@@ -81,45 +117,53 @@ export function AuditPage() {
         accessorKey: 'target',
         header: t('audit.columns.target'),
         cell: ({ row }) => (
-          <span className="text-sm text-muted-foreground">
+          <span className="text-sm text-muted-foreground font-mono text-xs">
             {row.original.target ?? '—'}
           </span>
         ),
       },
       {
-        accessorKey: 'method',
-        header: 'Método',
-        cell: ({ row }) => (
-          <Badge variant="outline" className="text-xs font-mono">
-            {row.original.method}
-          </Badge>
-        ),
-        size: 80,
-      },
-      {
         accessorKey: 'result',
         header: t('audit.columns.result'),
         cell: ({ row }) => {
-          const ok = row.original.result === 'success'
+          const r = row.original.result
+          if (r === 'success') {
+            return (
+              <span className="inline-flex items-center gap-1 text-emerald-600 text-sm">
+                <CheckCircle2 className="h-3.5 w-3.5" /> ok
+              </span>
+            )
+          }
+          if (r === 'error') {
+            return (
+              <span className="inline-flex items-center gap-1 text-destructive text-sm">
+                <XCircle className="h-3.5 w-3.5" /> error
+              </span>
+            )
+          }
           return (
-            <div className="flex items-center gap-1">
-              {ok ? (
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-              ) : (
-                <XCircle className="h-4 w-4 text-destructive" />
-              )}
-              <span className="text-xs">{ok ? 'OK' : 'Erro'}</span>
-            </div>
+            <span className="inline-flex items-center gap-1 text-muted-foreground text-sm">
+              <Info className="h-3.5 w-3.5" /> info
+            </span>
           )
         },
-        size: 80,
+        size: 90,
+      },
+      {
+        accessorKey: 'detail',
+        header: 'Detalhe',
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground line-clamp-2 max-w-[240px]">
+            {row.original.detail || '—'}
+          </span>
+        ),
       },
     ],
-    [],
+    [t, i18n.language],
   )
 
   const table = useReactTable({
-    data: entries ?? [],
+    data: entries,
     columns,
     state: { sorting, globalFilter },
     onSortingChange: setSorting,
@@ -131,166 +175,111 @@ export function AuditPage() {
     initialState: { pagination: { pageSize: 25 } },
   })
 
-  const handleExport = (format: 'csv' | 'json') => {
-    if (!entries?.length) return
-    let content: string
-    let type: string
-    let ext: string
-
-    if (format === 'json') {
-      content = JSON.stringify(entries, null, 2)
-      type = 'application/json'
-      ext = 'json'
-    } else {
-      const headers = 'timestamp,action,actor,target,method,path,result'
-      const rows = entries.map(
-        (e) =>
-          `${e.timestamp},${e.action},${e.actor},${e.target ?? ''},${e.method},${e.path},${e.result}`,
-      )
-      content = [headers, ...rows].join('\n')
-      type = 'text/csv'
-      ext = 'csv'
-    }
-
-    const blob = new Blob([content], { type })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `activity-log-${new Date().toISOString().slice(0, 10)}.${ext}`
-    a.click()
-    URL.revokeObjectURL(url)
+  if (q.isLoading) {
+    return (
+      <div className="p-6 space-y-3">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    )
   }
 
-  if (isLoading) return <AuditSkeleton />
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('audit.title')}</h1>
-          <p className="text-muted-foreground">
-            Registro de operações realizadas pelo console
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <ClipboardList className="h-7 w-7 text-primary" />
+            {t('audit.title', { defaultValue: 'Auditoria' })}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Timeline unificada: ações do console + sessões Warpgate (quando a
+            API expõe).
+            {q.data?.sources && (
+              <span className="ml-2 font-mono text-xs">
+                console={q.data.sources.console} · warpgate=
+                {q.data.sources.warpgate}
+              </span>
+            )}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/recycle-bin">
-              <Trash2 className="mr-2 h-4 w-4" />
-              Lixeira
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => handleExport('csv')}>
-            <Download className="mr-2 h-4 w-4" />
-            CSV
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => handleExport('json')}>
-            <Download className="mr-2 h-4 w-4" />
-            JSON
+        <div className="flex flex-wrap gap-2">
+          <Select
+            value={source}
+            onValueChange={(v) => setSource(v as typeof source)}
+          >
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas fontes</SelectItem>
+              <SelectItem value="console">Console</SelectItem>
+              <SelectItem value="warpgate">Warpgate</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              className="pl-8 w-56"
+              placeholder="Filtrar…"
+              value={globalFilter}
+              onChange={(e) => setGlobalFilter(e.target.value)}
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => void q.refetch()}
+            disabled={q.isFetching}
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${q.isFetching ? 'animate-spin' : ''}`}
+            />
           </Button>
         </div>
       </div>
 
-      <div className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
-        <Info className="mr-2 inline h-4 w-4" />
-        O Kanidm v1.9 não possui API de auditoria pública. Este log registra apenas
-        operações de escrita (criação, edição, exclusão) realizadas através do Console.
-      </div>
-
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder={t('audit.search')}
-          value={globalFilter}
-          onChange={(e) => setGlobalFilter(e.target.value)}
-          className="pl-10"
-        />
-      </div>
-
-      {!entries || entries.length === 0 ? (
+      {entries.length === 0 ? (
         <EmptyState
-          icon={ClipboardList}
-          title={t('audit.empty')}
-          description={t('audit.emptyHint')}
+          title="Sem eventos"
+          description="Ainda não há activity log ou sessões visíveis."
         />
       ) : (
-        <>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <TableHead key={header.id} style={{ width: header.getSize() }}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          <div className="flex items-center justify-end gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              Anterior
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              Página {table.getState().pagination.pageIndex + 1} de{' '}
-              {table.getPageCount()}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              Próxima
-            </Button>
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
-function AuditSkeleton() {
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <Skeleton className="h-9 w-48" />
-          <Skeleton className="mt-2 h-5 w-72" />
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((hg) => (
+                <TableRow key={hg.id}>
+                  {hg.headers.map((h) => (
+                    <TableHead key={h.id}>
+                      {h.isPlaceholder
+                        ? null
+                        : flexRender(
+                            h.column.columnDef.header,
+                            h.getContext(),
+                          )}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id}>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
-      </div>
-      <Skeleton className="h-10 w-80" />
-      <div className="rounded-md border">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-4 border-b p-4">
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-4 w-16" />
-          </div>
-        ))}
-      </div>
+      )}
     </div>
   )
 }

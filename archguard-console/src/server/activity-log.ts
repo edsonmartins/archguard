@@ -70,6 +70,12 @@ function deriveAction(method: string, path: string): string {
     if (method === 'PUT' || method === 'POST') return 'Salvar site'
   }
   if (path.startsWith('/archgate/connector')) return 'Checklist connector'
+  if (path.includes('/targets/') && path.includes('/secret'))
+    return 'Secret de target (OpenBao)'
+  if (path.includes('/revoke')) return 'Revogar acesso'
+  if (path.includes('/provision')) return 'Provisionar acesso'
+  if (path.includes('/grant')) return 'Grant target'
+  if (path.includes('onboarding/wizard')) return 'Wizard novo cliente'
   if (path.includes('mentors-axis')) return 'Sync Mentors Axis'
 
   if (method === 'POST' && !path.includes('/_')) return `Criar ${resource}`
