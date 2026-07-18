@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { usePermissions } from '@/lib/hooks/use-permissions'
 import { WarpgatePanel } from './warpgate-panel'
 import { GuacamolePanel } from './guacamole-panel'
+import { SessionsPanel } from './sessions-panel'
 
 export function GatewaysPage() {
   const { t } = useTranslation()
@@ -38,6 +39,7 @@ export function GatewaysPage() {
         <TabsList>
           <TabsTrigger value="warpgate">{t('gatewaysPage.warpgate')}</TabsTrigger>
           <TabsTrigger value="guacamole">{t('gatewaysPage.guacamole')}</TabsTrigger>
+          <TabsTrigger value="sessions">Sessões</TabsTrigger>
         </TabsList>
 
         <TabsContent value="warpgate" className="mt-4">
@@ -46,6 +48,10 @@ export function GatewaysPage() {
 
         <TabsContent value="guacamole" className="mt-4">
           <GuacamolePanel canRead={canRead} canManage={canManage} />
+        </TabsContent>
+
+        <TabsContent value="sessions" className="mt-4">
+          <SessionsPanel canRead={canRead} canManage={canManage} />
         </TabsContent>
       </Tabs>
     </div>

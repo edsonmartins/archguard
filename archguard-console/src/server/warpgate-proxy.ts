@@ -428,6 +428,104 @@ export async function deleteWarpgateUserByName(
   }
 }
 
+export type WarpgateSession = {
+  id: string
+  username?: string
+  target?: string
+  protocol?: string
+  started_at?: string
+  address?: string
+  raw?: Record<string, unknown>
+}
+
+function normalizeSession(raw: Record<string, unknown>): WarpgateSession {
+  const id = String(
+    raw.id || raw.session_id || raw.uuid || raw.ticket_id || '',
+  )
+  const username = String(
+    raw.username ||
+      raw.user ||
+      (raw.user_info as { username?: string } | undefined)?.username ||
+      '',
+  )
+  const target = String(
+    raw.target ||
+      raw.target_name ||
+      (raw.target as { name?: string } | undefined)?.name ||
+      '',
+  )
+  return {
+    id,
+    username: username || undefined,
+    target: target || undefined,
+    protocol: raw.protocol ? String(raw.protocol) : undefined,
+    started_at: raw.started_at
+      ? String(raw.started_at)
+      : raw.created
+        ? String(raw.created)
+        : undefined,
+    address: raw.address
+      ? String(raw.address)
+      : raw.remote_address
+        ? String(raw.remote_address)
+        : undefined,
+    raw,
+  }
+}
+
+/**
+ * List active sessions/tickets (Warpgate API varies by version).
+ */
+export async function listWarpgateSessions(): Promise<WarpgateSession[]> {
+  const paths = [
+    '/@warpgate/admin/api/sessions',
+    '/@warpgate/admin/api/tickets',
+    '/@warpgate/admin/api/sessions?active=true',
+  ]
+  let lastErr: Error | null = null
+  for (const path of paths) {
+    try {
+      const data = await api<unknown>('GET', path)
+      const arr = Array.isArray(data)
+        ? data
+        : Array.isArray((data as { sessions?: unknown[] })?.sessions)
+          ? (data as { sessions: unknown[] }).sessions
+          : Array.isArray((data as { items?: unknown[] })?.items)
+            ? (data as { items: unknown[] }).items
+            : []
+      return arr
+        .map((x) => normalizeSession(x as Record<string, unknown>))
+        .filter((s) => s.id)
+    } catch (e) {
+      lastErr = e as Error
+    }
+  }
+  throw lastErr || new Error('sessions API unavailable')
+}
+
+export async function terminateWarpgateSession(
+  id: string,
+): Promise<{ ok: boolean; detail: string }> {
+  const paths = [
+    `/@warpgate/admin/api/sessions/${id}`,
+    `/@warpgate/admin/api/tickets/${id}`,
+    `/@warpgate/admin/api/sessions/${id}/close`,
+  ]
+  for (const path of paths) {
+    try {
+      if (path.endsWith('/close')) {
+        await api('POST', path, {})
+      } else {
+        await api('DELETE', path)
+      }
+      return { ok: true, detail: `terminated via ${path}` }
+    } catch {
+      /* try next */
+    }
+  }
+  return { ok: false, detail: 'no terminate endpoint succeeded' }
+}
+
 export function warpgateConfigured(): boolean {
   return configured()
 }

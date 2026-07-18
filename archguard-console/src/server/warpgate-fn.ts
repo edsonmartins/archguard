@@ -10,6 +10,8 @@ import {
   upsertTarget,
   warpgateConfigured,
   warpgatePublicUrl,
+  listWarpgateSessions,
+  terminateWarpgateSession,
   type ApplyTargetInput,
 } from './warpgate-proxy'
 import {
@@ -357,4 +359,39 @@ export const deleteWarpgateRoleFn = createServerFn({ method: 'POST' })
     requireAnyPerm(s, [...MANAGE_PERMS], 'gateways:manage')
     await deleteRole(data.id)
     return { ok: true }
+  })
+
+/** Active sessions / tickets (W-C3). */
+export const listWarpgateSessionsFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const s = requireSession()
+    requireAnyPerm(s, [...READ_PERMS], 'gateways:read')
+    if (!warpgateConfigured()) {
+      return { configured: false, sessions: [] as Awaited<ReturnType<typeof listWarpgateSessions>> }
+    }
+    try {
+      const sessions = await listWarpgateSessions()
+      return { configured: true, sessions }
+    } catch (e) {
+      return {
+        configured: true,
+        sessions: [] as Awaited<ReturnType<typeof listWarpgateSessions>>,
+        error: (e as Error).message,
+      }
+    }
+  },
+)
+
+export const terminateWarpgateSessionFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: unknown) => {
+    const r = z.object({ id: z.string().min(1) }).safeParse(data)
+    if (!r.success) throw new Error(r.error.message)
+    return r.data
+  })
+  .handler(async ({ data }) => {
+    const s = requireSession()
+    requireAnyPerm(s, [...MANAGE_PERMS], 'gateways:manage')
+    const result = await terminateWarpgateSession(data.id)
+    if (!result.ok) throw new Error(result.detail)
+    return result
   })

@@ -41,6 +41,20 @@ import {
   revokePersonAccessFn,
   type OffboardStep,
 } from '@/server/offboarding-fn'
+import {
+  grantPersonTargetFn,
+  provisionPersonAccessFn,
+  type LifecycleStep,
+} from '@/server/lifecycle-fn'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 export function PersonDetailPage() {
   const { t } = useTranslation()
@@ -53,7 +67,15 @@ export function PersonDetailPage() {
   const [showDelete, setShowDelete] = useState(false)
   const [showReset, setShowReset] = useState(false)
   const [showRevoke, setShowRevoke] = useState(false)
+  const [showProvision, setShowProvision] = useState(false)
+  const [showGrant, setShowGrant] = useState(false)
   const [revokeSteps, setRevokeSteps] = useState<OffboardStep[] | null>(null)
+  const [lifecycleSteps, setLifecycleSteps] = useState<LifecycleStep[] | null>(
+    null,
+  )
+  const [tenantSlug, setTenantSlug] = useState('')
+  const [grantTarget, setGrantTarget] = useState('')
+  const [grantTtl, setGrantTtl] = useState('8h')
 
   const revokeAccess = useMutation({
     mutationFn: () =>
@@ -71,6 +93,55 @@ export function PersonDetailPage() {
         queryKey: queryKeys.persons.detail(personId),
       })
       void queryClient.invalidateQueries({ queryKey: queryKeys.persons.all })
+      if (res.ok) toast.success(res.message)
+      else toast.error(res.message)
+    },
+    onError: (e) => toast.error((e as Error).message),
+  })
+
+  const provision = useMutation({
+    mutationFn: () => {
+      const tenant =
+        tenantSlug.trim() ||
+        person!.groupNames.find((g) => g.startsWith('tenant_'))?.replace(
+          /^tenant_/,
+          '',
+        ) ||
+        'default'
+      return provisionPersonAccessFn({
+        data: {
+          username: person!.username,
+          email: person!.emails?.[0] || '',
+          tenant_slug: tenant,
+          groups: person!.groupNames || [],
+          profile: 'operator',
+        },
+      })
+    },
+    onSuccess: (res) => {
+      setLifecycleSteps(res.steps)
+      setShowProvision(false)
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.persons.detail(personId),
+      })
+      if (res.ok) toast.success(res.message)
+      else toast.error(res.message)
+    },
+    onError: (e) => toast.error((e as Error).message),
+  })
+
+  const grant = useMutation({
+    mutationFn: () =>
+      grantPersonTargetFn({
+        data: {
+          username: person!.username,
+          target: grantTarget.trim(),
+          ttl: grantTtl.trim() || '8h',
+        },
+      }),
+    onSuccess: (res) => {
+      setLifecycleSteps(res.steps)
+      setShowGrant(false)
       if (res.ok) toast.success(res.message)
       else toast.error(res.message)
     },
@@ -100,6 +171,36 @@ export function PersonDetailPage() {
           <p className="text-muted-foreground">@{person.username}</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <PermissionGate require={['persons:update', 'persons:create']} any>
+            <Button
+              variant="outline"
+              onClick={() => {
+                const t0 =
+                  person.groupNames
+                    .find((g) => g.startsWith('tenant_'))
+                    ?.replace(/^tenant_/, '') || ''
+                setTenantSlug(t0)
+                setShowProvision(true)
+              }}
+              disabled={provision.isPending}
+            >
+              {provision.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Shield className="mr-2 h-4 w-4" />
+              )}
+              Provisionar acesso
+            </Button>
+          </PermissionGate>
+          <PermissionGate require={['persons:update', 'gateways:manage']} any>
+            <Button
+              variant="outline"
+              onClick={() => setShowGrant(true)}
+              disabled={grant.isPending}
+            >
+              Grant target
+            </Button>
+          </PermissionGate>
           <PermissionGate require={['persons:update', 'persons:delete']} any>
             <Button
               variant="secondary"
@@ -132,14 +233,16 @@ export function PersonDetailPage() {
         </div>
       </div>
 
-      {revokeSteps && (
+      {(revokeSteps || lifecycleSteps) && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Último offboarding</CardTitle>
+            <CardTitle className="text-base">
+              {revokeSteps ? 'Último offboarding' : 'Último provision/grant'}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2 text-sm">
-              {revokeSteps.map((s, i) => (
+              {(revokeSteps || lifecycleSteps || []).map((s, i) => (
                 <li key={`${s.component}-${i}`} className="flex items-start gap-2">
                   {s.ok ? (
                     <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
@@ -295,6 +398,84 @@ export function PersonDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={showProvision} onOpenChange={setShowProvision}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Provisionar acesso</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Garante grupos tenant + archguard_users no Kanidm e dispara
+            orquestração (adapters). Pessoa já deve existir no IdP.
+          </p>
+          <div className="space-y-2">
+            <Label>Tenant slug (sem prefixo tenant_)</Label>
+            <Input
+              className="font-mono"
+              value={tenantSlug}
+              onChange={(e) => setTenantSlug(e.target.value)}
+              placeholder="rio_quality"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowProvision(false)}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={provision.isPending || !tenantSlug.trim()}
+              onClick={() => provision.mutate()}
+            >
+              {provision.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Provisionar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showGrant} onOpenChange={setShowGrant}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Grant target</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Concede acesso a um target/role via orquestração (Warpgate/OpenBao).
+          </p>
+          <div className="space-y-2">
+            <Label>Target ou role</Label>
+            <Input
+              className="font-mono"
+              value={grantTarget}
+              onChange={(e) => setGrantTarget(e.target.value)}
+              placeholder="rio-api-1"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>TTL</Label>
+            <Input
+              className="font-mono"
+              value={grantTtl}
+              onChange={(e) => setGrantTtl(e.target.value)}
+              placeholder="8h"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowGrant(false)}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={grant.isPending || !grantTarget.trim()}
+              onClick={() => grant.mutate()}
+            >
+              {grant.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Conceder
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={showRevoke}
