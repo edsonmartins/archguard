@@ -394,6 +394,40 @@ export async function deleteRole(id: string): Promise<void> {
   await api('DELETE', `/@warpgate/admin/api/roles/${id}`)
 }
 
+/**
+ * Best-effort remove of a Warpgate user by username (offboarding).
+ * API shape varies by WG version — try list + delete by id.
+ */
+export async function deleteWarpgateUserByName(
+  username: string,
+): Promise<{ ok: boolean; detail: string }> {
+  try {
+    const users = await api<Array<{ id: string; username?: string; name?: string }>>(
+      'GET',
+      '/@warpgate/admin/api/users',
+    )
+    const list = Array.isArray(users) ? users : []
+    const found = list.find(
+      (u) =>
+        u.username === username ||
+        u.name === username ||
+        (u as { credentials?: { username?: string } }).credentials
+          ?.username === username,
+    )
+    if (!found?.id) {
+      return { ok: true, detail: 'user not found (already gone)' }
+    }
+    await api('DELETE', `/@warpgate/admin/api/users/${found.id}`)
+    return { ok: true, detail: `deleted user id=${found.id}` }
+  } catch (e) {
+    // Older builds may not expose users API the same way
+    return {
+      ok: false,
+      detail: (e as Error).message.slice(0, 200),
+    }
+  }
+}
+
 export function warpgateConfigured(): boolean {
   return configured()
 }

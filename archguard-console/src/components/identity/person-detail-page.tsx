@@ -12,6 +12,10 @@ import {
   Users,
   History,
   Trash2,
+  UserX,
+  CheckCircle2,
+  Circle,
+  Loader2,
 } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
@@ -28,10 +32,15 @@ import { GroupBadge } from '@/components/shared/group-badge'
 import { CredentialStatusCard } from '@/components/identity/credential-status'
 import { CredentialResetDialog } from '@/components/identity/credential-reset-dialog'
 import { PersonGroupAssignment } from '@/components/identity/group-assignment'
-import { useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { usePerson, useDeletePerson, usePersonCredentials } from '@/lib/hooks/use-persons'
 import { queryKeys } from '@/lib/utils/query-keys'
 import { initials } from '@/lib/utils/formatters'
+import {
+  revokePersonAccessFn,
+  type OffboardStep,
+} from '@/server/offboarding-fn'
 
 export function PersonDetailPage() {
   const { t } = useTranslation()
@@ -43,6 +52,30 @@ export function PersonDetailPage() {
   const deletePerson = useDeletePerson()
   const [showDelete, setShowDelete] = useState(false)
   const [showReset, setShowReset] = useState(false)
+  const [showRevoke, setShowRevoke] = useState(false)
+  const [revokeSteps, setRevokeSteps] = useState<OffboardStep[] | null>(null)
+
+  const revokeAccess = useMutation({
+    mutationFn: () =>
+      revokePersonAccessFn({
+        data: {
+          username: person!.username,
+          person_id: personId,
+          reason: `console offboarding by admin`,
+        },
+      }),
+    onSuccess: (res) => {
+      setRevokeSteps(res.steps)
+      setShowRevoke(false)
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.persons.detail(personId),
+      })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.persons.all })
+      if (res.ok) toast.success(res.message)
+      else toast.error(res.message)
+    },
+    onError: (e) => toast.error((e as Error).message),
+  })
 
   if (isLoading || !person) {
     return <PersonDetailSkeleton />
@@ -66,7 +99,21 @@ export function PersonDetailPage() {
           </div>
           <p className="text-muted-foreground">@{person.username}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <PermissionGate require={['persons:update', 'persons:delete']} any>
+            <Button
+              variant="secondary"
+              onClick={() => setShowRevoke(true)}
+              disabled={revokeAccess.isPending}
+            >
+              {revokeAccess.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <UserX className="mr-2 h-4 w-4" />
+              )}
+              Revogar acesso
+            </Button>
+          </PermissionGate>
           <PermissionGate require="persons:credentials">
             <Button variant="outline" onClick={() => setShowReset(true)}>
               <KeySquare className="mr-2 h-4 w-4" />
@@ -84,6 +131,33 @@ export function PersonDetailPage() {
           </PermissionGate>
         </div>
       </div>
+
+      {revokeSteps && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Último offboarding</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2 text-sm">
+              {revokeSteps.map((s, i) => (
+                <li key={`${s.component}-${i}`} className="flex items-start gap-2">
+                  {s.ok ? (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <Circle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                  )}
+                  <span>
+                    <span className="font-mono text-xs">{s.component}</span>
+                    {s.detail ? (
+                      <span className="text-muted-foreground"> — {s.detail}</span>
+                    ) : null}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="overview">
         <TabsList>
@@ -221,6 +295,19 @@ export function PersonDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <ConfirmDialog
+        open={showRevoke}
+        onOpenChange={setShowRevoke}
+        title="Revogar acesso"
+        description={`Bloqueia o login de ${person.displayName} (@${person.username}) no Kanidm, aciona orquestração (WG/OpenBao) e remove usuário no Warpgate se existir. Preferível a excluir (mantém trilha de auditoria). Digite o username para confirmar.`}
+        confirmText={person.username}
+        destructive
+        isLoading={revokeAccess.isPending}
+        onConfirm={() => {
+          revokeAccess.mutate()
+        }}
+      />
 
       <ConfirmDialog
         open={showDelete}
