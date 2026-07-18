@@ -1,4 +1,4 @@
-// CP-5 — connector checklist + optional lab probes
+// CP-5 — connector checklist + admin-first agent control (no day-2 SSH)
 
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
@@ -11,7 +11,11 @@ import {
   tipoRisk,
   type ChecklistEval,
 } from '@/lib/connector/checklist'
-import { getConnectorChecklist, isLabSite } from '@/lib/api/types/site'
+import {
+  getConnectorChecklist,
+  isLabSite,
+  normalizeSiteConnectors,
+} from '@/lib/api/types/site'
 import { recordActivity } from './activity-log'
 import {
   assertSiteTenantAccess,
@@ -19,6 +23,17 @@ import {
   requireSession,
   sessionActor,
 } from './session-guard'
+import {
+  agentHealth,
+  agentListConnectors,
+  agentProbe,
+  agentPutConfig,
+  agentStart,
+  agentStop,
+  buildFortiConf,
+  connectorAgentConfigured,
+  connectorAgentUrl,
+} from './connector-agent-proxy'
 
 export type ConnectorProbe = {
   name: string
@@ -128,6 +143,29 @@ export const getConnectorStatusFn = createServerFn({ method: 'GET' })
       }
     }
 
+    let runtime: {
+      agent_configured: boolean
+      agent_url?: string
+      agent_ok?: boolean
+      connectors?: Awaited<ReturnType<typeof agentListConnectors>>
+      agent_error?: string
+    } = {
+      agent_configured: connectorAgentConfigured(),
+      agent_url: connectorAgentConfigured()
+        ? connectorAgentUrl()
+        : undefined,
+    }
+    if (connectorAgentConfigured()) {
+      try {
+        await agentHealth()
+        runtime.agent_ok = true
+        runtime.connectors = await agentListConnectors()
+      } catch (e) {
+        runtime.agent_ok = false
+        runtime.agent_error = (e as Error).message
+      }
+    }
+
     return {
       site: {
         slug: site.slug,
@@ -138,12 +176,15 @@ export const getConnectorStatusFn = createServerFn({ method: 'GET' })
         ambiente: site.ambiente,
         connector_deployed: site.connector_deployed,
         smoke_operador: site.smoke_operador,
+        connectors: normalizeSiteConnectors(site),
       },
       progress: checklistProgress(items),
       items,
       hints,
       risk,
       probes,
+      runtime,
+      admin_first: true,
     }
   })
 
@@ -211,4 +252,167 @@ export const updateConnectorChecklistFn = createServerFn({ method: 'POST' })
       items: evaluateChecklist(updated),
       progress: checklistProgress(evaluateChecklist(updated)),
     }
+  })
+
+/**
+ * Materialize connector config on host via agent (admin-first).
+ * Secret is one-shot in the request — never written to site SoT.
+ */
+export const deployConnectorFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: unknown) => {
+    const r = z
+      .object({
+        slug: z.string().min(1),
+        connector_id: z.string().min(1).max(64),
+        stack: z.enum(['openfortivpn', 'openvpn']),
+        /** Full conf body (ovpn file or openfortivpn conf). Preferred for openvpn. */
+        config: z.string().max(256_000).optional(),
+        /** Structured Forti fields if config omitted */
+        forti: z
+          .object({
+            host: z.string().min(1),
+            port: z.number().int().positive().optional(),
+            username: z.string().min(1),
+            password: z.string().min(1),
+            trusted_cert: z.string().optional(),
+          })
+          .optional(),
+        start: z.boolean().default(true),
+      })
+      .safeParse(data)
+    if (!r.success) throw new Error(r.error.message)
+    return r.data
+  })
+  .handler(async ({ data }) => {
+    const s = requireSession()
+    requireAnyPerm(s, ['sites:update', 'gateways:manage'], 'sites:update')
+    const site = await getSite(data.slug)
+    if (!site) throw new Error('Site não encontrado')
+    assertSiteTenantAccess(site, s)
+
+    if (!connectorAgentConfigured()) {
+      throw new Error(
+        'Agent não configurado. Bootstrap one-shot: scripts/66-install-connector-agent.sh + rewire console.',
+      )
+    }
+
+    let conf = data.config?.trim() || ''
+    if (!conf && data.stack === 'openfortivpn' && data.forti) {
+      conf = buildFortiConf(data.forti)
+    }
+    if (!conf) {
+      throw new Error('Informe config (texto) ou campos Forti (host/user/password)')
+    }
+
+    await agentPutConfig(data.connector_id, data.stack, conf)
+    let startResult: unknown = null
+    if (data.start) {
+      startResult = await agentStart(data.connector_id, data.stack)
+    }
+
+    const actor = sessionActor(s)
+    const connectors = normalizeSiteConnectors(site).map((c) =>
+      c.id === data.connector_id
+        ? { ...c, stack: data.stack as typeof c.stack }
+        : c,
+    )
+    // Ensure connector id exists on site inventory
+    if (!connectors.some((c) => c.id === data.connector_id)) {
+      connectors.push({
+        id: data.connector_id,
+        stack: data.stack,
+        tipo: site.tipo,
+        subnets: [],
+        meta: {},
+      })
+    }
+
+    await upsertSite(
+      {
+        ...site,
+        connectors,
+        connector_deployed: true,
+        stack_meta: {
+          ...site.stack_meta,
+          connector_checklist: {
+            ...getConnectorChecklist(site.stack_meta),
+            unit_systemd: true,
+            connector_deployed_flag: true,
+          },
+        },
+      },
+      actor,
+    )
+
+    recordActivity(
+      'POST',
+      `/archgate/connector/${data.slug}/deploy`,
+      actor,
+      'success',
+      undefined,
+      {
+        connector_id: data.connector_id,
+        stack: data.stack,
+        started: data.start,
+      },
+    )
+
+    return {
+      ok: true,
+      connector_id: data.connector_id,
+      started: data.start,
+      start: startResult,
+      runtime: await agentListConnectors(),
+    }
+  })
+
+export const stopConnectorFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: unknown) => {
+    const r = z
+      .object({
+        slug: z.string().min(1),
+        connector_id: z.string().min(1),
+        stack: z.enum(['openfortivpn', 'openvpn']),
+      })
+      .safeParse(data)
+    if (!r.success) throw new Error(r.error.message)
+    return r.data
+  })
+  .handler(async ({ data }) => {
+    const s = requireSession()
+    requireAnyPerm(s, ['sites:update', 'gateways:manage'], 'sites:update')
+    const site = await getSite(data.slug)
+    if (!site) throw new Error('Site não encontrado')
+    assertSiteTenantAccess(site, s)
+    const result = await agentStop(data.connector_id, data.stack)
+    recordActivity(
+      'POST',
+      `/archgate/connector/${data.slug}/stop`,
+      sessionActor(s),
+      'success',
+      undefined,
+      { connector_id: data.connector_id },
+    )
+    return { ok: true, result }
+  })
+
+export const probeConnectorFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: unknown) => {
+    const r = z
+      .object({
+        slug: z.string().min(1),
+        host: z.string().min(1),
+        port: z.number().int().positive(),
+      })
+      .safeParse(data)
+    if (!r.success) throw new Error(r.error.message)
+    return r.data
+  })
+  .handler(async ({ data }) => {
+    const s = requireSession()
+    requireAnyPerm(s, ['sites:read', 'sites:update'], 'sites:read')
+    const site = await getSite(data.slug)
+    if (!site) throw new Error('Site não encontrado')
+    assertSiteTenantAccess(site, s)
+    return agentProbe(data.host, data.port)
   })
