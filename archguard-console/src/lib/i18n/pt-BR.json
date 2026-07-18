@@ -98,6 +98,7 @@
     "title": "Clientes / Sites",
     "subtitle": "Configuração por cliente: stack VPN, conectividade e targets. Segredos de VPN ficam no connector.",
     "new": "Novo cliente",
+    "wizard": "Novo cliente (wizard)",
     "edit": "Editar: {{name}}",
     "createTitle": "Novo cliente / site",
     "search": "Buscar cliente, slug, stack…",

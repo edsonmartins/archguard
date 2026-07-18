@@ -28,6 +28,7 @@ import { Route as AuthedOauth2IndexRouteImport } from './routes/_authed/oauth2/i
 import { Route as AuthedIdentitiesIndexRouteImport } from './routes/_authed/identities/index'
 import { Route as AuthedGroupsIndexRouteImport } from './routes/_authed/groups/index'
 import { Route as AuthedGatewaysIndexRouteImport } from './routes/_authed/gateways/index'
+import { Route as AuthedSitesWizardRouteImport } from './routes/_authed/sites/wizard'
 import { Route as AuthedSitesCreateRouteImport } from './routes/_authed/sites/create'
 import { Route as AuthedSitesSlugRouteImport } from './routes/_authed/sites/$slug'
 import { Route as AuthedServiceAccountsCreateRouteImport } from './routes/_authed/service-accounts/create'
@@ -40,7 +41,10 @@ import { Route as AuthedIdentitiesCreateRouteImport } from './routes/_authed/ide
 import { Route as AuthedIdentitiesPersonIdRouteImport } from './routes/_authed/identities/$personId'
 import { Route as AuthedGroupsCreateRouteImport } from './routes/_authed/groups/create'
 import { Route as AuthedGroupsGroupIdRouteImport } from './routes/_authed/groups/$groupId'
+import { Route as ApiUnifiedV1SessionsRouteImport } from './routes/api/unified/v1/sessions'
+import { Route as ApiUnifiedV1ConnectionsRouteImport } from './routes/api/unified/v1/connections'
 import { Route as AuthedSitesSlugEditRouteImport } from './routes/_authed/sites/$slug.edit'
+import { Route as ApiUnifiedV1AuthCallbackRouteImport } from './routes/api/unified/v1/auth/callback'
 
 const UnauthorizedRoute = UnauthorizedRouteImport.update({
   id: '/unauthorized',
@@ -137,6 +141,11 @@ const AuthedGatewaysIndexRoute = AuthedGatewaysIndexRouteImport.update({
   path: '/gateways/',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedSitesWizardRoute = AuthedSitesWizardRouteImport.update({
+  id: '/sites/wizard',
+  path: '/sites/wizard',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedSitesCreateRoute = AuthedSitesCreateRouteImport.update({
   id: '/sites/create',
   path: '/sites/create',
@@ -201,11 +210,27 @@ const AuthedGroupsGroupIdRoute = AuthedGroupsGroupIdRouteImport.update({
   path: '/groups/$groupId',
   getParentRoute: () => AuthedRoute,
 } as any)
+const ApiUnifiedV1SessionsRoute = ApiUnifiedV1SessionsRouteImport.update({
+  id: '/api/unified/v1/sessions',
+  path: '/api/unified/v1/sessions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiUnifiedV1ConnectionsRoute = ApiUnifiedV1ConnectionsRouteImport.update({
+  id: '/api/unified/v1/connections',
+  path: '/api/unified/v1/connections',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthedSitesSlugEditRoute = AuthedSitesSlugEditRouteImport.update({
   id: '/edit',
   path: '/edit',
   getParentRoute: () => AuthedSitesSlugRoute,
 } as any)
+const ApiUnifiedV1AuthCallbackRoute =
+  ApiUnifiedV1AuthCallbackRouteImport.update({
+    id: '/api/unified/v1/auth/callback',
+    path: '/api/unified/v1/auth/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -229,6 +254,7 @@ export interface FileRoutesByFullPath {
   '/service-accounts/create': typeof AuthedServiceAccountsCreateRoute
   '/sites/$slug': typeof AuthedSitesSlugRouteWithChildren
   '/sites/create': typeof AuthedSitesCreateRoute
+  '/sites/wizard': typeof AuthedSitesWizardRoute
   '/gateways/': typeof AuthedGatewaysIndexRoute
   '/groups/': typeof AuthedGroupsIndexRoute
   '/identities/': typeof AuthedIdentitiesIndexRoute
@@ -239,6 +265,9 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof AuthedSettingsIndexRoute
   '/sites/': typeof AuthedSitesIndexRoute
   '/sites/$slug/edit': typeof AuthedSitesSlugEditRoute
+  '/api/unified/v1/connections': typeof ApiUnifiedV1ConnectionsRoute
+  '/api/unified/v1/sessions': typeof ApiUnifiedV1SessionsRoute
+  '/api/unified/v1/auth/callback': typeof ApiUnifiedV1AuthCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -262,6 +291,7 @@ export interface FileRoutesByTo {
   '/service-accounts/create': typeof AuthedServiceAccountsCreateRoute
   '/sites/$slug': typeof AuthedSitesSlugRouteWithChildren
   '/sites/create': typeof AuthedSitesCreateRoute
+  '/sites/wizard': typeof AuthedSitesWizardRoute
   '/gateways': typeof AuthedGatewaysIndexRoute
   '/groups': typeof AuthedGroupsIndexRoute
   '/identities': typeof AuthedIdentitiesIndexRoute
@@ -272,6 +302,9 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthedSettingsIndexRoute
   '/sites': typeof AuthedSitesIndexRoute
   '/sites/$slug/edit': typeof AuthedSitesSlugEditRoute
+  '/api/unified/v1/connections': typeof ApiUnifiedV1ConnectionsRoute
+  '/api/unified/v1/sessions': typeof ApiUnifiedV1SessionsRoute
+  '/api/unified/v1/auth/callback': typeof ApiUnifiedV1AuthCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -297,6 +330,7 @@ export interface FileRoutesById {
   '/_authed/service-accounts/create': typeof AuthedServiceAccountsCreateRoute
   '/_authed/sites/$slug': typeof AuthedSitesSlugRouteWithChildren
   '/_authed/sites/create': typeof AuthedSitesCreateRoute
+  '/_authed/sites/wizard': typeof AuthedSitesWizardRoute
   '/_authed/gateways/': typeof AuthedGatewaysIndexRoute
   '/_authed/groups/': typeof AuthedGroupsIndexRoute
   '/_authed/identities/': typeof AuthedIdentitiesIndexRoute
@@ -307,6 +341,9 @@ export interface FileRoutesById {
   '/_authed/settings/': typeof AuthedSettingsIndexRoute
   '/_authed/sites/': typeof AuthedSitesIndexRoute
   '/_authed/sites/$slug/edit': typeof AuthedSitesSlugEditRoute
+  '/api/unified/v1/connections': typeof ApiUnifiedV1ConnectionsRoute
+  '/api/unified/v1/sessions': typeof ApiUnifiedV1SessionsRoute
+  '/api/unified/v1/auth/callback': typeof ApiUnifiedV1AuthCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -332,6 +369,7 @@ export interface FileRouteTypes {
     | '/service-accounts/create'
     | '/sites/$slug'
     | '/sites/create'
+    | '/sites/wizard'
     | '/gateways/'
     | '/groups/'
     | '/identities/'
@@ -342,6 +380,9 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/sites/'
     | '/sites/$slug/edit'
+    | '/api/unified/v1/connections'
+    | '/api/unified/v1/sessions'
+    | '/api/unified/v1/auth/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -365,6 +406,7 @@ export interface FileRouteTypes {
     | '/service-accounts/create'
     | '/sites/$slug'
     | '/sites/create'
+    | '/sites/wizard'
     | '/gateways'
     | '/groups'
     | '/identities'
@@ -375,6 +417,9 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sites'
     | '/sites/$slug/edit'
+    | '/api/unified/v1/connections'
+    | '/api/unified/v1/sessions'
+    | '/api/unified/v1/auth/callback'
   id:
     | '__root__'
     | '/'
@@ -399,6 +444,7 @@ export interface FileRouteTypes {
     | '/_authed/service-accounts/create'
     | '/_authed/sites/$slug'
     | '/_authed/sites/create'
+    | '/_authed/sites/wizard'
     | '/_authed/gateways/'
     | '/_authed/groups/'
     | '/_authed/identities/'
@@ -409,6 +455,9 @@ export interface FileRouteTypes {
     | '/_authed/settings/'
     | '/_authed/sites/'
     | '/_authed/sites/$slug/edit'
+    | '/api/unified/v1/connections'
+    | '/api/unified/v1/sessions'
+    | '/api/unified/v1/auth/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -418,6 +467,9 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   TestLoginRoute: typeof TestLoginRoute
   UnauthorizedRoute: typeof UnauthorizedRoute
+  ApiUnifiedV1ConnectionsRoute: typeof ApiUnifiedV1ConnectionsRoute
+  ApiUnifiedV1SessionsRoute: typeof ApiUnifiedV1SessionsRoute
+  ApiUnifiedV1AuthCallbackRoute: typeof ApiUnifiedV1AuthCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -555,6 +607,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedGatewaysIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/sites/wizard': {
+      id: '/_authed/sites/wizard'
+      path: '/sites/wizard'
+      fullPath: '/sites/wizard'
+      preLoaderRoute: typeof AuthedSitesWizardRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/sites/create': {
       id: '/_authed/sites/create'
       path: '/sites/create'
@@ -639,12 +698,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedGroupsGroupIdRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/api/unified/v1/sessions': {
+      id: '/api/unified/v1/sessions'
+      path: '/api/unified/v1/sessions'
+      fullPath: '/api/unified/v1/sessions'
+      preLoaderRoute: typeof ApiUnifiedV1SessionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/unified/v1/connections': {
+      id: '/api/unified/v1/connections'
+      path: '/api/unified/v1/connections'
+      fullPath: '/api/unified/v1/connections'
+      preLoaderRoute: typeof ApiUnifiedV1ConnectionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authed/sites/$slug/edit': {
       id: '/_authed/sites/$slug/edit'
       path: '/edit'
       fullPath: '/sites/$slug/edit'
       preLoaderRoute: typeof AuthedSitesSlugEditRouteImport
       parentRoute: typeof AuthedSitesSlugRoute
+    }
+    '/api/unified/v1/auth/callback': {
+      id: '/api/unified/v1/auth/callback'
+      path: '/api/unified/v1/auth/callback'
+      fullPath: '/api/unified/v1/auth/callback'
+      preLoaderRoute: typeof ApiUnifiedV1AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -678,6 +758,7 @@ interface AuthedRouteChildren {
   AuthedServiceAccountsCreateRoute: typeof AuthedServiceAccountsCreateRoute
   AuthedSitesSlugRoute: typeof AuthedSitesSlugRouteWithChildren
   AuthedSitesCreateRoute: typeof AuthedSitesCreateRoute
+  AuthedSitesWizardRoute: typeof AuthedSitesWizardRoute
   AuthedGatewaysIndexRoute: typeof AuthedGatewaysIndexRoute
   AuthedGroupsIndexRoute: typeof AuthedGroupsIndexRoute
   AuthedIdentitiesIndexRoute: typeof AuthedIdentitiesIndexRoute
@@ -706,6 +787,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedServiceAccountsCreateRoute: AuthedServiceAccountsCreateRoute,
   AuthedSitesSlugRoute: AuthedSitesSlugRouteWithChildren,
   AuthedSitesCreateRoute: AuthedSitesCreateRoute,
+  AuthedSitesWizardRoute: AuthedSitesWizardRoute,
   AuthedGatewaysIndexRoute: AuthedGatewaysIndexRoute,
   AuthedGroupsIndexRoute: AuthedGroupsIndexRoute,
   AuthedIdentitiesIndexRoute: AuthedIdentitiesIndexRoute,
@@ -727,7 +809,19 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   TestLoginRoute: TestLoginRoute,
   UnauthorizedRoute: UnauthorizedRoute,
+  ApiUnifiedV1ConnectionsRoute: ApiUnifiedV1ConnectionsRoute,
+  ApiUnifiedV1SessionsRoute: ApiUnifiedV1SessionsRoute,
+  ApiUnifiedV1AuthCallbackRoute: ApiUnifiedV1AuthCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

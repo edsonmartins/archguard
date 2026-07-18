@@ -575,17 +575,17 @@ export function SiteFormPage({
           {form.targets.length === 0 && (
             <p className="text-sm text-muted-foreground">Nenhum target cadastrado.</p>
           )}
-          {form.targets.map((t, idx) => (
+          {form.targets.map((tgt, idx) => (
             <div key={idx} className="rounded-lg border p-3 grid gap-2 sm:grid-cols-6">
               <Input
                 className="sm:col-span-2"
                 placeholder="nome"
-                value={t.nome}
+                value={tgt.nome}
                 onChange={(e) => updateTarget(idx, { nome: e.target.value })}
                 disabled={!canWrite}
               />
               <Select
-                value={t.engine}
+                value={tgt.engine}
                 onValueChange={(v) =>
                   updateTarget(idx, { engine: v as 'warpgate' | 'guacamole' })
                 }
@@ -605,20 +605,20 @@ export function SiteFormPage({
               </Select>
               <Input
                 placeholder="protocolo"
-                value={t.protocolo}
+                value={tgt.protocolo}
                 onChange={(e) => updateTarget(idx, { protocolo: e.target.value })}
                 disabled={!canWrite}
               />
               <Input
                 placeholder="host"
-                value={t.host}
+                value={tgt.host}
                 onChange={(e) => updateTarget(idx, { host: e.target.value })}
                 disabled={!canWrite}
               />
               <Input
                 type="number"
                 placeholder="port"
-                value={t.port}
+                value={tgt.port}
                 onChange={(e) =>
                   updateTarget(idx, { port: Number(e.target.value) || 0 })
                 }
@@ -627,7 +627,7 @@ export function SiteFormPage({
               <Input
                 className="sm:col-span-2 font-mono text-xs"
                 placeholder="secret_ref OpenBao (ex: secret/data/archgate/targets/rio-ssh)"
-                value={t.secret_ref || ''}
+                value={tgt.secret_ref || ''}
                 onChange={(e) =>
                   updateTarget(idx, { secret_ref: e.target.value })
                 }
@@ -636,7 +636,7 @@ export function SiteFormPage({
               <Input
                 className="sm:col-span-2 font-mono text-xs"
                 placeholder="connector_id (opcional)"
-                value={t.connector_id || ''}
+                value={tgt.connector_id || ''}
                 onChange={(e) =>
                   updateTarget(idx, { connector_id: e.target.value })
                 }
@@ -662,7 +662,7 @@ export function SiteFormPage({
               <Input
                 className="sm:col-span-6"
                 placeholder="roles (vírgula)"
-                value={(t.roles || []).join(', ')}
+                value={(tgt.roles || []).join(', ')}
                 onChange={(e) =>
                   updateTarget(idx, {
                     roles: e.target.value

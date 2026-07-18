@@ -283,7 +283,13 @@ export const deployConnectorFn = createServerFn({ method: 'POST' })
     if (!r.success) throw new Error(r.error.message)
     return r.data
   })
-  .handler(async ({ data }) => {
+  .handler(async ({ data }): Promise<{
+    ok: true
+    connector_id: string
+    started: boolean
+    start: Record<string, unknown> | null
+    runtime: Awaited<ReturnType<typeof agentListConnectors>>
+  }> => {
     const s = requireSession()
     requireAnyPerm(s, ['sites:update', 'gateways:manage'], 'sites:update')
     const site = await getSite(data.slug)
@@ -305,9 +311,12 @@ export const deployConnectorFn = createServerFn({ method: 'POST' })
     }
 
     await agentPutConfig(data.connector_id, data.stack, conf)
-    let startResult: unknown = null
+    let startResult: Record<string, unknown> | null = null
     if (data.start) {
-      startResult = await agentStart(data.connector_id, data.stack)
+      startResult = (await agentStart(
+        data.connector_id,
+        data.stack,
+      )) as Record<string, unknown>
     }
 
     const actor = sessionActor(s)
@@ -358,7 +367,7 @@ export const deployConnectorFn = createServerFn({ method: 'POST' })
     )
 
     return {
-      ok: true,
+      ok: true as const,
       connector_id: data.connector_id,
       started: data.start,
       start: startResult,
@@ -384,7 +393,10 @@ export const stopConnectorFn = createServerFn({ method: 'POST' })
     const site = await getSite(data.slug)
     if (!site) throw new Error('Site não encontrado')
     assertSiteTenantAccess(site, s)
-    const result = await agentStop(data.connector_id, data.stack)
+    const result = (await agentStop(
+      data.connector_id,
+      data.stack,
+    )) as Record<string, unknown>
     recordActivity(
       'POST',
       `/archgate/connector/${data.slug}/stop`,

@@ -135,6 +135,14 @@ export function SiteListPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <PermissionGate require={['sites:create', 'sites:update']} any>
+            <Button asChild>
+              <Link to="/sites/wizard">
+                <Plus className="h-4 w-4 mr-1" />
+                {t('sites.wizard', { defaultValue: 'Novo cliente (wizard)' })}
+              </Link>
+            </Button>
+          </PermissionGate>
           <Button
             variant="outline"
             size="sm"

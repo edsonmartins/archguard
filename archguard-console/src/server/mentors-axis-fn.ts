@@ -141,6 +141,7 @@ async function proprietarioToSiteInput(
     connector_id: `connector-${slug}`,
     subnets: [],
     stack_meta: axisMeta,
+    connectors: [],
     targets: [],
     warpgate_roles,
     notas: [

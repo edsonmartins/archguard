@@ -79,7 +79,7 @@ export function ConnectorStatusPanel({ slug }: { slug: string }) {
   })
 
   const deploy = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const id =
         connectorId.trim() ||
         q.data?.site.connector_id ||
@@ -124,8 +124,9 @@ export function ConnectorStatusPanel({ slug }: { slug: string }) {
       })
     },
     onSuccess: (res) => {
+      const r = res as { connector_id: string; started: boolean }
       toast.success(
-        `Connector ${res.connector_id} materializado${res.started ? ' e iniciado' : ''}`,
+        `Connector ${r.connector_id} materializado${r.started ? ' e iniciado' : ''}`,
       )
       setFortiPass('')
       void qc.invalidateQueries({ queryKey: ['connector', slug] })
