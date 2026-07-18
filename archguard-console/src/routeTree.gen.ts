@@ -24,6 +24,7 @@ import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settin
 import { Route as AuthedServiceAccountsIndexRouteImport } from './routes/_authed/service-accounts/index'
 import { Route as AuthedSecretsIndexRouteImport } from './routes/_authed/secrets/index'
 import { Route as AuthedPlatformIndexRouteImport } from './routes/_authed/platform/index'
+import { Route as AuthedOracleIndexRouteImport } from './routes/_authed/oracle/index'
 import { Route as AuthedOauth2IndexRouteImport } from './routes/_authed/oauth2/index'
 import { Route as AuthedIdentitiesIndexRouteImport } from './routes/_authed/identities/index'
 import { Route as AuthedGroupsIndexRouteImport } from './routes/_authed/groups/index'
@@ -119,6 +120,11 @@ const AuthedSecretsIndexRoute = AuthedSecretsIndexRouteImport.update({
 const AuthedPlatformIndexRoute = AuthedPlatformIndexRouteImport.update({
   id: '/platform/',
   path: '/platform/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedOracleIndexRoute = AuthedOracleIndexRouteImport.update({
+  id: '/oracle/',
+  path: '/oracle/',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedOauth2IndexRoute = AuthedOauth2IndexRouteImport.update({
@@ -259,6 +265,7 @@ export interface FileRoutesByFullPath {
   '/groups/': typeof AuthedGroupsIndexRoute
   '/identities/': typeof AuthedIdentitiesIndexRoute
   '/oauth2/': typeof AuthedOauth2IndexRoute
+  '/oracle/': typeof AuthedOracleIndexRoute
   '/platform/': typeof AuthedPlatformIndexRoute
   '/secrets/': typeof AuthedSecretsIndexRoute
   '/service-accounts/': typeof AuthedServiceAccountsIndexRoute
@@ -296,6 +303,7 @@ export interface FileRoutesByTo {
   '/groups': typeof AuthedGroupsIndexRoute
   '/identities': typeof AuthedIdentitiesIndexRoute
   '/oauth2': typeof AuthedOauth2IndexRoute
+  '/oracle': typeof AuthedOracleIndexRoute
   '/platform': typeof AuthedPlatformIndexRoute
   '/secrets': typeof AuthedSecretsIndexRoute
   '/service-accounts': typeof AuthedServiceAccountsIndexRoute
@@ -335,6 +343,7 @@ export interface FileRoutesById {
   '/_authed/groups/': typeof AuthedGroupsIndexRoute
   '/_authed/identities/': typeof AuthedIdentitiesIndexRoute
   '/_authed/oauth2/': typeof AuthedOauth2IndexRoute
+  '/_authed/oracle/': typeof AuthedOracleIndexRoute
   '/_authed/platform/': typeof AuthedPlatformIndexRoute
   '/_authed/secrets/': typeof AuthedSecretsIndexRoute
   '/_authed/service-accounts/': typeof AuthedServiceAccountsIndexRoute
@@ -374,6 +383,7 @@ export interface FileRouteTypes {
     | '/groups/'
     | '/identities/'
     | '/oauth2/'
+    | '/oracle/'
     | '/platform/'
     | '/secrets/'
     | '/service-accounts/'
@@ -411,6 +421,7 @@ export interface FileRouteTypes {
     | '/groups'
     | '/identities'
     | '/oauth2'
+    | '/oracle'
     | '/platform'
     | '/secrets'
     | '/service-accounts'
@@ -449,6 +460,7 @@ export interface FileRouteTypes {
     | '/_authed/groups/'
     | '/_authed/identities/'
     | '/_authed/oauth2/'
+    | '/_authed/oracle/'
     | '/_authed/platform/'
     | '/_authed/secrets/'
     | '/_authed/service-accounts/'
@@ -577,6 +589,13 @@ declare module '@tanstack/react-router' {
       path: '/platform'
       fullPath: '/platform/'
       preLoaderRoute: typeof AuthedPlatformIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/oracle/': {
+      id: '/_authed/oracle/'
+      path: '/oracle'
+      fullPath: '/oracle/'
+      preLoaderRoute: typeof AuthedOracleIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/oauth2/': {
@@ -763,6 +782,7 @@ interface AuthedRouteChildren {
   AuthedGroupsIndexRoute: typeof AuthedGroupsIndexRoute
   AuthedIdentitiesIndexRoute: typeof AuthedIdentitiesIndexRoute
   AuthedOauth2IndexRoute: typeof AuthedOauth2IndexRoute
+  AuthedOracleIndexRoute: typeof AuthedOracleIndexRoute
   AuthedPlatformIndexRoute: typeof AuthedPlatformIndexRoute
   AuthedSecretsIndexRoute: typeof AuthedSecretsIndexRoute
   AuthedServiceAccountsIndexRoute: typeof AuthedServiceAccountsIndexRoute
@@ -792,6 +812,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedGroupsIndexRoute: AuthedGroupsIndexRoute,
   AuthedIdentitiesIndexRoute: AuthedIdentitiesIndexRoute,
   AuthedOauth2IndexRoute: AuthedOauth2IndexRoute,
+  AuthedOracleIndexRoute: AuthedOracleIndexRoute,
   AuthedPlatformIndexRoute: AuthedPlatformIndexRoute,
   AuthedSecretsIndexRoute: AuthedSecretsIndexRoute,
   AuthedServiceAccountsIndexRoute: AuthedServiceAccountsIndexRoute,

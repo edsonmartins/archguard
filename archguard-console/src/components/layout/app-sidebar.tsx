@@ -17,6 +17,7 @@ import {
   KeyRound as KeyRoundIcon,
   Cloud,
   Gauge,
+  Database,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -117,6 +118,12 @@ const navGroups: NavGroup[] = [
         labelKey: 'nav.secrets',
         to: '/secrets',
         icon: KeyRoundIcon,
+        permission: 'secrets:read',
+      },
+      {
+        labelKey: 'nav.oracle',
+        to: '/oracle',
+        icon: Database,
         permission: 'secrets:read',
       },
       {
