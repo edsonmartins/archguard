@@ -1,0 +1,64 @@
+# Design — 001 · Bootstrap do fork ArchGuard
+
+## Fork point
+
+Congelar commit-base e tag do upstream. Registrar em `NOTICE` e em `docs/upstream/FORK_POINT.md`
+com: SHA completo, tag, data, e hash de verificação da árvore. O fork point é ativo de valor
+(ADR-0002, §2): o grant Apache 2.0 sobre esse código é irrevogável.
+
+**Antes de congelar**, verificar na aba *Insights/Releases* do repositório upstream a release
+corrente e a base de mantenedores — há divergência conhecida entre fontes secundárias sobre a
+última tag publicada. A fonte primária decide.
+
+## Topologia de repositório
+
+```
+vendor/upstream   espelho somente-leitura (nunca merged)
+main              linha do ArchGuard
+feature/*         um branch por pacote OpenSpec
+```
+
+Commits importados carregam trailer `Upstream-Commit: <sha>`.
+
+## Rebranding
+
+Nome, domínios, identificadores de pacote/módulo, cabeçalhos de resposta HTTP, assets e
+strings de UI. **Não** remove atribuição de autoria do `NOTICE` nem cabeçalhos de copyright
+existentes (ADR-0002). Arquivos modificados ganham linha de modificação; arquivos novos
+recebem cabeçalho IntegrAllTech.
+
+## Remoção de escopo (ADR-0015)
+
+Ordem: (1) mapear dependências internas de cada módulo alvo; (2) remover em commits pequenos e
+independentes; (3) build + testes a cada remoção; (4) registrar em `DIVERGENCE.md`.
+
+Alvos: pagamento/produto/assinatura; funcionalidades de agentes IA/MCP; provedores fora do
+catálogo curado; **senha-mestra** (por invariante I-4.1 — removida aqui, redesenho completo em
+004).
+
+## PostgreSQL único (ADR-0009)
+
+Remover dialetos, configuração e documentação. Estabelecer migrations versionadas com
+travamento de execução concorrente. Criar papéis segregados: aplicação, migração, leitura.
+
+## Fronteiras de framework (ADR-0016)
+
+Criar `internal/domain/**` sem importação de framework web ou ORM. Regra de dependência
+verificada no CI. Nova persistência via `pgx`; XORM permanece apenas no código herdado.
+
+## Suíte de invariantes
+
+Testes que **quebram o build** se:
+- existir caminho de autenticação por credencial que não seja do próprio usuário
+  (senha-mestra reintroduzida);
+- existir endpoint ou código que faça `UPDATE`/`DELETE` em tabela de auditoria;
+- um pacote de domínio importar framework web/ORM;
+- uma dependência estiver fora da matriz de licenças (ADR-0002).
+
+Esta suíte é a defesa real da estratégia de cherry-pick. Sem ela, o ADR-0003 é intenção, não
+controle.
+
+## CI
+
+Etapas: lint → build → testes → **regra de dependência** → **suíte de invariantes** → SBOM
+(CycloneDX) → **license gate** → imagem assinada. Nenhuma etapa pode ser pulada por flag.
