@@ -1,0 +1,26 @@
+ArchGuard
+Copyright 2026 IntegrAllTech Ltda. (Integrall.tech) — Maringá/PR, Brasil
+
+This product is a derivative work of Casdoor:
+
+    Casdoor — An open-source UI-first Identity and Access Management (IAM) /
+    Single-Sign-On (SSO) platform
+    Copyright The Casdoor Authors
+    https://github.com/casdoor/casdoor
+    Licensed under the Apache License, Version 2.0
+
+Fork point (frozen 2026-07-20, forensic record in docs/upstream/FORK_POINT.md):
+
+    Tag:    v3.119.0
+    Commit: 50e77ade0ee902a2e375fa83a57c86fc452c0a45 (2026-07-18)
+    Tree:   291daef8c3a63747bee99e23b6439e44d0aa479c
+
+Files of the original work have been modified by IntegrAllTech Ltda. Structural
+divergence from the original work is recorded in docs/upstream/DIVERGENCE.md.
+Original copyright headers are preserved as required by the Apache License,
+Version 2.0; the license text is available in the LICENSE file at the root of
+this repository.
+
+Casdoor is a trademark of its respective owners. It is used here solely for the
+attribution required by the Apache License, Version 2.0, and not to promote or
+endorse this product.
