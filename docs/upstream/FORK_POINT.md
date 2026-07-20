@@ -1,8 +1,35 @@
 # FORK_POINT.md — Registro forense do fork point
 
-> **Estado: FORK POINT AINDA NÃO CONGELADO.** Este arquivo contém, por ora, a evidência de
-> fonte primária exigida por T-001. O congelamento (T-002) só ocorre após aprovação da
-> recomendação ao final.
+> **Estado: FORK POINT CONGELADO em 2026-07-20** (T-002). A evidência de fonte primária
+> (T-001) que fundamentou o congelamento está preservada abaixo.
+
+## Fork point congelado
+
+| Campo | Valor |
+|---|---|
+| **Tag** | `v3.119.0` |
+| **SHA completo** | `50e77ade0ee902a2e375fa83a57c86fc452c0a45` |
+| **Data do commit** | 2026-07-18T00:58:16+08:00 |
+| **Hash da árvore** | `291daef8c3a63747bee99e23b6439e44d0aa479c` |
+| **Data do congelamento** | 2026-07-20 |
+| **Aprovado por** | Edson Martins (Arquiteto de Software e Soluções), com aval registrado em sessão: convergência release-"latest"/tip-de-master elimina a ambiguidade tag-vs-commit; LICENSE Apache-2.0 íntegro e idêntico entre tag e master satisfaz o ADR-0002 |
+
+**Natureza da tag (declaração do que a evidência prova):** `v3.119.0` é **tag leve e não
+assinada** — aponta diretamente para o commit, sem objeto de tag anotado e sem assinatura
+PGP. Ela prova apenas que o mantenedor nomeou este commit; **a prova forte deste registro é o
+SHA do commit e o hash da árvore**, verificados localmente sobre os objetos git trazidos do
+upstream, não a tag em si. A materialização em `main` referencia o SHA, não a tag.
+
+**Risco de mantenedor único (consequência operacional):** a manutenção do upstream tem
+*bus factor* 1 (`hsluoyz`: 1662 commits; segundo colocado: 311). Consequência aceita por
+desenho: se o upstream estagnar, o ADR-0003 degrada de "triagem semanal" para **fork
+soberano** sem alterar nenhuma decisão arquitetural — este é o comportamento pretendido, não
+um risco a mitigar. O grant Apache 2.0 **irrevogável** sobre `50e77ade` (ADR-0002, §2) é o
+que torna essa degradação segura.
+
+> Nota de processo: a due diligence jurídica não bloqueou este congelamento — ela é
+> pré-requisito de M1/GA (ADR-0001), e o risco jurídico nasce na distribuição, não no
+> registro de um commit.
 
 ## Evidência de fonte primária (T-001)
 
@@ -55,9 +82,5 @@ point como ativo (ADR-0002, §2).
 
 Congelar o fork point em **`v3.119.0` = `50e77ade0ee902a2e375fa83a57c86fc452c0a45`**: é
 simultaneamente a release corrente publicada e o tip de `master`, eliminando qualquer
-ambiguidade entre "última release" e "último commit".
-
-<!-- Seção a preencher em T-002, após aprovação:
-## Fork point congelado
-- Tag: | SHA: | Data: | Hash da árvore: | Data do congelamento: | Aprovado por:
--->
+ambiguidade entre "última release" e "último commit". *(Recomendação aprovada e executada em
+2026-07-20 — ver seção "Fork point congelado" acima.)*
