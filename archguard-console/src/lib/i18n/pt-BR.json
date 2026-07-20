@@ -369,8 +369,8 @@
     "networkError": "Erro de conexão. Verifique sua rede."
   },
   "login": {
-    "title": "ArchGuard Console",
-    "subtitle": "Gerenciamento de Identidades e Acessos",
+    "title": "ArchGate Manager",
+    "subtitle": "Control plane — identidade, sites, gateways e segredos",
     "signIn": "Entrar com ArchGuard ID",
     "connecting": "Conectando...",
     "errorNetwork": "Não foi possível conectar ao servidor de identidade. Verifique se o Kanidm está acessível.",
@@ -378,8 +378,8 @@
     "errorUnknown": "Erro desconhecido"
   },
   "dashboard": {
-    "title": "Dashboard",
-    "subtitle": "Interface única de administração ArchGate — identidade, sites, gateways e segredos. Operadores usam a UnifiedUI; UIs stock são break-glass.",
+    "title": "ArchGate Manager",
+    "subtitle": "Configura a plataforma (admin). Operadores usam ArchGate Connect ou UnifiedUI para sessões; UIs stock (WG/Guac) são break-glass.",
     "stats": {
       "people": "Pessoas",
       "peopleDesc": "Identidades registradas",
@@ -400,8 +400,8 @@
       "openbao": "OpenBao (segredos)"
     },
     "quickActions": {
-      "title": "Admin unificado",
-      "subtitle": "Use o console para identidade, gateways e segredos. UIs stock (Warpgate / Guac / OpenBao) são break-glass.",
+      "title": "Ações rápidas",
+      "subtitle": "Manager configura a plataforma. UIs stock (Warpgate / Guac / OpenBao) são break-glass.",
       "platformHealth": "Saúde da plataforma",
       "gateways": "Gateways (WG / Guac)",
       "sites": "Clientes / Sites",
@@ -409,6 +409,42 @@
       "newPerson": "Nova pessoa",
       "newGroup": "Novo grupo",
       "oauth2Client": "Client OAuth2"
+    },
+    "modules": {
+      "title": "Módulos",
+      "subtitle": "Tudo que o admin configura no Manager — sem abrir sessão de operador aqui.",
+      "sites": {
+        "title": "Clientes / Sites",
+        "desc": "Fichas, stack VPN, connectors e targets de inventário."
+      },
+      "gateways": {
+        "title": "Gateways",
+        "desc": "Warpgate e Guacamole — targets, roles e sessões admin."
+      },
+      "secrets": {
+        "title": "Segredos",
+        "desc": "OpenBao: engines, leases e referências (sem colar senha de VPN)."
+      },
+      "identity": {
+        "title": "Identidade",
+        "desc": "Pessoas, grupos e OAuth2 (módulo ArchGuard / Kanidm)."
+      },
+      "platform": {
+        "title": "Plataforma",
+        "desc": "Saúde dos serviços, endpoints e runbooks."
+      },
+      "audit": {
+        "title": "Auditoria",
+        "desc": "Activity log do console e trilha de sessões."
+      },
+      "axis": {
+        "title": "Mentors Axis",
+        "desc": "Sync de proprietários / clientes comerciais."
+      },
+      "connect": {
+        "title": "ArchGate Connect",
+        "desc": "App do operador (sessões SSH/RDP). Não é admin — baixe/use o desktop."
+      }
     }
   },
   "serviceAccounts": {

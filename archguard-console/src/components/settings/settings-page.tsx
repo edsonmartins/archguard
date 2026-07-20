@@ -204,7 +204,7 @@ export function SettingsPage() {
               <CardTitle className="text-base">Informações do Console</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <SettingsField label="ArchGuard Console" value="v1.0.0" />
+              <SettingsField label="ArchGate Manager" value="v1.0.0" />
               <SettingsField label="Framework" value="TanStack Start" />
               <SettingsField
                 label={t('settings.kanidmVersion')}

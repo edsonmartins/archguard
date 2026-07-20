@@ -1,4 +1,4 @@
-// Control plane navigation (AWS Console–style modules)
+// ArchGate Manager navigation (AWS Console–style modules; ADR-009A)
 
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
@@ -170,7 +170,7 @@ export function AppSidebar() {
           <ShieldCheck className="h-6 w-6 text-primary" />
           <div>
             <span className="text-base font-bold leading-none">ArchGate</span>
-            <p className="text-xs text-muted-foreground">Admin</p>
+            <p className="text-xs text-muted-foreground">Manager</p>
           </div>
         </Link>
       </SidebarHeader>

@@ -24,7 +24,7 @@ function UnauthorizedPage() {
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
             Sua conta não possui permissões de administrador para acessar o
-            ArchGuard Console.
+            ArchGate Manager.
           </p>
           <p className="text-sm text-muted-foreground">
             Entre em contato com o administrador do sistema para solicitar

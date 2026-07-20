@@ -1,4 +1,16 @@
-Welcome to your new TanStack Start app! 
+# ArchGate Manager
+
+**Product name:** ArchGate Manager (ADR-009 / ADR-009A)  
+**Code package:** `archguard-console` (OIDC client id may remain `archguard-console`)  
+**Role:** Admin control plane — configure tenants, sites, gateways, secrets, identity.  
+**Not for:** Day-to-day operator RDP/SSH sessions → use **ArchGate Connect** or UnifiedUI.
+
+| Layer | Name |
+|-------|------|
+| Product UI | ArchGate Manager |
+| Identity module | ArchGuard (Kanidm) |
+| Operator desktop | ArchGate Connect |
+| Operator browser | UnifiedUI |
 
 # Getting Started
 

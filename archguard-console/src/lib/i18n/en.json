@@ -369,8 +369,8 @@
     "networkError": "Connection error. Check your network."
   },
   "login": {
-    "title": "ArchGuard Console",
-    "subtitle": "Identity and Access Management",
+    "title": "ArchGate Manager",
+    "subtitle": "Control plane — identity, sites, gateways and secrets",
     "signIn": "Sign in with ArchGuard ID",
     "connecting": "Connecting...",
     "errorNetwork": "Could not reach the identity server. Check that Kanidm is available.",
@@ -378,8 +378,8 @@
     "errorUnknown": "Unknown error"
   },
   "dashboard": {
-    "title": "Dashboard",
-    "subtitle": "Single ArchGate admin console — identity, sites, gateways and secrets. Operators use UnifiedUI; stock UIs are break-glass.",
+    "title": "ArchGate Manager",
+    "subtitle": "Configure the platform (admin). Operators use ArchGate Connect or UnifiedUI for sessions; stock UIs (WG/Guac) are break-glass.",
     "stats": {
       "people": "People",
       "peopleDesc": "Registered identities",
@@ -400,8 +400,8 @@
       "openbao": "OpenBao (secrets)"
     },
     "quickActions": {
-      "title": "Unified admin",
-      "subtitle": "Use the console for identity, gateways and secrets. Stock UIs (Warpgate / Guac / OpenBao) are break-glass.",
+      "title": "Quick actions",
+      "subtitle": "Manager configures the platform. Stock UIs (Warpgate / Guac / OpenBao) are break-glass.",
       "platformHealth": "Platform health",
       "gateways": "Gateways (WG / Guac)",
       "sites": "Clients / Sites",
@@ -409,6 +409,42 @@
       "newPerson": "New person",
       "newGroup": "New group",
       "oauth2Client": "OAuth2 client"
+    },
+    "modules": {
+      "title": "Modules",
+      "subtitle": "Everything admins configure in Manager — no operator sessions here.",
+      "sites": {
+        "title": "Clients / Sites",
+        "desc": "Records, VPN stack, connectors and inventory targets."
+      },
+      "gateways": {
+        "title": "Gateways",
+        "desc": "Warpgate and Guacamole — targets, roles and admin sessions."
+      },
+      "secrets": {
+        "title": "Secrets",
+        "desc": "OpenBao: engines, leases and secret_ref (never paste VPN passwords)."
+      },
+      "identity": {
+        "title": "Identity",
+        "desc": "People, groups and OAuth2 (ArchGuard / Kanidm module)."
+      },
+      "platform": {
+        "title": "Platform",
+        "desc": "Service health, endpoints and runbooks."
+      },
+      "audit": {
+        "title": "Audit",
+        "desc": "Console activity log and session trail."
+      },
+      "axis": {
+        "title": "Mentors Axis",
+        "desc": "Sync commercial owners / customers."
+      },
+      "connect": {
+        "title": "ArchGate Connect",
+        "desc": "Operator app (SSH/RDP sessions). Not admin — use the desktop client."
+      }
     }
   },
   "serviceAccounts": {

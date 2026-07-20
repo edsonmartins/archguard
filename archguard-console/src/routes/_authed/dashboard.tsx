@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { StatsCards } from '@/components/dashboard/stats-cards'
 import { SystemHealth } from '@/components/dashboard/system-health'
 import { QuickActions } from '@/components/dashboard/quick-actions'
+import { ManagerModules } from '@/components/dashboard/manager-modules'
 import { personApi, groupApi, oauth2Api, systemApi } from '@/lib/api/kanidm-client'
 import { getOpenBaoStatusFn } from '@/server/openbao-fn'
 import { queryKeys } from '@/lib/utils/query-keys'
@@ -124,6 +125,8 @@ function DashboardPage() {
         vaultOnline={openbaoOk}
         isLoading={isLoading}
       />
+
+      <ManagerModules />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <SystemHealth
