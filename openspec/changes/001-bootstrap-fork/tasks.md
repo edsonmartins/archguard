@@ -71,7 +71,12 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
       no mesmo commit. **INV-1 verde SEM allowlist**. Campo do struct removido ⇒ coluna
       `master_password` não é criada em instalação nova (satisfaz o cenário INV-1 "coluna não
       existe no esquema"); DROP explícito p/ bancos existentes em T-013. Gate verde.)*
-- [ ] **T-012** Remover dialetos de banco não-PostgreSQL.
+- [x] **T-012** Remover dialetos de banco não-PostgreSQL. *(ADR-0009: drivers mysql/mssql/sqlite
+      removidos de ormer.go; backend + syncer externo postgres-only; guarda de init recusa
+      driverName != postgres; sync/ e sync_v2/ (replicação MySQL, não usados) removidos.
+      Esvazia baseline: go-sql-driver/mysql + modernc/mathutil → **baseline = 3** (só as MPL do
+      ADR-0019). app.conf default = postgres. Gate verde.)* **Pendente:** cenário PG<15 recusa
+      iniciar → validar no smoke test T-022 (PG real).
 - [ ] **T-013** Implantar migrations versionadas com travamento de execução concorrente.
       Inclui a migration explícita de **drop das colunas órfãs de escopo removido**: `cart`,
       `balance`, `balanceCredit`, `balanceCurrency` (T-008), `master_password` (T-011), `face_ids` + colunas de provedores

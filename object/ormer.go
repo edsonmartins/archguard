@@ -27,13 +27,10 @@ import (
 	"github.com/casdoor/casdoor/conf"
 	"github.com/casdoor/casdoor/util"
 	xormadapter "github.com/casdoor/xorm-adapter/v3"
-	_ "github.com/go-sql-driver/mysql"  // db = mysql
-	_ "github.com/lib/pq"               // db = postgres
-	_ "github.com/microsoft/go-mssqldb" // db = mssql
+	_ "github.com/lib/pq" // db = postgres — único backend suportado (ADR-0009)
 	"github.com/xorm-io/xorm"
 	"github.com/xorm-io/xorm/core"
 	"github.com/xorm-io/xorm/names"
-	_ "modernc.org/sqlite" // db = sqlite
 )
 
 const (
@@ -89,6 +86,11 @@ func InitConfig() {
 }
 
 func InitAdapter() {
+	// ADR-0009: PostgreSQL 15+ é o único backend suportado. Recusa iniciar com
+	// qualquer outro dialeto, de forma explícita (spec fork-baseline).
+	if driverName := conf.GetConfigString("driverName"); driverName != "" && driverName != "postgres" {
+		panic(fmt.Sprintf("unsupported database driver: %q — ArchGuard supports only PostgreSQL 15+ (driverName must be \"postgres\", ADR-0009)", driverName))
+	}
 	if conf.GetConfigString("driverName") == "" {
 		if !util.FileExist(configPath) {
 			dir, err := os.Getwd()
@@ -238,40 +240,21 @@ func createDatabaseForPostgres(driverName string, dataSourceName string, dbName 
 }
 
 func (a *Ormer) CreateDatabase() error {
-	if a.driverName == "postgres" {
-		return nil
-	}
-
-	engine, err := xorm.NewEngine(a.driverName, a.dataSourceName)
-	if err != nil {
-		return err
-	}
-	defer engine.Close()
-
-	_, err = engine.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s default charset utf8mb4 COLLATE utf8mb4_general_ci", a.dbName))
-	return err
+	// PostgreSQL databases are created out-of-band (createDatabaseForPostgres);
+	// nothing to do here for the sole supported backend (ADR-0009).
+	return nil
 }
 
 func (a *Ormer) open() error {
-	dataSourceName := a.dataSourceName + a.dbName
-	if a.driverName != "mysql" {
-		dataSourceName = a.dataSourceName
-	}
-
-	driverName := a.driverName
-	if driverName == "sqlite3" {
-		driverName = "sqlite"
-	}
-	engine, err := xorm.NewEngine(driverName, dataSourceName)
+	dataSourceName := a.dataSourceName
+	engine, err := xorm.NewEngine("postgres", dataSourceName)
 	if err != nil {
 		return err
 	}
 
-	if a.driverName == "postgres" {
-		schema := util.GetValueFromDataSourceName("search_path", dataSourceName)
-		if schema != "" {
-			engine.SetSchema(schema)
-		}
+	schema := util.GetValueFromDataSourceName("search_path", dataSourceName)
+	if schema != "" {
+		engine.SetSchema(schema)
 	}
 
 	a.Engine = engine
@@ -279,27 +262,18 @@ func (a *Ormer) open() error {
 }
 
 func (a *Ormer) openFromDb(db *sql.DB) error {
-	dataSourceName := a.dataSourceName + a.dbName
-	if a.driverName != "mysql" {
-		dataSourceName = a.dataSourceName
-	}
+	dataSourceName := a.dataSourceName
 
 	xormDb := core.FromDB(db)
 
-	driverName := a.driverName
-	if driverName == "sqlite3" {
-		driverName = "sqlite"
-	}
-	engine, err := xorm.NewEngineWithDB(driverName, dataSourceName, xormDb)
+	engine, err := xorm.NewEngineWithDB("postgres", dataSourceName, xormDb)
 	if err != nil {
 		return err
 	}
 
-	if a.driverName == "postgres" {
-		schema := util.GetValueFromDataSourceName("search_path", dataSourceName)
-		if schema != "" {
-			engine.SetSchema(schema)
-		}
+	schema := util.GetValueFromDataSourceName("search_path", dataSourceName)
+	if schema != "" {
+		engine.SetSchema(schema)
 	}
 
 	a.Engine = engine

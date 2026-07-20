@@ -5,7 +5,6 @@ go 1.25.0
 toolchain go1.25.8
 
 require (
-	github.com/Masterminds/squirrel v1.5.3
 	github.com/alexedwards/argon2id v0.0.0-20211130144151-3585854a6387
 	github.com/aliyun/alibaba-cloud-sdk-go v1.63.107
 	github.com/aliyun/aliyun-oss-go-sdk v2.2.2+incompatible
@@ -29,8 +28,6 @@ require (
 	github.com/go-git/go-git/v5 v5.16.3
 	github.com/go-jose/go-jose/v4 v4.1.3
 	github.com/go-ldap/ldap/v3 v3.4.6
-	github.com/go-mysql-org/go-mysql v1.7.0
-	github.com/go-sql-driver/mysql v1.8.1
 	github.com/go-webauthn/webauthn v0.10.2
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
@@ -41,7 +38,6 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/likexian/whois v1.15.1
 	github.com/likexian/whois-parser v1.24.9
-	github.com/microsoft/go-mssqldb v1.9.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/nyaruka/phonenumbers v1.2.2
 	github.com/pquerna/otp v1.4.0
@@ -55,7 +51,6 @@ require (
 	github.com/russellhaering/goxmldsig v1.2.0
 	github.com/sendgrid/sendgrid-go v3.16.0+incompatible
 	github.com/shirou/gopsutil/v4 v4.25.9
-	github.com/siddontang/go-log v0.0.0-20190221022429-1e957dd83bed
 	github.com/stretchr/testify v1.11.1
 	github.com/tealeg/xlsx v1.0.5
 	github.com/thanhpk/randstr v1.0.4
@@ -69,7 +64,6 @@ require (
 	golang.org/x/time v0.8.0
 	google.golang.org/api v0.215.0
 	layeh.com/radius v0.0.0-20231213012653-1006025d24f8
-	modernc.org/sqlite v1.18.2
 )
 
 require (
@@ -82,11 +76,9 @@ require (
 	cloud.google.com/go/monitoring v1.21.2 // indirect
 	cloud.google.com/go/storage v1.47.0 // indirect
 	dario.cat/mergo v1.0.0 // indirect
-	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
 	github.com/Azure/azure-storage-blob-go v0.15.0 // indirect
 	github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358 // indirect
-	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.31.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.49.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.49.0 // indirect
@@ -128,8 +120,6 @@ require (
 	github.com/go-webauthn/x v0.1.9 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
-	github.com/golang-sql/civil v0.0.0-20220223132316-b832511892a9 // indirect
-	github.com/golang-sql/sqlexp v0.1.0 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golang/mock v1.6.0 // indirect
@@ -150,10 +140,7 @@ require (
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/jonboulle/clockwork v0.2.2 // indirect
-	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
-	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
-	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
 	github.com/lestrrat-go/backoff/v2 v2.0.8 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.4 // indirect
 	github.com/lestrrat-go/httpcc v1.0.1 // indirect
@@ -164,15 +151,11 @@ require (
 	github.com/magefile/mage v1.15.1-0.20241126214340-bdc92f694516 // indirect
 	github.com/mattermost/xml-roundtrip-validator v0.1.0 // indirect
 	github.com/mattn/go-ieproxy v0.0.1 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/miekg/dns v1.1.57 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b // indirect
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20240411101913-e07a1f0e8eb4 // indirect
-	github.com/pingcap/errors v0.11.5-0.20210425183316-da1aaba5fb63 // indirect
-	github.com/pingcap/log v0.0.0-20210625125904-98ed8e2eb1c7 // indirect
-	github.com/pingcap/tidb/parser v0.0.0-20221126021158-6b02a5d8ba7d // indirect
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
@@ -182,15 +165,12 @@ require (
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/qiniu/go-sdk/v7 v7.12.1 // indirect
 	github.com/rainycape/memcache v0.0.0-20150622160815-1031fa0ce2f2 // indirect
-	github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0 // indirect
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
 	github.com/scim2/filter-parser/v2 v2.2.0 // indirect
 	github.com/sendgrid/rest v2.6.9+incompatible // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/shiena/ansicolor v0.0.0-20200904210342-c7312218db18 // indirect
-	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
-	github.com/siddontang/go v0.0.0-20180604090527-bdc77568d726 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/skeema/knownhosts v1.3.1 // indirect
 	github.com/slack-go/slack v0.15.0 // indirect
@@ -222,9 +202,6 @@ require (
 	go.opentelemetry.io/otel/sdk v1.40.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.40.0 // indirect
 	go.opentelemetry.io/otel/trace v1.40.0 // indirect
-	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/multierr v1.7.0 // indirect
-	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/image v0.18.0 // indirect
 	golang.org/x/mod v0.32.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
@@ -237,18 +214,11 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
-	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/uint128 v1.2.0 // indirect
-	modernc.org/cc/v3 v3.37.0 // indirect
-	modernc.org/ccgo/v3 v3.16.9 // indirect
-	modernc.org/libc v1.18.0 // indirect
-	modernc.org/mathutil v1.5.0 // indirect
-	modernc.org/memory v1.3.0 // indirect
 	modernc.org/opt v0.1.3 // indirect
-	modernc.org/strutil v1.1.3 // indirect
-	modernc.org/token v1.0.1 // indirect
+	modernc.org/sqlite v1.18.2 // indirect
 	rsc.io/binaryregexp v0.2.0 // indirect
 )

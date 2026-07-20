@@ -20,9 +20,7 @@ github.com/hashicorp/go-uuid@v1.0.3|MPL-2.0|regime:ADR-0019
 layeh.com/radius@v0.0.0-20231213012653-1006025d24f8|MPL-2.0|regime:ADR-0019
 
 # --- MPL-2.0 que saem por remoção de escopo ---
-github.com/go-sql-driver/mysql@v1.8.1|MPL-2.0|remocao:T-012
 
 # --- Indeterminados que saem por remoção de escopo (faceId/idv/captcha Alibaba, SQLite, tumblr) ---
-modernc.org/mathutil@v1.5.0|Unknown|remocao:T-012
 
 # --- Indeterminado resolvido por eleição (freetype via fogleman/gg em object; FTL em T-010) ---

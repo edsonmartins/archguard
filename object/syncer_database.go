@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/casdoor/casdoor/util"
-	"github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -37,23 +36,21 @@ func (p *DatabaseSyncerProvider) InitAdapter() error {
 		return nil
 	}
 
-	var dataSourceName string
-	if p.Syncer.DatabaseType == "mssql" {
-		dataSourceName = fmt.Sprintf("sqlserver://%s:%s@%s:%d?database=%s", p.Syncer.User, p.Syncer.Password, p.Syncer.Host, p.Syncer.Port, p.Syncer.Database)
-	} else if p.Syncer.DatabaseType == "postgres" {
-		sslMode := "disable"
-		if p.Syncer.SslMode != "" {
-			sslMode = p.Syncer.SslMode
-		}
-		dataSourceName = fmt.Sprintf("user=%s password=%s host=%s port=%d sslmode=%s dbname=%s", p.Syncer.User, p.Syncer.Password, p.Syncer.Host, p.Syncer.Port, sslMode, p.Syncer.Database)
-	} else {
-		dataSourceName = fmt.Sprintf("%s:%s@tcp(%s:%d)/", p.Syncer.User, p.Syncer.Password, p.Syncer.Host, p.Syncer.Port)
+	// ADR-0009: only PostgreSQL is supported, for the ArchGuard backend and for
+	// external database syncers alike. Other dialects are removed from the build.
+	if p.Syncer.DatabaseType != "postgres" {
+		return fmt.Errorf("unsupported syncer database type: %q — only PostgreSQL is supported (ADR-0009)", p.Syncer.DatabaseType)
 	}
+	sslMode := "disable"
+	if p.Syncer.SslMode != "" {
+		sslMode = p.Syncer.SslMode
+	}
+	dataSourceName := fmt.Sprintf("user=%s password=%s host=%s port=%d sslmode=%s dbname=%s", p.Syncer.User, p.Syncer.Password, p.Syncer.Host, p.Syncer.Port, sslMode, p.Syncer.Database)
 
 	var db *sql.DB
 	var err error
 
-	if p.Syncer.SshType != "" && (p.Syncer.DatabaseType == "mysql" || p.Syncer.DatabaseType == "postgres" || p.Syncer.DatabaseType == "mssql") {
+	if p.Syncer.SshType != "" {
 		var dial *ssh.Client
 		if p.Syncer.SshType == "password" {
 			dial, err = DialWithPassword(p.Syncer.SshUser, p.Syncer.SshPassword, p.Syncer.SshHost, p.Syncer.SshPort)
@@ -67,12 +64,7 @@ func (p *DatabaseSyncerProvider) InitAdapter() error {
 		// Store SSH client for proper cleanup
 		p.Syncer.SshClient = dial
 
-		if p.Syncer.DatabaseType == "mysql" {
-			dataSourceName = fmt.Sprintf("%s:%s@%s(%s:%d)/", p.Syncer.User, p.Syncer.Password, p.Syncer.Owner+p.Syncer.Name, p.Syncer.Host, p.Syncer.Port)
-			mysql.RegisterDialContext(p.Syncer.Owner+p.Syncer.Name, (&ViaSSHDialer{Client: dial, Context: nil}).MysqlDial)
-		} else if p.Syncer.DatabaseType == "postgres" || p.Syncer.DatabaseType == "mssql" {
-			db = sql.OpenDB(dsnConnector{dsn: dataSourceName, driver: &ViaSSHDialer{Client: dial, Context: nil, DatabaseType: p.Syncer.DatabaseType}})
-		}
+		db = sql.OpenDB(dsnConnector{dsn: dataSourceName, driver: &ViaSSHDialer{Client: dial, Context: nil, DatabaseType: p.Syncer.DatabaseType}})
 	}
 
 	if !isCloudIntranet {
