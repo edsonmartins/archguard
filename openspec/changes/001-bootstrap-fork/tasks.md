@@ -41,8 +41,8 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
       `bypass actors` vazio, verificado.
 - [x] **T-004** Preservar `LICENSE`; redigir bloco de atribuição no `NOTICE` (ADR-0002).
 - [x] **T-005** Definir política de cabeçalhos de copyright e aplicar em arquivos novos.
-- [ ] **T-006** Inicializar `docs/upstream/DIVERGENCE.md`.
-- [ ] **T-007** Mapear dependências internas dos módulos fora de escopo (relatório).
+- [x] **T-006** Inicializar `docs/upstream/DIVERGENCE.md`.
+- [x] **T-007** Mapear dependências internas dos módulos fora de escopo (relatório).
 - [x] **T-008** Remover módulos de pagamento/produto/assinatura. *(Código: object/controllers
       de pagamento + `pp/` removidos; gating de subscription no auth, `GetPaymentProvider`,
       `User.Cart` e seeds/dump removidos; 38 rotas fora; `go-cleanhttp` sai do baseline. Gate
