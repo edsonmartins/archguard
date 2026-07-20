@@ -43,9 +43,39 @@ func TestClassifyMPLIsMPLAndRegimeAware(t *testing.T) {
 	if !isMPL {
 		t.Fatal("MPL-2.0 não marcada como MPL")
 	}
-	// mplLinkedAllowed=false (regime vigente) ⇒ deve acusar.
-	if !strings.Contains(v, "regime vigente") {
-		t.Errorf("MPL linkada deveria ser proibida no regime vigente, veio: %q", v)
+	// mplLinkedAllowed=true (regime ADR-0019, ratificado 2026-07-20) ⇒ MPL
+	// linkada não é achado; a modificação é decidida pelos detectores de
+	// transição (checkMPLTransition), não por classify.
+	if v != "" {
+		t.Errorf("MPL linkada deveria ser permitida sob ADR-0019, veio: %q", v)
+	}
+}
+
+// TestCollectFindingsAlwaysCollectsMPL guards the ADR-0019 safety mechanism:
+// a permitted (unmodified) MPL module produces no finding, but MUST still be
+// handed to the transition detectors. Regression test for the loop that once
+// short-circuited on v=="" before recording the module as MPL, silently
+// disarming checkMPLTransition for exactly the modules it needed to guard.
+func TestCollectFindingsAlwaysCollectsMPL(t *testing.T) {
+	comps := []component{
+		{Ref: "github.com/hashicorp/go-uuid", License: "MPL-2.0"},
+		{Ref: "example.com/ok", License: "MIT"},
+		{Ref: "example.com/bad", License: "GPL-3.0"},
+	}
+	pkgMod := map[string]string{
+		"github.com/hashicorp/go-uuid": "github.com/hashicorp/go-uuid@v1.0.3",
+		"example.com/bad":              "example.com/bad@v1.0.0",
+	}
+	findings, mpl := collectFindings(comps, pkgMod, nil)
+
+	if len(mpl) != 1 || mpl[0] != "github.com/hashicorp/go-uuid" {
+		t.Fatalf("MPL permitida deveria ser coletada para os detectores de transição, veio: %v", mpl)
+	}
+	if _, ok := findings["github.com/hashicorp/go-uuid@v1.0.3"]; ok {
+		t.Error("MPL permitida (ADR-0019) não deveria virar achado")
+	}
+	if _, ok := findings["example.com/bad@v1.0.0"]; !ok {
+		t.Error("licença proibida deveria virar achado")
 	}
 }
 

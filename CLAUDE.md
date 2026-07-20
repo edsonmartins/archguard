@@ -50,7 +50,7 @@ Estes não são "boas práticas". São condições de rejeição automática:
 | **INV-1** | Nenhum caminho autentica um usuário com credencial que não seja dele. Senha-mestra **não existe** | I-4.1 |
 | **INV-2** | Nenhum `UPDATE`/`DELETE` em tabela de auditoria, em nenhuma camada | I-5.2 |
 | **INV-3** | Pacote sob `internal/domain/**` **não importa** framework web nem ORM | I-7.2 / ADR-0016 |
-| **INV-4** | Nenhuma dependência AGPL/GPL/SSPL/BUSL na árvore de build | I-2.2 / ADR-0002 |
+| **INV-4** | Nenhuma AGPL/GPL/LGPL-linkada/SSPL/BUSL na árvore. MPL/EPL/CDDL linkadas apenas se NÃO MODIFICADAS — patch, `replace` local ou vendorização alterada é violação | I-2.2 / ADR-0002 / ADR-0019 |
 | **INV-5** | Nenhuma query a tabela de domínio sem predicado de tenant | I-6.3 |
 | **INV-6** | **Não existe fail-open.** Falha de PDP, cofre ou auditoria ⇒ negação | I-5.4 / ADR-0005 |
 | **INV-7** | Segredos e chaves privadas nunca no banco nem em log/telemetria | I-4.3 / ADR-0013 |

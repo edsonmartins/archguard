@@ -41,9 +41,15 @@ suportada. Perfis normativos em ADR-0017.
 `NOTICE` de atribuição são **preservados integralmente e para sempre**, com registro explícito
 do commit-base do fork.
 
-**I-2.2** Nenhuma dependência sob **AGPL, GPL, SSPL, BUSL ou licença "community" com restrição
-por porte de empresa** entra na árvore de build do ArchGuard. Dependências MPL-2.0 são
-permitidas apenas como **serviço externo em processo separado** (ex.: OpenBao), nunca linkadas.
+**I-2.2** *(emendado por ADR-0019 em 2026-07-20)* Dependências sob **copyleft por arquivo**
+(MPL-2.0, EPL-2.0, CDDL) são permitidas **linkadas ao binário quando consumidas sem
+modificação**, sujeitas às obrigações de aviso, atribuição e disponibilização de fonte dos
+arquivos cobertos. Dependência sob copyleft por arquivo que seja **modificada, vendorizada com
+patch ou forkada** só é permitida como **serviço externo em processo separado** — caso
+contrário, os arquivos modificados tornam-se publicáveis sob a licença original, incompatível
+com o produto proprietário. Nenhuma dependência sob **AGPL, GPL, LGPL linkada, SSPL, BUSL ou
+licença "community" com restrição por porte de empresa** entra na árvore de build, em qualquer
+circunstância.
 
 **I-2.3** Toda dependência nova exige verificação de licença registrada no PR. O CI **quebra o
 build** diante de licença não aprovada (SBOM + license gate obrigatórios).
@@ -205,3 +211,4 @@ sócios-fundadores.
 | Data | Invariante | ADR | Motivo |
 |---|---|---|---|
 | 2026-07-20 | I-1.3 | ADR-0017 | Contradição com I-4.3 e RFC-0001: autossuficiência de runtime confundida com configuração suportada em produção. Invariante pétreo I-4.3 preservado sem alteração. |
+| 2026-07-20 | I-2.2 | ADR-0019 | Correção de erro de redação: MPL é copyleft por ARQUIVO, não por linkagem. MPL/EPL/CDDL não modificado passa a ser permitido linkado (obrigações de aviso/fonte); modificado só em processo separado. GPL/AGPL/LGPL-linkada/SSPL/BUSL seguem proibidas. **Ratificado pelos sócios-fundadores** (I-10.2). |

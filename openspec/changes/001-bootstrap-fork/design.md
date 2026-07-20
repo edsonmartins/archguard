@@ -123,6 +123,16 @@ cada remoção **reduz o baseline de forma mecanicamente verificada**. T-018 e T
 quando o baseline entra e o gate fica verde — não dependem da ratificação; o que depende dela é
 o **esvaziamento das 3 entradas `regime:ADR-0019`**, condição de fechamento do pacote.
 
+**FECHAMENTO (2026-07-20).** ADR-0019 ratificado. A troca de regime (`mplLinkedAllowed=true`)
+tornou as 3 MPL herdadas **permitidas linkadas** — deixaram de ser achado, logo suas entradas
+ficaram obsoletas (trava 2) e o `license-baseline.txt` foi **removido** (trava 5, autodestruição
+ao zerar). Gate final: `license-gate: ok (209 pacotes; 0 achados em quarentena; 3 MPL não
+modificados)`. As 3 MPL seguem guardadas pelos **detectores de transição** (não pelo baseline).
+Defeito corrigido na ratificação: o loop de classificação do licensegate fazia `continue` em
+`v==""` **antes** de coletar o módulo MPL, o que desarmava silenciosamente `checkMPLTransition`
+para exatamente as MPL permitidas — coleta movida para antes do short-circuit e travada por
+`TestCollectFindingsAlwaysCollectsMPL`.
+
 ### Distinção: gate local verde × gate imposto (decisão de 2026-07-20)
 
 Dois conceitos que estavam colados e precisam ficar separados:

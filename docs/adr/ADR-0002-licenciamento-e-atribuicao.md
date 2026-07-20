@@ -39,7 +39,8 @@ a capacidade de importar contribuições posteriores. Consequência operacional:
 | Classe | Licenças | Uso permitido |
 |---|---|---|
 | **Permitida** | Apache-2.0, MIT, BSD-2/3, ISC, Unlicense, Zlib | Livre, inclusive linkagem estática |
-| **Condicionada** | MPL-2.0, EPL-2.0, CDDL | **Somente** como serviço em processo separado (ex.: OpenBao), nunca linkado ao binário |
+| **Copyleft por arquivo — não modificado** *(ADR-0019)* | MPL-2.0, EPL-2.0, CDDL consumidos sem patch/fork/vendorização alterada | **Linkagem permitida**, com NOTICE + SBOM + referência à fonte; transição para modificado é detectada pelo gate (ADR-0019 §II.3) |
+| **Copyleft por arquivo — modificado** *(ADR-0019)* | MPL/EPL/CDDL com patch, fork ou vendorização alterada de arquivo coberto | **Somente** como serviço em processo separado (ex.: OpenBao), nunca linkado ao binário |
 | **Proibida** | AGPL-*, GPL-*, LGPL-* (linkado), SSPL, BUSL, Elastic License, "Community Edition" com corte por porte de empresa | Bloqueio de build |
 | **Revisão obrigatória** | CC-BY-*, EUPL, licenças duais, código sem licença declarada | Aprovação caso a caso registrada em PR |
 

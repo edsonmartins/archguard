@@ -39,8 +39,11 @@ make build         # binário
 
 - **`make invariants`/`make sbom`** rodam `go-licenses` (baixa a ferramenta fixada; requer
   rede na primeira vez). O license gate é **fail-closed**: licença não determinável é vermelho.
-- **`license-baseline.txt`** quarentena o passivo de licença herdado; ver
-  `openspec/changes/001-bootstrap-fork/design.md` (nota transitória). Só encolhe.
+- **Passivo de licença: fechado.** O `license-baseline.txt` de quarentena foi **removido** ao
+  ratificar-se o ADR-0019 (2026-07-20): MPL/EPL/CDDL não modificadas passaram a ser permitidas
+  linkadas, esvaziando as 3 MPL herdadas. O gate agora reporta `0 achados em quarentena`; as MPL
+  não modificadas seguem sob os **detectores de transição** do licensegate (`replace` local,
+  vendorização alterada, `go mod verify`) — modificação reabre violação.
 - **Disco/temp:** o build completo consome vários GB de temp; se faltar espaço, use
   `go clean -cache` e `go build -p 1 ./pacote/`.
 

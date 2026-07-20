@@ -30,7 +30,9 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
       vigente e base de mantenedores; registrar evidência.
 - [x] **T-002** Criar fork, congelar fork point e escrever `docs/upstream/FORK_POINT.md`.
 - [ ] **T-003** Configurar `vendor/upstream` como espelho somente-leitura e proteger `main`
-      no **GitHub** (bloqueada até ADR-0018 ratificado). Conforme ADR-0018: ruleset em `main`
+      no **GitHub**. **ADR-0018 ratificado em 2026-07-20**; T-003 permanece bloqueada apenas no
+      **provisionamento da forja** (GitHub privado), diferido junto ao DevOps para o fim do pacote
+      (T-020/T-021/T-022). Conforme ADR-0018: ruleset em `main`
       (PR obrigatório, aprovações mínimas, required status checks bloqueantes, up-to-date,
       force-push/deleção bloqueados, `Require signed commits`); papéis de trabalho = Write,
       admin da org não é conta de trabalho; detecção (verificador de proveniência de `main`
@@ -118,8 +120,15 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
       vendorização alterada), regra de licença dual (eleição explícita registrada; sem eleição
       = desconhecida = vermelho), SBOM CycloneDX + license gate como alvo local, módulo de
       ferramentas separado com versões fixadas, fail-closed em licença desconhecida.
-- [ ] **T-019b** Imposição pela forja: o gate vira status check obrigatório. **Bloqueada**
-      (forja provisionada + ADR-0018 ratificado).
+      **RATIFICAÇÃO ADR-0019 (2026-07-20):** regime trocado (`mplLinkedAllowed=true`); MPL/EPL/CDDL
+      não modificadas permitidas linkadas; I-2.2 emendado (Anexo B), ADR-0002 matriz 3-estados,
+      CLAUDE.md §3 INV-4, inv4_test MPL-permitida. As 3 MPL herdadas deixaram de ser achado →
+      `license-baseline.txt` **removido** (baseline = 0, trava 5). **Condição de fechamento de
+      licença do pacote 001: cumprida.** Defeito corrigido: coleta de MPL para os detectores de
+      transição ocorria após `continue` em `v==""` — desarmava o guard; movida + travada por teste.
+      Gate final: `ok (209 pacotes; 0 em quarentena; 3 MPL não modificados)`.
+- [ ] **T-019b** Imposição pela forja: o gate vira status check obrigatório. **ADR-0018
+      ratificado (2026-07-20);** bloqueada apenas na **forja provisionada** (DevOps diferido).
 - [x] **T-020a** Implementar perfis de implantação `dev`/`pilot`/`production` com declaração
       obrigatória e reporte no health check (ADR-0017). *(internal/deploy: Profile + Parse
       obrigatório (vazio/inválido = fatal); /health reporta profile/keyCustodian/compliance.)*

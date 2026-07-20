@@ -46,10 +46,12 @@ var (
 	forbiddenPrefixes = []string{
 		"AGPL", "GPL", "LGPL", "SSPL", "BUSL", "Elastic",
 	}
-	// Conditioned classes (MPL/EPL/CDDL) are allowed ONLY as an external
-	// service in a separate process (I-2.2); as a linked build dependency
-	// they are a violation.
-	conditionedPrefixes = []string{"MPL", "EPL", "CDDL"}
+	// File-copyleft classes (MPL/EPL/CDDL) are ALLOWED linked to the build
+	// tree WHEN NOT MODIFIED (I-2.2, amended by ADR-0019). Whether a given
+	// module was modified — patch, local `replace`, altered vendoring — is
+	// decided by the licensegate transition detectors (ADR-0019 §II.3), not
+	// here: this suite only rejects the hard-forbidden classes.
+	fileCopyleftPrefixes = []string{"MPL", "EPL", "CDDL"}
 )
 
 // classifyLicense returns an empty string when the license is allowed, or a
@@ -64,9 +66,11 @@ func classifyLicense(pkg, license string) string {
 			return fmt.Sprintf("INV-4: %s sob licença PROIBIDA %s (ADR-0002 §3)", pkg, license)
 		}
 	}
-	for _, p := range conditionedPrefixes {
+	for _, p := range fileCopyleftPrefixes {
 		if strings.HasPrefix(license, p) {
-			return fmt.Sprintf("INV-4: %s sob licença condicionada %s LINKADA à árvore de build — permitida apenas como serviço em processo separado (I-2.2)", pkg, license)
+			// Allowed linked when unmodified (ADR-0019). Modification is the
+			// licensegate's call — this suite treats the class as permitted.
+			return ""
 		}
 	}
 	if license == "" || strings.EqualFold(license, "Unknown") {

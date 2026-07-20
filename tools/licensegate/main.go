@@ -33,11 +33,11 @@ import (
 	"strings"
 )
 
-// mplLinkedAllowed reflects the VIGENTE license regime. Under the current
-// (unamended) I-2.2, MPL/EPL/CDDL linked to the build tree is forbidden. When
-// ADR-0019 is ratified, flip this to true; the transition detectors are
-// unaffected.
-const mplLinkedAllowed = false
+// mplLinkedAllowed reflects the VIGENTE license regime. ADR-0019 (ratified
+// 2026-07-20) amended I-2.2: MPL/EPL/CDDL linked to the build tree is permitted
+// WHEN NOT MODIFIED. The transition detectors (§II.3) still catch a modified MPL
+// module — flipping this flag changed the permission, not the detectors.
+const mplLinkedAllowed = true
 
 var allowedLicenses = map[string]bool{
 	"Apache-2.0": true, "MIT": true, "BSD-2-Clause": true, "BSD-3-Clause": true,
@@ -87,19 +87,7 @@ func main() {
 	}
 
 	// findings: problematic module@version -> normalized license.
-	findings := map[string]string{}
-	var mplModules []string
-	for _, c := range comps {
-		v, isMPL := classify(c.Ref, c.License, elections)
-		if v == "" {
-			continue
-		}
-		modver := resolveModule(c.Ref, pkgMod)
-		findings[modver] = normalizeLicense(c.License)
-		if isMPL {
-			mplModules = append(mplModules, c.Ref)
-		}
-	}
+	findings, mplModules := collectFindings(comps, pkgMod, elections)
 
 	// Reconcile against the baseline (locks b and c).
 	for modver, lic := range findings {
@@ -126,6 +114,29 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf("license-gate: ok (%d pacotes; %d achados em quarentena no baseline; %d MPL não modificados)\n", len(comps), len(baseline), len(mplModules))
+}
+
+// collectFindings classifies each scanned component into (a) findings —
+// module@version -> normalized license for anything not outright allowed — and
+// (b) mplModules — EVERY MPL/EPL/CDDL package, allowed or not. A permitted MPL
+// (classify returns v=="") is still collected into mplModules because the
+// transition detectors (checkMPLTransition) are the whole basis for allowing it
+// linked (ADR-0019 §II.3); dropping it here would silently disarm that guard.
+func collectFindings(comps []component, pkgMod, elections map[string]string) (map[string]string, []string) {
+	findings := map[string]string{}
+	var mplModules []string
+	for _, c := range comps {
+		v, isMPL := classify(c.Ref, c.License, elections)
+		if isMPL {
+			mplModules = append(mplModules, c.Ref)
+		}
+		if v == "" {
+			continue
+		}
+		modver := resolveModule(c.Ref, pkgMod)
+		findings[modver] = normalizeLicense(c.License)
+	}
+	return findings, mplModules
 }
 
 // normalizeLicense collapses undeterminable license strings to "Unknown" so

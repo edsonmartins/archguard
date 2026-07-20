@@ -1,6 +1,6 @@
 # ADR-0018 — Forja de código e infraestrutura de CI
 
-- **Status:** **Proposto — submetido à ratificação** (bloqueia T-019b e T-003)
+- **Status:** **Aceito — ratificado em 2026-07-20.** T-003 e T-019b permanecem bloqueados no provisionamento da forja (GitHub privado), diferido junto ao trabalho de DevOps para o fim do pacote 001.
 - **Data:** 2026-07-20
 - **Invariantes tocados:** I-9.4 (gate como autoridade de "pronto"), I-8.1 (proteção da linha
   `main`), ADR-0008 (tier admin como break-glass), ADR-0007/RFC-0003 (detecção de proveniência
@@ -199,7 +199,7 @@ logo não há decisão de custo para o sócio.
 
 | Papel | Nome | Data | Ratificação |
 |---|---|---|---|
-| Arquiteto de Software e Soluções | Edson Martins | ______ | ☐ |
+| Arquiteto de Software e Soluções | Edson Martins | 2026-07-20 | ☑ Ratificado |
 
 As provas do item "Critérios de aceite bloqueantes" são aceite do **T-003**, não da ratificação
 deste ADR.

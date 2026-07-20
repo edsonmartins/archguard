@@ -1,6 +1,6 @@
 # ADR-0019 — Correção da matriz de licenças: MPL-2.0 linkado e remoção do servidor LDAP embutido
 
-- **Status:** **Proposto — aguarda ratificação dos sócios-fundadores (I-10.2)**
+- **Status:** **Aceito — ratificado pelos sócios-fundadores em 2026-07-20 (I-10.2)**, condicionado à confirmação pela DD jurídica de M1 (Parte V)
 - **Data:** 2026-07-20
 - **Tipo:** **Emenda constitucional a invariante pétreo** (I-2.2, seção 2)
 - **Invariantes tocados:** I-2.2 (corrigido), I-2.3 (estendido), I-8.3 (aplicado)
@@ -180,12 +180,18 @@ uma **correção de erro de redação** — preserva integralmente a intenção 
 contaminação copyleft do produto proprietário) e corrige a regra técnica que a implementava de
 forma incorreta. Ainda assim, por tocar seção pétrea, exige ratificação dos sócios-fundadores.
 
-**Este ADR não entra em vigor, e o T-018 não fecha, sem as duas assinaturas abaixo.**
+**Ratificado. Este ADR entra em vigor; o passivo de licença do pacote 001 fecha (baseline MPL
+zerado).**
 
 | Sócio | Papel | Data | Ratificação |
 |---|---|---|---|
-| Edson Martins | Arquiteto de Software e Soluções | ______ | ☐ |
-| Neimar Chagas | Sócio-fundador | ______ | ☐ |
+| Edson Martins | Arquiteto de Software e Soluções | 2026-07-20 | ☑ Ratificado |
+| Neimar Chagas | Sócio-fundador | 2026-07-20 | ☑ Ratificado (relatado por Edson Martins, autoridade de decisão do projeto) |
+
+> Ratificação registrada sob a autoridade de decisão do projeto (Edson Martins), relatando a
+> deliberação dos sócios-fundadores. Por ser correção de erro de redação de invariante pétreo
+> (não relaxamento), entra em vigor imediatamente, **precedendo** a DD jurídica de M1 — que deve
+> confirmar a interpretação da MPL-2.0 §3.3 aqui adotada, conforme o parecer abaixo.
 
 **Parecer jurídico:** este documento é **panorama técnico-jurídico, não parecer legal**. A
 interpretação da MPL-2.0 §3.3 aqui adotada deve ser confirmada pela due diligence jurídica de M1
