@@ -92,7 +92,11 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
       faz o migrator conectar como archguard_migrate. Gate verde.)* **Pendente:** aplicação do
       roles.sql contra PG real validada no smoke test T-022. Conjunto de tabelas de auditoria
       cresce no pacote 003 (reafirmar o REVOKE a cada nova).
-- [ ] **T-015** Criar `internal/domain/**` e a regra de dependência no CI (ADR-0016).
+- [x] **T-015** Criar `internal/domain/**` e a regra de dependência no CI (ADR-0016). *(Criado
+      `internal/domain/` com doc.go (contrato de fronteira) + `outcome.go` (primitivo fundamental
+      livre de framework: distinção Allowed/Denied/Failed + fail-closed do INV-6, CLAUDE.md §6).
+      Regra INV-3 agora ATIVA contra o diretório real — provado por injeção: import de beego no
+      domínio quebra `make deps-check`, revertido volta a verde. Gate verde.)*
 - [ ] **T-016** Introduzir camada de persistência `pgx` para código novo.
 - [ ] **T-017** Rebranding: identificadores, cabeçalhos HTTP, assets, strings.
 - [x] **T-018** Implementar suíte de invariantes (4 testes do design).
