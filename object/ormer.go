@@ -15,6 +15,7 @@
 package object
 
 import (
+	"context"
 	"database/sql"
 	"flag"
 	"fmt"
@@ -25,6 +26,7 @@ import (
 
 	"github.com/beego/beego/v2/server/web"
 	"github.com/casdoor/casdoor/conf"
+	"github.com/casdoor/casdoor/internal/migrate"
 	"github.com/casdoor/casdoor/util"
 	xormadapter "github.com/casdoor/xorm-adapter/v3"
 	_ "github.com/lib/pq" // db = postgres — único backend suportado (ADR-0009)
@@ -129,6 +131,17 @@ func CreateTables() {
 	}
 
 	ormer.createTable()
+}
+
+// RunMigrations applies the versioned, explicit SQL migrations (ADR-0009) after
+// the legacy XORM Sync2 has created/updated the tables. Destructive schema
+// changes (e.g. dropping columns of removed scope) live here, never in Sync2.
+func RunMigrations() {
+	// Use exactly the DSN the ORM connects with (ormer.open), so migrations run
+	// against the same database the application uses.
+	if err := migrate.Run(context.Background(), conf.GetConfigDataSourceName()); err != nil {
+		panic(err)
+	}
 }
 
 // Ormer represents the MySQL adapter for policy storage.

@@ -77,11 +77,14 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
       Esvazia baseline: go-sql-driver/mysql + modernc/mathutil → **baseline = 3** (só as MPL do
       ADR-0019). app.conf default = postgres. Gate verde.)* **Pendente:** cenário PG<15 recusa
       iniciar → validar no smoke test T-022 (PG real).
-- [ ] **T-013** Implantar migrations versionadas com travamento de execução concorrente.
-      Inclui a migration explícita de **drop das colunas órfãs de escopo removido**: `cart`,
-      `balance`, `balanceCredit`, `balanceCurrency` (T-008), `master_password` (T-011), `face_ids` + colunas de provedores
-      sociais removidos (T-010), e demais deixadas pelas remoções do Bloco 3. Nunca por
-      auto-sync de ORM.
+- [x] **T-013** Implantar migrations versionadas com travamento de execução concorrente.
+      *(`internal/migrate/`: migrator próprio em pgx + `pg_advisory_lock`, `schema_migrations`,
+      migrations SQL numeradas embutidas, idempotente; roda após o Sync2 legado; dep nova
+      `jackc/pgx/v5` aprovada. Migration 0001 dropa as 3 colunas órfãs `cart`/`face_ids`/
+      `master_password` — DROP explícito, nunca auto-sync. Testes de lógica pura verdes; gate
+      verde.)* **Pendente:** aplicação real da migration validada no smoke test T-022 (PG real).
+      Colunas `balance*` e de provedores sociais ficam (campos ainda no struct) para passo
+      futuro que remova esses campos primeiro.
 - [ ] **T-014** Criar papéis de banco segregados (aplicação/migração/leitura).
 - [ ] **T-015** Criar `internal/domain/**` e a regra de dependência no CI (ADR-0016).
 - [ ] **T-016** Introduzir camada de persistência `pgx` para código novo.
