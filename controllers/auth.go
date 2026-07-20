@@ -31,7 +31,6 @@ import (
 	"github.com/casdoor/casdoor/captcha"
 	"github.com/casdoor/casdoor/conf"
 	"github.com/casdoor/casdoor/form"
-	"github.com/casdoor/casdoor/i18n"
 	"github.com/casdoor/casdoor/idp"
 	"github.com/casdoor/casdoor/object"
 	"github.com/casdoor/casdoor/proxy"
@@ -531,61 +530,7 @@ func (c *ApiController) Login() {
 
 	if authForm.Username != "" {
 		var user *object.User
-		if authForm.SigninMethod == "Face ID" {
-			var application *object.Application
-			application, err = object.GetApplication(fmt.Sprintf("admin/%s", authForm.Application))
-			if err != nil {
-				c.ResponseError(err.Error(), nil)
-				return
-			}
-
-			if application == nil {
-				c.ResponseError(fmt.Sprintf(c.T("auth:The application: %s does not exist"), authForm.Application))
-				return
-			}
-
-			if user, err = object.GetUserByFieldsForSharedApp(application, authForm.Organization, authForm.Username); err != nil {
-				c.ResponseError(err.Error(), nil)
-				return
-			} else if user == nil {
-				c.ResponseError(fmt.Sprintf(c.T("general:The user: %s doesn't exist"), util.GetId(authForm.Organization, authForm.Username)))
-				return
-			}
-
-			if !application.IsFaceIdEnabled() {
-				c.ResponseError(c.T("auth:The login method: login with face is not enabled for the application"))
-				return
-			}
-
-			faceIdProvider, err := object.GetFaceIdProviderByApplication(util.GetId(application.Owner, application.Name), "false", c.GetAcceptLanguage())
-			if err != nil {
-				c.ResponseError(err.Error())
-				return
-			}
-
-			if faceIdProvider == nil {
-				if err := object.CheckFaceId(user, authForm.FaceId, c.GetAcceptLanguage()); err != nil {
-					c.ResponseError(err.Error(), nil)
-					return
-				}
-			} else {
-				if !user.HasFaceIdImage() {
-					c.ResponseError(i18n.Translate(c.GetAcceptLanguage(), "check:Face data does not exist, cannot log in"))
-					return
-				}
-
-				ok, err := user.CheckUserFace(authForm.FaceIdImage, faceIdProvider)
-				if err != nil {
-					c.ResponseError(err.Error(), nil)
-					return
-				}
-
-				if !ok {
-					c.ResponseError(i18n.Translate(c.GetAcceptLanguage(), "check:Face data mismatch"))
-					return
-				}
-			}
-		} else if authForm.Password == "" {
+		if authForm.Password == "" {
 			var application *object.Application
 			application, err = object.GetApplication(fmt.Sprintf("admin/%s", authForm.Application))
 			if err != nil {

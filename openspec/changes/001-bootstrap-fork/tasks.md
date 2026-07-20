@@ -53,7 +53,12 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
       + telemetria OTLP), scanner de intranet MCP. Fronteira preservada: OAuth DCR (RFC 7591),
       `Entry`/log-collector geral, Security Scan, RADIUS ficam. SDK MCP + otlp saem do grafo.
       Redução de superfície, não de licença. Gate verde.)*
-- [ ] **T-010** Reduzir provedores ao catálogo curado (ADR-0015, §3).
+- [x] **T-010** Reduzir provedores ao catálogo curado (ADR-0015, §3). *(3 partes: notificações
+      + eleição FTL freetype; idp ao catálogo (Entra/AD, Google, Okta, GitHub, GitLab, Custom,
+      Casdoor) + remove goth + fluxos WeChat; faceId/idv/captcha-aliyun (KYC não-PAM). Esvaziou
+      do baseline: mautrix, go.mau.fi, freetype, mrjones, 6 alibaba → baseline 15→5. Decisão do
+      usuário: manter GitHub/GitLab. Gate verde.)* **Esquema pendente T-013:** colunas órfãs
+      `face_ids` + provedores sociais removidos.
 - [x] **T-010a** Remover o servidor LDAP embutido e a dependência `goldap` (GPL-2.0) —
       ADR-0019 Parte III / ADR-0015 §5. O conector **cliente** LDAP/AD (pacote 009) e o
       servidor RADIUS não são afetados. *(Antecipada ao Bloco 3 por ordem expressa; gate verde
@@ -64,8 +69,9 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
 - [ ] **T-012** Remover dialetos de banco não-PostgreSQL.
 - [ ] **T-013** Implantar migrations versionadas com travamento de execução concorrente.
       Inclui a migration explícita de **drop das colunas órfãs de escopo removido**: `cart`,
-      `balance`, `balanceCredit`, `balanceCurrency` (T-008) e demais deixadas pelas remoções do
-      Bloco 3. Nunca por auto-sync de ORM.
+      `balance`, `balanceCredit`, `balanceCurrency` (T-008), `face_ids` + colunas de provedores
+      sociais removidos (T-010), e demais deixadas pelas remoções do Bloco 3. Nunca por
+      auto-sync de ORM.
 - [ ] **T-014** Criar papéis de banco segregados (aplicação/migração/leitura).
 - [ ] **T-015** Criar `internal/domain/**` e a regra de dependência no CI (ADR-0016).
 - [ ] **T-016** Introduzir camada de persistência `pgx` para código novo.

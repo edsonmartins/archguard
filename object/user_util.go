@@ -852,15 +852,6 @@ func CheckPermissionForUpdateUser(oldUser, newUser *User, isAdmin bool, allowDis
 		}
 	}
 
-	if newUser.FaceIds != nil {
-		item := GetAccountItemByName("Face ID", organization)
-		if !userVisible(isAdmin, item) {
-			newUser.FaceIds = oldUser.FaceIds
-		} else {
-			itemsChanged = append(itemsChanged, item)
-		}
-	}
-
 	if oldUser.IsAdmin != newUser.IsAdmin {
 		item := GetAccountItemByName("Is admin", organization)
 		if !userVisible(isAdmin, item) {
@@ -1076,8 +1067,6 @@ func StringArrayToStruct[T any](stringArray [][]string) ([]*T, error) {
 				err = setReflectAttr[[]string](&fv, v)
 			case reflect.TypeOf([]*string{}):
 				err = setReflectAttr[[]*string](&fv, v)
-			case reflect.TypeOf([]*FaceId{}):
-				err = setReflectAttr[[]*FaceId](&fv, v)
 			case reflect.TypeOf([]*MfaProps{}):
 				err = setReflectAttr[[]*MfaProps](&fv, v)
 			case reflect.TypeOf([]*Role{}):

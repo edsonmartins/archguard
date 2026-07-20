@@ -7,12 +7,6 @@ toolchain go1.25.8
 require (
 	github.com/Masterminds/squirrel v1.5.3
 	github.com/alexedwards/argon2id v0.0.0-20211130144151-3585854a6387
-	github.com/alibabacloud-go/cloudauth-20190307/v3 v3.9.2
-	github.com/alibabacloud-go/darabonba-openapi/v2 v2.1.4
-	github.com/alibabacloud-go/facebody-20191230/v5 v5.1.2
-	github.com/alibabacloud-go/openapi-util v0.1.0
-	github.com/alibabacloud-go/tea v1.3.2
-	github.com/alibabacloud-go/tea-utils/v2 v2.0.7
 	github.com/aliyun/alibaba-cloud-sdk-go v1.63.107
 	github.com/aliyun/aliyun-oss-go-sdk v2.2.2+incompatible
 	github.com/aliyun/credentials-go v1.3.10
@@ -99,16 +93,8 @@ require (
 	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProtonMail/go-crypto v1.1.6 // indirect
-	github.com/alibabacloud-go/alibabacloud-gateway-spi v0.0.5 // indirect
-	github.com/alibabacloud-go/darabonba-number v1.0.4 // indirect
 	github.com/alibabacloud-go/debug v1.0.1 // indirect
-	github.com/alibabacloud-go/endpoint-util v1.1.0 // indirect
-	github.com/alibabacloud-go/openplatform-20191219/v2 v2.0.1 // indirect
-	github.com/alibabacloud-go/tea-fileform v1.1.1 // indirect
-	github.com/alibabacloud-go/tea-oss-sdk v1.1.3 // indirect
-	github.com/alibabacloud-go/tea-oss-utils v1.1.0 // indirect
-	github.com/alibabacloud-go/tea-utils v1.3.6 // indirect
-	github.com/alibabacloud-go/tea-xml v1.1.3 // indirect
+	github.com/alibabacloud-go/tea v1.3.2 // indirect
 	github.com/apistd/uni-go-sdk v0.0.2 // indirect
 	github.com/atc0005/go-teams-notify/v2 v2.13.0 // indirect
 	github.com/aws/smithy-go v1.24.0 // indirect
@@ -117,7 +103,6 @@ require (
 	github.com/boombuler/barcode v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/clbanning/mxj/v2 v2.7.0 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/cncf/xds/go v0.0.0-20251210132809-ee656c7534f5 // indirect
 	github.com/corazawaf/libinjection-go v0.2.2 // indirect
@@ -217,7 +202,6 @@ require (
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
-	github.com/tjfoc/gmsm v1.4.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.15 // indirect
 	github.com/tklauser/numcpus v0.10.0 // indirect
 	github.com/twilio/twilio-go v1.13.0 // indirect

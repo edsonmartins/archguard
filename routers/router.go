@@ -92,7 +92,6 @@ func InitAPI() {
 	web.Router("/api/delete-user", &controllers.ApiController{}, "POST:DeleteUser")
 	web.Router("/api/upload-users", &controllers.ApiController{}, "POST:UploadUsers")
 	web.Router("/api/remove-user-from-group", &controllers.ApiController{}, "POST:RemoveUserFromGroup")
-	web.Router("/api/verify-identification", &controllers.ApiController{}, "POST:VerifyIdentification")
 	web.Router("/api/impersonate-user", &controllers.ApiController{}, "POST:ImpersonateUser")
 	web.Router("/api/exit-impersonate-user", &controllers.ApiController{}, "POST:ExitImpersonateUser")
 
@@ -350,5 +349,4 @@ func InitAPI() {
 
 	web.Router("/scim/*", &controllers.RootController{}, "*:HandleScim")
 
-	web.Router("/api/faceid-signin-begin", &controllers.ApiController{}, "GET:FaceIDSigninBegin")
 }

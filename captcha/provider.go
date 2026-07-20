@@ -30,8 +30,6 @@ func GetCaptchaProvider(captchaType string) CaptchaProvider {
 		return NewReCaptchaProvider()
 	case "reCAPTCHA v3":
 		return NewReCaptchaProvider()
-	case "Aliyun Captcha":
-		return NewAliyunCaptchaProvider()
 	case "hCaptcha":
 		return NewHCaptchaProvider()
 	case "GEETEST":

@@ -15,20 +15,16 @@
 package object
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"reflect"
 	"strconv"
 	"strings"
 
 	"github.com/casbin/casbin/v2"
 	"github.com/casdoor/casdoor/conf"
-	"github.com/casdoor/casdoor/faceId"
 	"github.com/casdoor/casdoor/i18n"
-	"github.com/casdoor/casdoor/proxy"
 	"github.com/casdoor/casdoor/util"
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/xorm-io/builder"
@@ -222,7 +218,6 @@ type User struct {
 	MultiFactorAuths    []*MfaProps           `xorm:"-" json:"multiFactorAuths,omitempty"`
 	Invitation          string                `xorm:"varchar(100) index" json:"invitation"`
 	InvitationCode      string                `xorm:"varchar(100) index" json:"invitationCode"`
-	FaceIds             []*FaceId             `json:"faceIds"`
 
 	Ldap       string            `xorm:"ldap varchar(100)" json:"ldap"`
 	Properties map[string]string `json:"properties"`
@@ -286,12 +281,6 @@ type Address struct {
 	State   string `xorm:"varchar(100)" json:"state"`
 	ZipCode string `xorm:"varchar(100)" json:"zipCode"`
 	Region  string `xorm:"varchar(100)" json:"region"`
-}
-
-type FaceId struct {
-	Name       string    `xorm:"varchar(100) notnull pk" json:"name"`
-	FaceIdData []float64 `json:"faceIdData"`
-	ImageUrl   string    `json:"imageUrl"`
 }
 
 func GetUserFieldStringValue(user *User, fieldName string) (bool, string, error) {
@@ -1474,49 +1463,6 @@ func (user *User) IsGlobalAdmin() bool {
 	}
 
 	return user.Owner == "built-in"
-}
-
-func (user *User) HasFaceIdImage() bool {
-	for _, userFaceId := range user.FaceIds {
-		if userFaceId.ImageUrl != "" {
-			return true
-		}
-	}
-	return false
-}
-
-func (user *User) CheckUserFace(faceIdImage []string, provider *Provider) (bool, error) {
-	faceIdChecker := faceId.GetFaceIdProvider(provider.Type, provider.ClientId, provider.ClientSecret, provider.Endpoint)
-	httpClient := proxy.DefaultHttpClient
-	errList := []error{}
-	for _, userFaceId := range user.FaceIds {
-		if userFaceId.ImageUrl != "" {
-			imgResp, err := httpClient.Get(userFaceId.ImageUrl)
-			if err != nil {
-				continue
-			}
-			imgByte, err := io.ReadAll(imgResp.Body)
-			if err != nil {
-				continue
-			}
-
-			base64Img := base64.StdEncoding.EncodeToString(imgByte)
-			for _, imgBase64 := range faceIdImage {
-				isSuccess, err := faceIdChecker.Check(imgBase64, base64Img)
-				if err != nil {
-					errList = append(errList, err)
-					continue
-				}
-				if isSuccess {
-					return true, nil
-				}
-			}
-		}
-	}
-	if len(errList) > 0 {
-		return false, errList[0]
-	}
-	return false, nil
 }
 
 func (user *User) GetUserFullGroupPath() ([]string, error) {

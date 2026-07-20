@@ -502,17 +502,6 @@ func (application *Application) IsLdapEnabled() bool {
 	return false
 }
 
-func (application *Application) IsFaceIdEnabled() bool {
-	if len(application.SigninMethods) > 0 {
-		for _, signinMethod := range application.SigninMethods {
-			if signinMethod.Name == "Face ID" {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 func (application *Application) IsOriginValid(origin string) bool {
 	isValid, err := util.IsValidOrigin(origin)
 	if err != nil {

@@ -273,8 +273,6 @@ func (syncer *Syncer) setUserByKeyValue(user *User, key string, value string) {
 		user.MfaRememberDeadline = value
 	case "WebauthnCredentials":
 		_ = unmarshalJSON(value, &user.WebauthnCredentials)
-	case "FaceIds":
-		_ = unmarshalJSON(value, &user.FaceIds)
 	case "ManagedAccounts":
 		_ = unmarshalJSON(value, &user.ManagedAccounts)
 	case "MfaAccounts":
@@ -442,7 +440,6 @@ func (syncer *Syncer) getMapFromOriginalUser(user *OriginalUser) map[string]stri
 	m["IpWhitelist"] = user.IpWhitelist
 	m["MfaRememberDeadline"] = user.MfaRememberDeadline
 	m["WebauthnCredentials"] = marshalToJSONString(user.WebauthnCredentials)
-	m["FaceIds"] = marshalToJSONString(user.FaceIds)
 	m["ManagedAccounts"] = marshalToJSONString(user.ManagedAccounts)
 	m["MfaAccounts"] = marshalToJSONString(user.MfaAccounts)
 	m["MfaItems"] = marshalToJSONString(user.MfaItems)
