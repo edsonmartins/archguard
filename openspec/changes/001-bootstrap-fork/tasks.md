@@ -103,15 +103,15 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
       interface `Beginner` estreita p/ testabilidade). doc.go fixa as regras (sem chamada remota
       em transação — outbox RFC-0004 §4; tenant no construtor). 4 testes com fake. pgx já entrara
       no T-013. Repositórios reais vêm nos pacotes 002+. Gate verde.)*
-- [ ] **T-017** Rebranding: identificadores, cabeçalhos HTTP, assets, strings.
-      *(PARCIAL — backend de marca visível FEITO: cookie de sessão `archguard_session_id`,
-      appname `archguard`, issuer TOTP default `ArchGuard`, seed da app default (DisplayName/
-      Logo/HomepageUrl). Nenhum header HTTP de marca existia. Corrigido teste órfão do FaceId
-      (T-010). Estrutural mantido (provider Type "Casdoor" de federação, chaves de config, nomes
-      built-in). Gate verde.)* **FALTA p/ fechar:** (a) **module path** `github.com/casdoor/
-      casdoor` — DECISÃO do usuário (trocar p/ qual path, ou manter); toca todos os imports.
-      (b) **assets/strings do frontend `web/`** — DEFERIDO ao pacote 008 (ADR-0004 substitui o
-      console inteiro; rebrandizar UI descartada é desperdício).
+- [x] **T-017** Rebranding: identificadores, cabeçalhos HTTP, assets, strings. *(Backend de
+      marca visível: cookie `archguard_session_id`, appname `archguard`, issuer TOTP default
+      `ArchGuard`, seed da app default (DisplayName/Logo/HomepageUrl). Sem header HTTP de marca.
+      Corrigido teste órfão do FaceId (T-010). Estrutural mantido (provider Type "Casdoor" de
+      federação, config keys, built-in names). NOTICE/copyright intactos (ADR-0002). Gate
+      verde.)* **Decisões (2026-07-20):** module path `github.com/casdoor/casdoor` **mantido**
+      por ora (migração de path é passo dedicado quando houver path-alvo); assets/strings do
+      frontend `web/` **deferidos ao pacote 008** (ADR-0004 substitui o console — rebrandizar UI
+      descartada é desperdício).
 - [x] **T-018** Implementar suíte de invariantes (4 testes do design).
 - [x] **T-019a** Implementação local (não depende da forja): os três detectores de transição
       MPL do ADR-0019 §II.3 (hash vs proxy oficial; ausência de `replace` local; ausência de
