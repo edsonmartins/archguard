@@ -35,8 +35,9 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
       Maintainer; push a `main` = "No one"; merge exige pipeline verde); detecção
       (verificador de proveniência de `main` com alerta de severidade máxima; audit events do
       tier admin; commits assinados verificados; alerta imediato em canal de segurança);
-      Admin Mode habilitado. **Aceite bloqueante:** evidência de que um Maintainer não-admin
-      não consegue push a `main`, merge com gate vermelho, nem force-push.
+      Admin Mode habilitado (evidência empírica obrigatória: toggle demonstrado, funcionando).
+      **Aceite bloqueante:** evidência de que um Maintainer não-admin não consegue push a
+      `main`, merge com gate vermelho, nem force-push.
 - [x] **T-004** Preservar `LICENSE`; redigir bloco de atribuição no `NOTICE` (ADR-0002).
 - [x] **T-005** Definir política de cabeçalhos de copyright e aplicar em arquivos novos.
 - [ ] **T-006** Inicializar `docs/upstream/DIVERGENCE.md`.
@@ -58,10 +59,13 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
 - [ ] **T-016** Introduzir camada de persistência `pgx` para código novo.
 - [ ] **T-017** Rebranding: identificadores, cabeçalhos HTTP, assets, strings.
 - [ ] **T-018** Implementar suíte de invariantes (4 testes do design).
-- [ ] **T-019** Pipeline CI completo com SBOM e license gate bloqueante. Inclui: os três
-      detectores de transição MPL do ADR-0019 §II.3 (hash vs proxy, `replace` local,
-      vendorização alterada) e a regra de licença dual (eleição explícita registrada em
-      NOTICE + SBOM; dual sem eleição = desconhecida = vermelho).
+- [ ] **T-019a** Implementação local (não depende da forja): os três detectores de transição
+      MPL do ADR-0019 §II.3 (hash vs proxy oficial; ausência de `replace` local; ausência de
+      vendorização alterada), regra de licença dual (eleição explícita registrada; sem eleição
+      = desconhecida = vermelho), SBOM CycloneDX + license gate como alvo local, módulo de
+      ferramentas separado com versões fixadas, fail-closed em licença desconhecida.
+- [ ] **T-019b** Imposição pela forja: o gate vira status check obrigatório. **Bloqueada**
+      (forja provisionada + ADR-0018 ratificado).
 - [ ] **T-020a** Implementar perfis de implantação `dev`/`pilot`/`production` com declaração
       obrigatória e reporte no health check (ADR-0017).
 - [ ] **T-020b** Implementar keystore local selado do perfil `dev` (chave cifrada fora do banco;

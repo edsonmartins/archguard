@@ -91,6 +91,39 @@ tarefa):
 Triagem registrada no cabeçalho do próprio arquivo. Defeito real herdado **não** é
 baselinável: vira micro-tarefa.
 
+### Distinção: gate local verde × gate imposto (decisão de 2026-07-20)
+
+Dois conceitos que estavam colados e precisam ficar separados:
+
+| Conceito | O que é | Estado | Papel |
+|---|---|---|---|
+| **Gate local verde** | `make lint/test/invariants/deps-check/sbom/build` verdes na máquina | **Existe hoje** | Disciplina de tarefa; autoriza marcar `[x]` |
+| **Gate imposto** | Impossibilidade **mecânica** de merge com gate vermelho (status check obrigatório na forja) | Pende de forja + ADR-0018 (T-003 / T-019b) | Protege contra **esquecimento humano**, não contra ausência de teste |
+
+Consequência: a antecipação do Bloco 2 já cumpriu seu propósito — a suíte existe e é verde, então a remoção da senha-mestra (T-011) nasce verificada por teste. O que falta (imposição pela forja) é item de fechamento do T-003/T-019b, **não pré-requisito das remoções do Bloco 3**.
+
+### Divisão do T-019 (decisão de 2026-07-20)
+
+- **T-019a — implementação** (não depende da forja; liberada): detectores de transição MPL do
+  ADR-0019, regra de licença dual, geração de SBOM CycloneDX + license gate como alvo local,
+  módulo de ferramentas separado com versões fixadas, fail-closed em licença desconhecida.
+  Os detectores de transição MPL são implementados agora e ficam **dormentes quanto à
+  semântica de permissão**: são necessários sob os dois regimes (vigente = MPL proibida;
+  ADR-0019 = MPL não modificada permitida). Ratificado o ADR-0019, troca-se a **classificação**,
+  não o detector.
+- **T-019b — imposição pela forja**: gate vira status check obrigatório. Permanece bloqueada
+  (forja provisionada + ADR-0018 ratificado).
+
+### Condições do Bloco 3 (decisão de 2026-07-20)
+
+a) `make invariants` e `make deps-check` verdes localmente **antes de cada `[x]`**, sem exceção.
+b) T-011 executada com o detector INV-1 ativo e o `known_violations.txt` **deletado no mesmo
+   commit** — a suíte passa a falhar se ele reaparecer (trava (c) da nota transitória).
+c) Toda remoção que elimine achado de licença **reduz a contagem do INV-4 de forma
+   verificável**: contagem antes/depois registrada em cada commit (prova de remoção real, não
+   cosmética).
+d) Nenhum `[x]` em T-003 ou T-019b até as ratificações (ADR-0018 e ADR-0019).
+
 ## CI
 
 Etapas: lint → build → testes → **regra de dependência** → **suíte de invariantes** → SBOM

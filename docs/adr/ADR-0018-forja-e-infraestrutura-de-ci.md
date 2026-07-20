@@ -186,8 +186,9 @@ metade 2 é o que o T-003 implementa.
 **Admin Mode (mitigação de primeira linha):** o `admin_mode` (application setting) **está
 disponível no GitLab CE** (introduzido no GitLab 12.x) e exige reautenticação explícita para
 exercer poderes administrativos — é step-up (ADR-0010) aplicado à forja. **Habilitar** e
-evidenciar empiricamente na forja definitiva (T-003). Reduz o vetor do "admin distraído"
-(abaixo) ao forçar um ato consciente antes de qualquer ação privilegiada.
+evidenciar empiricamente na forja definitiva (T-003) — evidência **obrigatória**, ao lado da
+prova do Maintainer: habilitado, funcionando, e o toggle demonstrado. Reduz o vetor do "admin
+distraído" (abaixo) ao forçar um ato consciente antes de qualquer ação privilegiada.
 
 ## Risco aceito
 
@@ -217,13 +218,27 @@ sabotagem, e é exatamente o que a segregação organizacional previne (e o Admi
   Maintainer.
 - A squad assume operação de infraestrutura crítica própria (custo aceito e orçado acima).
 
+## Custo operacional e aval de sócio
+
+Se o caminho escolhido for GitLab CE self-hosted novo (não uma instância já existente), há
+**custo operacional recorrente**: 1 host para GitLab CE + 1–2 runners, storage com backup
+offsite cifrado, e ~2–4 h/mês de manutenção (upgrades mensais de segurança, monitoramento,
+teste de restauração). Ordem de grandeza: uma VM média + storage — dentro da infraestrutura
+existente da IntegrAllTech.
+
+**O aval de custo é do sócio (Neimar), distinto da ratificação técnica (Edson):** o Neimar tem
+legitimidade sobre o **custo** (máquina, storage, backup, manutenção), não sobre a
+arquitetura. Se o caminho for reutilizar GitLab já provisionado, o custo marginal é próximo de
+zero e este aval é dispensável.
+
 ## Ratificação
 
 Decisão de infraestrutura, cara de reverter após histórico de CI e releases. Ratificação:
 
-| Papel | Nome | Data | Ratificação |
-|---|---|---|---|
-| Arquiteto de Software e Soluções | Edson Martins | ______ | ☐ |
+| Papel | Nome | Escopo | Data | Ratificação |
+|---|---|---|---|---|
+| Arquiteto de Software e Soluções | Edson Martins | Técnico (arquitetura) | ______ | ☐ |
+| Sócio-fundador | Neimar Chagas | Custo operacional (só se forja nova self-hosted) | ______ | ☐ |
 
 Condicionada à resposta dos **insumos pendentes** acima (GitLab existente? musculatura
 operacional). A prova (ii) e o **teste do Maintainer** são aceite bloqueante do T-003, não
