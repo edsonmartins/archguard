@@ -97,7 +97,12 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
       livre de framework: distinção Allowed/Denied/Failed + fail-closed do INV-6, CLAUDE.md §6).
       Regra INV-3 agora ATIVA contra o diretório real — provado por injeção: import de beego no
       domínio quebra `make deps-check`, revertido volta a verde. Gate verde.)*
-- [ ] **T-016** Introduzir camada de persistência `pgx` para código novo.
+- [x] **T-016** Introduzir camada de persistência `pgx` para código novo. *(ADR-0016 §3:
+      `internal/adapters/postgres/` com `NewPool` (pgxpool compartilhado) e `WithTx` (uma
+      transação por operação de negócio, RFC-0002 §5; rollback em erro/panic, no-op após commit;
+      interface `Beginner` estreita p/ testabilidade). doc.go fixa as regras (sem chamada remota
+      em transação — outbox RFC-0004 §4; tenant no construtor). 4 testes com fake. pgx já entrara
+      no T-013. Repositórios reais vêm nos pacotes 002+. Gate verde.)*
 - [ ] **T-017** Rebranding: identificadores, cabeçalhos HTTP, assets, strings.
 - [x] **T-018** Implementar suíte de invariantes (4 testes do design).
 - [x] **T-019a** Implementação local (não depende da forja): os três detectores de transição
