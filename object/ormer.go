@@ -137,9 +137,15 @@ func CreateTables() {
 // the legacy XORM Sync2 has created/updated the tables. Destructive schema
 // changes (e.g. dropping columns of removed scope) live here, never in Sync2.
 func RunMigrations() {
-	// Use exactly the DSN the ORM connects with (ormer.open), so migrations run
-	// against the same database the application uses.
-	if err := migrate.Run(context.Background(), conf.GetConfigDataSourceName()); err != nil {
+	// Role segregation (ADR-0009, deploy/postgres/roles.sql): migrations run as
+	// archguard_migrate (DDL) via migrationDataSourceName when configured; the
+	// runtime application connects as archguard_app (which lacks UPDATE/DELETE on
+	// audit tables). Falls back to the app DSN when not segregated (e.g. dev).
+	dsn := conf.GetConfigString("migrationDataSourceName")
+	if dsn == "" {
+		dsn = conf.GetConfigDataSourceName()
+	}
+	if err := migrate.Run(context.Background(), dsn); err != nil {
 		panic(err)
 	}
 }

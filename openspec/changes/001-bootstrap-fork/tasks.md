@@ -85,7 +85,13 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
       verde.)* **Pendente:** aplicação real da migration validada no smoke test T-022 (PG real).
       Colunas `balance*` e de provedores sociais ficam (campos ainda no struct) para passo
       futuro que remova esses campos primeiro.
-- [ ] **T-014** Criar papéis de banco segregados (aplicação/migração/leitura).
+- [x] **T-014** Criar papéis de banco segregados (aplicação/migração/leitura). *(ADR-0009:
+      `deploy/postgres/roles.sql` cria archguard_migrate (DDL), archguard_app (DML de domínio
+      mas **sem UPDATE/DELETE nas tabelas de auditoria** = barreira física do INV-2) e
+      archguard_readonly (SELECT). Segregação de conexão: `migrationDataSourceName` no app.conf
+      faz o migrator conectar como archguard_migrate. Gate verde.)* **Pendente:** aplicação do
+      roles.sql contra PG real validada no smoke test T-022. Conjunto de tabelas de auditoria
+      cresce no pacote 003 (reafirmar o REVOKE a cada nova).
 - [ ] **T-015** Criar `internal/domain/**` e a regra de dependência no CI (ADR-0016).
 - [ ] **T-016** Introduzir camada de persistência `pgx` para código novo.
 - [ ] **T-017** Rebranding: identificadores, cabeçalhos HTTP, assets, strings.
