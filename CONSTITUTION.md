@@ -1,7 +1,7 @@
 # CONSTITUTION.md — ArchGuard
 
 > **Status:** Vigente (provisória até ratificação do primeiro release GA)
-> **Versão:** 1.1.0 (emenda ADR-0017 — ver Anexo B)
+> **Versão:** 1.1.0 *(emenda de I-1.3 por ADR-0017 — ver Anexo B)*
 > **Produto:** ArchGuard — plano de controle de identidade da plataforma ArchGate (PAM)
 > **Organização:** IntegrAllTech (Integrall.tech) — Maringá/PR, Brasil
 > **Base:** fork do Casdoor (Apache License 2.0)
@@ -24,13 +24,14 @@ credencial pertencem a Warpgate, Apache Guacamole, NetBird e OpenBao.
 decisão de arquitetura é tomada pela IntegrAllTech; o upstream é fonte de correções, não de
 direção de produto.
 
-**I-1.3** *(emendado pelo ADR-0017)* O ArchGuard é **autossuficiente em continuidade de
-runtime**: a indisponibilidade transitória de qualquer serviço adjacente (OpenBao, OpenFGA,
-coletor OTLP) **não derruba** o plano de autenticação nem invalida sessões existentes. O perfil
-`dev` (ArchGuard + PostgreSQL) autentica, emite tokens OIDC e audita sem serviço externo, para
-fins de desenvolvimento, CI e demonstração. **A configuração suportada em produção é o perfil
-`production`**, no qual a custódia de chaves em OpenBao é obrigatória (I-4.3). Autossuficiência
-descreve o comportamento sob falha, não a configuração comercialmente suportada.
+**I-1.3** *(emendado por ADR-0017 em 2026-07-20)* O ArchGuard é **autossuficiente em
+continuidade de runtime**: a indisponibilidade transitória de qualquer serviço adjacente
+(OpenBao, OpenFGA, coletor OTLP) **não derruba** o plano de autenticação nem invalida sessões
+existentes. O perfil `dev` (ArchGuard + PostgreSQL) autentica, emite tokens OIDC e audita sem
+serviço externo, para fins de desenvolvimento, CI e demonstração. **A configuração suportada em
+produção é o perfil `production`**, no qual a custódia de chaves em OpenBao é obrigatória
+(I-4.3). Autossuficiência descreve o comportamento sob falha, não a configuração comercialmente
+suportada. Perfis normativos em ADR-0017.
 
 ---
 
@@ -199,10 +200,8 @@ sócios-fundadores.
 | `openspec/changes/*` | Pacotes de mudança executáveis com critérios WHEN/THEN |
 | `LICENSE` / `NOTICE` | Obrigações Apache 2.0 do fork |
 
----
+## Anexo B — Registro de emendas
 
-## Anexo B — Registro de emendas (I-10.1)
-
-| Data | Versão | Invariante afetado | Emenda | ADR |
-|---|---|---|---|---|
-| 2026-07-20 | 1.1.0 | I-1.3 | Autossuficiência redefinida como continuidade sob falha; perfis de implantação `dev`/`pilot`/`production`; custódia mínima em keystore local selado. Seções pétreas (2, 3, 4) não alteradas | [ADR-0017](docs/adr/ADR-0017-perfis-de-implantacao-e-custodia-minima.md) |
+| Data | Invariante | ADR | Motivo |
+|---|---|---|---|
+| 2026-07-20 | I-1.3 | ADR-0017 | Contradição com I-4.3 e RFC-0001: autossuficiência de runtime confundida com configuração suportada em produção. Invariante pétreo I-4.3 preservado sem alteração. |

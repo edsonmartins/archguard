@@ -42,14 +42,14 @@ referências (identificadores de chave), nunca valores secretos.**
   pública vigente à época.
 - Toda rotação é operação **L3** (ADR-0010) e evento de auditoria.
 
-### Modo degradado (I-1.3, emendado pelo ADR-0017)
-O invariante exige **continuidade sob falha** do plano de autenticação. Solução:
+### Modo degradado (I-1.3)
+O invariante exige autenticação funcional sem serviços externos obrigatórios. Solução:
 - **Cache de curta duração** das chaves públicas e capacidade de assinatura, permitindo
   sobreviver a indisponibilidade transitória do cofre.
-- **Perfil `dev`** (fonte normativa: **ADR-0017**): custódia em keystore local selado —
-  **explicitamente não suportado em produção**, com aviso de inicialização, marca
-  `compliance: non_conformant` no *health check*, negação de operações L3 e recusa de boot
-  sob indício de exposição pública.
+- **Perfil `dev`**: keystore local selado (chave cifrada fora do banco; material de selagem
+  fornecido no boot, nunca persistido junto nem no banco) — **explicitamente não suportado em
+  produção**, com operações L3 negadas e *health check* sinalizando não conformidade.
+  Especificação normativa em **ADR-0017**.
 - Indisponibilidade prolongada do cofre: emissão de novos tokens degrada primeiro; operações
   L3 falham fechado.
 

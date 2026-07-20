@@ -57,7 +57,7 @@ alvo, roteamento de rede — responsabilidades de Warpgate, Guacamole, OpenBao e
 | Porta | Implementação v1 | Obrigatória? | Degradação |
 |---|---|---|---|
 | `Repository` | PostgreSQL 15+ (pgx para código novo; XORM legado) | **Sim** | Indisponível ⇒ serviço fora |
-| `KeyCustodian` | OpenBao (HTTP); keystore local selado no perfil `dev` (ADR-0017) | **Sim** (perfis `pilot`/`production`) | Cache curto; L3 falha fechado |
+| `KeyCustodian` | OpenBao (HTTP) | **Sim** em `pilot`/`production`; keystore local selado em `dev` (ADR-0017) | Cache curto; expirado ⇒ emissão degrada e L3 falha fechado |
 | `PolicyDecisionPoint` | OpenFGA | Não | Decisões privilegiadas **negam** (fail-closed) |
 | `AuditSink` | Trilha própria + export OTLP | **Sim** | Falha ⇒ operação privilegiada negada |
 | `DirectoryConnector` | LDAP/AD, SCIM, OIDC/SAML | Não | Sincronismo pausa; login local segue |
@@ -98,16 +98,14 @@ OpenBao em HA, OpenFGA replicado, coletor OTLP.
 **Estado:** o core é stateless; estado de sessão em banco (com cache), permitindo perda de
 qualquer réplica sem perda de sessão.
 
-**Perfis de implantação (ADR-0017):** o perfil é configuração explícita e obrigatória na
-inicialização; subir sem declará-lo é erro fatal.
+**Perfis de implantação (normativo: ADR-0017).** O perfil é configuração explícita e
+obrigatória; ausência de declaração é erro fatal de inicialização.
 
-| Perfil | Composição | Custódia de chaves | Uso |
+| Perfil | Composição | Custódia | Uso |
 |---|---|---|---|
-| `dev` | Core + PostgreSQL | Keystore local selado | Desenvolvimento, CI, smoke test, demonstração |
-| `pilot` | Core + PostgreSQL + OpenBao | OpenBao | Piloto e homologação em cliente |
+| `dev` | Core + PostgreSQL | Keystore local selado | Desenvolvimento, CI, smoke test, demonstração. **Não suportado em produção**; operações L3 negadas; marcado como não conforme no health check |
+| `pilot` | Core + PostgreSQL + OpenBao | OpenBao | Piloto e homologação. Sem OpenFGA, decisões privilegiadas granulares ficam indisponíveis (negadas), não permissivas |
 | `production` | Core + PostgreSQL + OpenBao (HA) + OpenFGA + coletor OTLP | OpenBao (HA) | **Única configuração suportada comercialmente** |
-
-Sem OpenFGA, decisões privilegiadas granulares ficam indisponíveis (negadas), não permissivas.
 
 ## 7. Modos de degradação (resumo normativo)
 
@@ -119,7 +117,7 @@ Sem OpenFGA, decisões privilegiadas granulares ficam indisponíveis (negadas), 
 | Coletor OTLP indisponível | Nenhum impacto funcional |
 | IdP externo indisponível | Login federado falha; login local segue |
 | ArchGuard indisponível | Sessões existentes nos componentes sobrevivem até expirar; **novos acessos não são concedidos** |
-| Perfil `dev` (por construção, não por falha) | Aviso de inicialização; `compliance: non_conformant` no health check; **operações L3 negadas**; recusa de boot sob indício de exposição pública (ADR-0017) |
+| Perfil `dev` em uso | Operações L3 **negadas**; instalação marcada como não conforme; recusa de inicialização sob indício de exposição pública (ADR-0017) |
 
 ## 8. Requisitos não funcionais (metas iniciais)
 
