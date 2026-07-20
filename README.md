@@ -35,7 +35,8 @@ Seções 2 (licença), 3 (soberania) e 4 (segurança) são pétreas na v1.
 | [0015](docs/adr/ADR-0015-rebranding-e-reducao-de-escopo.md) | Rebranding e redução de superfície | Escopo |
 | [0016](docs/adr/ADR-0016-manutencao-do-framework-beego.md) | Manter Beego isolado atrás de fronteiras | Dívida técnica |
 | [0017](docs/adr/ADR-0017-perfis-de-implantacao-e-custodia-minima.md) | Perfis `dev`/`pilot`/`production` e custódia mínima — **emenda a I-1.3** | Implantação |
-| [0018](docs/adr/ADR-0018-forja-e-infraestrutura-de-ci.md) | Forja e CI: GitLab CE self-hosted (**Proposto**) | Infraestrutura |
+| [0018](docs/adr/ADR-0018-forja-e-infraestrutura-de-ci.md) | Forja e CI: GitLab CE self-hosted (**Proposto** — aguarda evidência empírica de bloqueio de merge e insumos de Edson) | Infraestrutura |
+| [0019](docs/adr/ADR-0019-matriz-de-licencas-mpl-e-remocao-ldap-server.md) | MPL linkado e remoção do servidor LDAP — **emenda a I-2.2 (pétreo)** · *aguarda 2 assinaturas* | Jurídico |
 
 ### RFCs — desenhos técnicos (`docs/rfc/`)
 
@@ -103,6 +104,7 @@ Caminho crítico: **001 → 002 → 003 → 005 → 004 → 007**.
 | Data | Alteração | ADR |
 |---|---|---|
 | 2026-07-20 | I-1.3 emendado: autossuficiência passa a descrever continuidade sob falha, não topologia suportada. Perfis `dev`/`pilot`/`production` normatizados. I-4.3 (pétreo) preservado | [ADR-0017](docs/adr/ADR-0017-perfis-de-implantacao-e-custodia-minima.md) |
+| 2026-07-20 | **PROPOSTO** — I-2.2 corrigido: copyleft por arquivo (MPL) permitido linkado quando não modificado; servidor LDAP embutido removido (GPL). **Seção pétrea: exige ratificação de Edson + Neimar** | [ADR-0019](docs/adr/ADR-0019-matriz-de-licencas-mpl-e-remocao-ldap-server.md) |
 
 ## Pendências bloqueantes antes do M1
 
@@ -115,6 +117,12 @@ Caminho crítico: **001 → 002 → 003 → 005 → 004 → 007**.
    panorama técnico, **não parecer legal**.
 3. **Inventário do PoC Kanidm** (volume e qualidade dos dados de identidade) para dimensionar
    o RFC-0007.
+4. **Ratificação do ADR-0019** (Edson + Neimar): até as duas assinaturas, as três dependências
+   MPL-2.0 sobreviventes (`golang-lru` via Beego, `go-uuid` via gokrb5, `layeh.com/radius`)
+   são **pendência conhecida documentada** — não violação a corrigir, não permissão a exercer.
+   Bloqueia o fechamento do T-018 (INV-4).
+5. **Evidência empírica do ADR-0018** (teste de aceitação da forja) + insumos de Edson
+   (GitLab existente? musculatura operacional). Bloqueia T-019 e T-003.
 
 ## Questões em aberto (registradas nos RFCs)
 

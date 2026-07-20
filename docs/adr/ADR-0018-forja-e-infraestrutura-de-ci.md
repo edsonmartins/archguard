@@ -74,6 +74,26 @@ do orçado; vulnerabilidade estrutural no GitLab CE sem correção tempestiva; m
 licenciamento do GitLab CE que afete o uso. Migração de saída: espelho git é trivial;
 pipelines exigem reescrita (contida — o gate é um Makefile, o CI apenas o invoca).
 
+## Teste de aceitação *(fixado em 2026-07-20 — pré-condição de ratificação)*
+
+Forja não se ratifica por documentação de fornecedor; ratifica-se por **demonstração**.
+Evidência exigida, anexada a este ADR antes da ratificação:
+
+1. Um MR aberto com o gate de invariantes **vermelho**;
+2. Prova de que o merge é **mecanicamente impossível** — inclusive para quem tem permissão de
+   mantenedor;
+3. Prova da ausência de qualquer caminho de contorno: override de mantenedor, force-push e
+   bypass de proteção desabilitados ou inexistentes.
+
+Qualquer caminho de contorno reprova a escolha, **seja qual for a ferramenta**: sem isso o
+ADR-0003 é convenção, não controle.
+
+## Insumos pendentes (Edson)
+
+- Existe GitLab já provisionado na infraestrutura da IntegrAllTech?
+- Avaliação de musculatura operacional do time para self-hosted (valida o orçamento de
+  2–4 h/mês assumido acima).
+
 ## Consequências
 
 - O gate de invariantes torna-se **mecanicamente obrigatório** — nenhum merge em `main` com
