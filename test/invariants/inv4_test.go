@@ -41,6 +41,7 @@ var (
 		"ISC":          true,
 		"Unlicense":    true,
 		"Zlib":         true,
+		"FTL":          true, // permissiva (estilo BSD c/ atribuição); elegível para eleição
 	}
 	forbiddenPrefixes = []string{
 		"AGPL", "GPL", "LGPL", "SSPL", "BUSL", "Elastic",
@@ -80,7 +81,7 @@ func classifyLicense(pkg, license string) string {
 // empty-to-close) is tools/licensegate, run by `make sbom`; this suite reads the
 // same baseline file only to tolerate known-inherited findings, keeping INV-4 a
 // self-contained build-breaking check for any NEW violation.
-func classifyCSV(csv string, pkgMod, baseline map[string]string) []string {
+func classifyCSV(csv string, pkgMod, baseline, elections map[string]string) []string {
 	var violations []string
 	for _, line := range strings.Split(csv, "\n") {
 		line = strings.TrimSpace(line)
@@ -93,7 +94,13 @@ func classifyCSV(csv string, pkgMod, baseline map[string]string) []string {
 			continue
 		}
 		pkg := cols[0]
-		if v := classifyLicense(pkg, cols[len(cols)-1]); v != "" {
+		license := cols[len(cols)-1]
+		// An explicit election (LICENSE_ELECTIONS.md) resolves an undeterminable
+		// license to a permitted one — same authority licensegate applies.
+		if elected := electionFor(pkg, elections); elected != "" && allowedLicenses[elected] {
+			license = elected
+		}
+		if v := classifyLicense(pkg, license); v != "" {
 			if _, quarantined := baseline[resolveModuleVer(pkg, pkgMod)]; quarantined {
 				continue
 			}
@@ -101,6 +108,48 @@ func classifyCSV(csv string, pkgMod, baseline map[string]string) []string {
 		}
 	}
 	return violations
+}
+
+// electionFor returns the elected license for a package, matching an election
+// key that equals or prefixes the package path.
+func electionFor(pkg string, elections map[string]string) string {
+	if lic, ok := elections[pkg]; ok {
+		return lic
+	}
+	for mod, lic := range elections {
+		if strings.HasPrefix(pkg, mod+"/") {
+			return lic
+		}
+	}
+	return ""
+}
+
+// readElections parses module=>license lines from LICENSE_ELECTIONS.md.
+func readElections(t *testing.T, root string) map[string]string {
+	t.Helper()
+	out := map[string]string{}
+	data, err := os.ReadFile(filepath.Join(root, "docs", "upstream", "LICENSE_ELECTIONS.md"))
+	if os.IsNotExist(err) {
+		return out
+	}
+	if err != nil {
+		t.Fatalf("INV-4: LICENSE_ELECTIONS.md ilegível: %v", err)
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		if i := strings.Index(line, "#"); i >= 0 {
+			line = line[:i]
+		}
+		if !strings.Contains(line, "=>") {
+			continue
+		}
+		parts := strings.SplitN(line, "=>", 2)
+		mod := strings.TrimSpace(parts[0])
+		lic := strings.TrimSpace(parts[1])
+		if mod != "" && lic != "" {
+			out[mod] = lic
+		}
+	}
+	return out
 }
 
 // resolveModuleVer maps a go-licenses finding path to module@version, falling
@@ -180,7 +229,8 @@ func TestINV4LicenseMatrix(t *testing.T) {
 	}
 	pkgMod := buildModuleMap(t, root)
 	baseline := baselineKeys(t, root)
-	for _, v := range classifyCSV(string(out), pkgMod, baseline) {
+	elections := readElections(t, root)
+	for _, v := range classifyCSV(string(out), pkgMod, baseline, elections) {
 		t.Error(v)
 	}
 }

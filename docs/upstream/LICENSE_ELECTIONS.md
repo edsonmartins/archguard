@@ -16,12 +16,5 @@ casa por prefixo com os pacotes do módulo.
 ## Eleições vigentes
 
 ```
-(nenhuma eleição vigente)
+github.com/golang/freetype => FTL  # dual FTL-ou-GPLv2; via fogleman/gg em object/user_avatar_identicon.go (avatar identicon, feature geral que sobrevive ao Bloco 3). FTL é permissiva (estilo BSD com atribuição). Eleito em T-010.
 ```
-
-## Eleições pendentes
-
-- `github.com/golang/freetype` (dual **FTL-ou-GPLv2**): eleger **FTL** (permissiva, estilo BSD
-  com atribuição) **em T-010**, condicionado à verificação de que a dependência sobrevive ao
-  Bloco 3 (só consumidor é captcha/render). Se o consumidor for removido, a dependência sai e
-  não há eleição a registrar. Não eleger antes do T-010.

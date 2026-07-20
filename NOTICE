@@ -24,3 +24,8 @@ this repository.
 Casdoor is a trademark of its respective owners. It is used here solely for the
 attribution required by the Apache License, Version 2.0, and not to promote or
 endorse this product.
+
+Dual-licensed dependencies, license elected by IntegrAllTech (see
+docs/upstream/LICENSE_ELECTIONS.md):
+
+    github.com/golang/freetype — elected: FreeType License (FTL)

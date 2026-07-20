@@ -16,47 +16,18 @@ package notification
 
 import notify "github.com/casdoor/notify2"
 
+// GetNotificationProvider returns a notifier for the curated set (ADR-0015 §2/§3):
+// webhook (Custom HTTP) plus the corporate channels. Non-curated consumer and
+// regional providers were removed in T-010.
 func GetNotificationProvider(typ string, clientId string, clientSecret string, clientId2 string, clientSecret2 string, appId string, receiver string, method string, title string, metaData string, regionId string) (notify.Notifier, error) {
-	if typ == "Telegram" {
-		return NewTelegramProvider(clientSecret, receiver)
-	} else if typ == "Custom HTTP" {
+	if typ == "Custom HTTP" {
 		return NewCustomHttpProvider(receiver, method, title)
-	} else if typ == "DingTalk" {
-		return NewDingTalkProvider(clientId, clientSecret)
-	} else if typ == "Lark" {
-		return NewLarkProvider(clientSecret)
 	} else if typ == "Microsoft Teams" {
 		return NewMicrosoftTeamsProvider(clientSecret)
-	} else if typ == "Bark" {
-		return NewBarkProvider(clientSecret)
-	} else if typ == "Pushover" {
-		return NewPushoverProvider(clientSecret, receiver)
-	} else if typ == "Pushbullet" {
-		return NewPushbulletProvider(clientSecret, receiver)
 	} else if typ == "Slack" {
 		return NewSlackProvider(clientSecret, receiver)
-	} else if typ == "Webpush" {
-		return NewWebpushProvider(clientId, clientSecret, receiver)
-	} else if typ == "Discord" {
-		return NewDiscordProvider(clientSecret, receiver)
 	} else if typ == "Google Chat" {
 		return NewGoogleChatProvider(metaData)
-	} else if typ == "Line" {
-		return NewLineProvider(clientSecret, appId, receiver)
-	} else if typ == "Matrix" {
-		return NewMatrixProvider(clientId, clientSecret, appId, receiver)
-	} else if typ == "Twitter" {
-		return NewTwitterProvider(clientId, clientSecret, clientId2, clientSecret2, receiver)
-	} else if typ == "Reddit" {
-		return NewRedditProvider(clientId, clientSecret, clientId2, clientSecret2, receiver)
-	} else if typ == "Rocket Chat" {
-		return NewRocketChatProvider(clientId, clientSecret, appId, receiver)
-	} else if typ == "Viber" {
-		return NewViberProvider(clientId, clientSecret, appId, receiver)
-	} else if typ == "CUCloud" {
-		return NewCucloudProvider(clientId, clientSecret, appId, title, regionId, clientId2, metaData)
-	} else if typ == "WeCom" {
-		return NewWeComProvider(clientSecret)
 	}
 
 	return nil, nil
