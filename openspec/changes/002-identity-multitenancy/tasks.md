@@ -1,6 +1,16 @@
 # Tasks — 002 · Identidade global e multi-tenancy B2B
 
-- [ ] **T-001** Modelar e migrar `identity` (UUIDv7, `sub` opaco, status, campos cifrados).
+- [x] **T-001** Modelar e migrar `identity` (UUIDv7, `sub` opaco, status, campos cifrados).
+      *(Domínio `internal/domain/identity.go`: `Identity` com `IdentityType` (human|service) e
+      `IdentityStatus` (active|suspended|deprovisioned); `NewIdentity` gera UUIDv7 (google/uuid) +
+      subject opaco de 128 bits (crypto/rand, base64url, distinto do id — não vaza tempo);
+      transições Suspend/Reactivate/Deprovision honram o terminal R5. Campos pessoais como
+      ciphertext `[]byte` — domínio não vê PII. Migration `0002_create_identity.sql`: tabela
+      CROSS-TENANT (R1, sem organization_id), `id uuid` sem default (UUIDv7 da app), CHECKs de
+      type/status espelhando o domínio, `subject` UNIQUE, `email_hash` como coluna (índice único +
+      login por hash ficam no T-003). Verificado em PostgreSQL 15 real: estrutura, idempotência,
+      CHECKs e UNIQUE rejeitam inválidos, defaults. Teste de integração do migrator gated por
+      `ARCHGUARD_TEST_DSN` (pula sem PG); domínio 100% unitário. Gate local verde.)*
 - [ ] **T-002** Modelar e migrar `membership` com unicidade `(identity_id, organization_id)`.
 - [ ] **T-003** Introduzir `email_hash` (HMAC) com índice único e caminho de login por hash.
 - [ ] **T-004** Introduzir interface `KeyCustodian` (implementação provisória marcada como
