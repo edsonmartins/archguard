@@ -1,9 +1,10 @@
 # ADR-0018 — Forja de código e infraestrutura de CI
 
-- **Status:** **Proposto** (aguardando aprovação — bloqueia T-019 e T-003)
+- **Status:** **Proposto — submetido à ratificação** (bloqueia T-019 e T-003)
 - **Data:** 2026-07-20
 - **Invariantes tocados:** I-9.4 (gate como autoridade de "pronto"), I-8.1 (proteção da linha
-  `main`), I-3.1 (soberania — cenário self-hosted de primeira classe)
+  `main`), I-3.1 (soberania — cenário self-hosted de primeira classe), ADR-0008 (tier admin
+  como break-glass), ADR-0007/RFC-0003 (detecção de proveniência análoga à cadeia de auditoria)
 - **Escopo:** infraestrutura. A forja **não** é dependência de árvore de build — a matriz de
   licenças do ADR-0002 não se aplica aqui (ver ADR-0002 §3a).
 
@@ -19,9 +20,23 @@ uma forja:
   "pronto"; o CI é onde essa autoridade vira mecanismo.
 - **T-020** — registry de imagens de container.
 
-**Critério decisivo:** a forja precisa suportar *required status checks* **bloqueantes** na
-proteção de branch — merge em `main` mecanicamente impossível com o gate de invariantes
-vermelho. Se a forja não sustentar isso, o ADR-0003 vira convenção, não controle.
+**Critério decisivo (corrigido em 2026-07-20):** exigir "merge mecanicamente impossível
+inclusive para admin" é **incoerente como requisito absoluto** — nenhuma forja pode vincular
+o próprio superadmin (GitHub org owner altera o ruleset, Gitea admin idem). Quem controla a
+forja controla as regras; isso é propriedade estrutural, não limitação do GitLab CE. O
+critério correto tem duas metades:
+
+1. O gate é **mecanicamente impossível de contornar para todo papel de trabalho humano**
+   (Developer, Maintainer): push a `main` = "No one", merge exige pipeline verde.
+2. **Todo contorno exercido pelo tier administrativo é detectável e alertado** — nunca
+   silencioso.
+
+A prevenção resolve a metade 1; a **detecção** resolve a metade 2. É o mesmo padrão que o
+projeto já adotou duas vezes: ADR-0007 não impede o DBA de editar a auditoria (hash-chain
+torna inegável); ADR-0019 não proíbe MPL linkado (detecta a transição para modificado). Aqui:
+não se impede o push do admin — detecta-se e alerta. Coerência de produto: privilégio
+administrativo é break-glass auditado (ADR-0008), não conta de trabalho; o ArchGuard aplica ao
+próprio SDLC o modelo que vende.
 
 Critérios secundários: registry de container embutido (T-020); execução de runners
 self-hosted; maturidade do CI para sustentar gate de segurança; soberania (I-3.1 — o fonte de
@@ -98,6 +113,15 @@ tem gate próprio: repetição das provas 1–3 na configuração real, anexada 
 Produzir a evidência apenas na forja definitiva foi rejeitado como via única: ratificar o ADR
 depois de já ter migrado inverteria a ordem e esvaziaria o teste.
 
+**Prova pendente — Maintainer não-admin (CONDIÇÃO BLOQUEANTE do T-003).** A inferência por
+monotonicidade de papéis **não** é aceita como prova final: todo o argumento de segurança
+repousa em "os papéis que humanos usam estão bloqueados", e o padrão fixado é demonstração,
+não documentação. Motivo instrumental pelo qual não foi fechada no PoC: falha de formato de
+token do usuário de teste na instância descartável — **não** resultado de segurança. Critério
+de aceite bloqueante do T-003, evidência anexada: um Maintainer não-admin **não** consegue
+(a) push a `main`, (b) merge com gate vermelho, (c) force-push. Se falhar na forja definitiva,
+o T-003 não fecha e este ADR volta a Proposto.
+
 ### Evidência (i) — demonstração em instância descartável (2026-07-20)
 
 Ambiente: `gitlab/gitlab-ce` (arm64) em runtime de container local; projeto com `main`
@@ -132,13 +156,51 @@ amplos; *security policies* que restringem admins são recurso Ultimate).
   filosofia do ArchGuard, deve ser **minimizado e tratado como break-glass auditado**
   (ADR-0008), não concedido a contas de trabalho.
 
-**Consequência para este ADR:** a escolha do GitLab CE **não é reprovada**, mas passa a exigir
-um controle organizacional explícito — *nenhuma conta humana de trabalho é admin-de-instância
-ou owner do repositório* — que precisa entrar na configuração do T-003 e ser você a decidir se
-é suficiente. Sem essa regra, o ADR-0003 é contornável por qualquer admin. **Decisão pendente
-do arquiteto antes da ratificação.**
+**Consequência para este ADR (decidida em 2026-07-20):** a escolha do GitLab CE **é mantida**
+sob o critério corrigido — o resultado 4 recai inteiramente no tier admin/owner, que a regra
+organizacional abaixo retira das contas de trabalho e a camada de detecção torna não
+silencioso. A prevenção da metade 1 do critério está demonstrada (linhas 1–3); a detecção da
+metade 2 é o que o T-003 implementa.
 
 > Instância descartável destruída após a coleta; nenhum artefato do PoC entra em `main`.
+
+## Controles a implementar no T-003
+
+**Regra organizacional (configuração + documento):**
+- Nenhuma conta humana de trabalho é admin de instância nem owner do repositório.
+- Papéis de trabalho: Developer e Maintainer, com push a `main` = "No one" e merge exigindo
+  pipeline verde.
+- Credencial admin é **break-glass**: uso justificado, temporário e auditado — aplicação do
+  ADR-0008, não exceção a ele.
+
+**Detecção (o controle que substitui a prevenção impossível):**
+- **(a) Verificador de proveniência de `main`** — job agendado + on-push que confirma que todo
+  commit alcançável de `main` provém de MR mergeado com gate verde. Commit sem MR
+  correspondente ⇒ **alerta de severidade máxima**. É o verificador de cadeia do RFC-0003
+  aplicado ao histórico do repositório, não à trilha de eventos.
+- **(b) Audit events** do GitLab para ações do tier admin ⇒ alerta em canal de segurança.
+- **(c) Commits assinados** em `main`, com verificação de assinatura no mesmo job — sem isso a
+  proveniência é afirmação, não prova.
+- **(d)** Alerta **imediato** em canal de segurança, não e-mail de relatório.
+
+**Admin Mode (mitigação de primeira linha):** o `admin_mode` (application setting) **está
+disponível no GitLab CE** (introduzido no GitLab 12.x) e exige reautenticação explícita para
+exercer poderes administrativos — é step-up (ADR-0010) aplicado à forja. **Habilitar** e
+evidenciar empiricamente na forja definitiva (T-003). Reduz o vetor do "admin distraído"
+(abaixo) ao forçar um ato consciente antes de qualquer ação privilegiada.
+
+## Risco aceito
+
+O tier admin/owner do GitLab CE contorna a proteção de branch por push fast-forward direto a
+`main`. **Não é mitigável por configuração no CE**, e nenhuma forja self-hosted mainstream
+barra o próprio superadmin sem tier pago. O risco é **aceito** e compensado por: (i)
+segregação organizacional — nenhuma conta humana de trabalho no tier admin; (ii) detecção de
+proveniência de `main` com alerta; (iii) auditoria de ações administrativas; (iv) Admin Mode.
+Reavaliar se houver aquisição de tier pago ou mudança de forja.
+
+**O vetor dominante não é o admin malicioso — é o admin distraído:** trabalho de rotina com
+conta privilegiada e push por memória muscular. É ordens de magnitude mais provável que
+sabotagem, e é exatamente o que a segregação organizacional previne (e o Admin Mode dificulta).
 
 ## Insumos pendentes (Edson)
 
@@ -148,7 +210,21 @@ do arquiteto antes da ratificação.**
 
 ## Consequências
 
-- O gate de invariantes torna-se **mecanicamente obrigatório** — nenhum merge em `main` com
-  vermelho, nem por disciplina, nem por exceção.
-- T-003 executável imediatamente após o provisionamento.
+- O gate de invariantes torna-se **mecanicamente obrigatório** para os papéis de trabalho —
+  nenhum merge em `main` com vermelho, nem por disciplina, nem por exceção.
+- Contorno pelo tier admin/owner é **possível mas detectável e alertado** (não silencioso).
+- T-003 executável imediatamente após o provisionamento, com aceite bloqueante do teste do
+  Maintainer.
 - A squad assume operação de infraestrutura crítica própria (custo aceito e orçado acima).
+
+## Ratificação
+
+Decisão de infraestrutura, cara de reverter após histórico de CI e releases. Ratificação:
+
+| Papel | Nome | Data | Ratificação |
+|---|---|---|---|
+| Arquiteto de Software e Soluções | Edson Martins | ______ | ☐ |
+
+Condicionada à resposta dos **insumos pendentes** acima (GitLab existente? musculatura
+operacional). A prova (ii) e o **teste do Maintainer** são aceite bloqueante do T-003, não
+da ratificação deste ADR.
