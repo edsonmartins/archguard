@@ -43,7 +43,11 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
 - [x] **T-005** Definir política de cabeçalhos de copyright e aplicar em arquivos novos.
 - [ ] **T-006** Inicializar `docs/upstream/DIVERGENCE.md`.
 - [ ] **T-007** Mapear dependências internas dos módulos fora de escopo (relatório).
-- [ ] **T-008** Remover módulos de pagamento/produto/assinatura.
+- [x] **T-008** Remover módulos de pagamento/produto/assinatura. *(Código: object/controllers
+      de pagamento + `pp/` removidos; gating de subscription no auth, `GetPaymentProvider`,
+      `User.Cart` e seeds/dump removidos; 38 rotas fora; `go-cleanhttp` sai do baseline. Gate
+      verde.)* **Esquema pendente:** colunas órfãs `cart`/`balance`/`balanceCredit`/
+      `balanceCurrency` só saem em migration explícita pós-T-013 (nunca auto-sync) — ver T-013.
 - [ ] **T-009** Remover funcionalidades de agentes IA/MCP.
 - [ ] **T-010** Reduzir provedores ao catálogo curado (ADR-0015, §3).
 - [x] **T-010a** Remover o servidor LDAP embutido e a dependência `goldap` (GPL-2.0) —
@@ -55,6 +59,9 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
       a existência do arquivo é ela própria violação de INV-1 (design.md, nota transitória).
 - [ ] **T-012** Remover dialetos de banco não-PostgreSQL.
 - [ ] **T-013** Implantar migrations versionadas com travamento de execução concorrente.
+      Inclui a migration explícita de **drop das colunas órfãs de escopo removido**: `cart`,
+      `balance`, `balanceCredit`, `balanceCurrency` (T-008) e demais deixadas pelas remoções do
+      Bloco 3. Nunca por auto-sync de ORM.
 - [ ] **T-014** Criar papéis de banco segregados (aplicação/migração/leitura).
 - [ ] **T-015** Criar `internal/domain/**` e a regra de dependência no CI (ADR-0016).
 - [ ] **T-016** Introduzir camada de persistência `pgx` para código novo.

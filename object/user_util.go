@@ -739,20 +739,6 @@ func CheckPermissionForUpdateUser(oldUser, newUser *User, isAdmin bool, allowDis
 		}
 	}
 
-	oldUserCartJson, _ := json.Marshal(oldUser.Cart)
-	if newUser.Cart == nil {
-		newUser.Cart = []ProductInfo{}
-	}
-	newUserCartJson, _ := json.Marshal(newUser.Cart)
-	if string(oldUserCartJson) != string(newUserCartJson) {
-		item := GetAccountItemByName("Cart", organization)
-		if !userVisible(isAdmin, item) {
-			newUser.Cart = oldUser.Cart
-		} else {
-			itemsChanged = append(itemsChanged, item)
-		}
-	}
-
 	if oldUser.Score != newUser.Score {
 		item := GetAccountItemByName("Score", organization)
 		if !userVisible(isAdmin, item) {

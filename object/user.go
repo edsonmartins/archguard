@@ -223,7 +223,6 @@ type User struct {
 	Invitation          string                `xorm:"varchar(100) index" json:"invitation"`
 	InvitationCode      string                `xorm:"varchar(100) index" json:"invitationCode"`
 	FaceIds             []*FaceId             `json:"faceIds"`
-	Cart                []ProductInfo         `xorm:"mediumtext" json:"cart"`
 
 	Ldap       string            `xorm:"ldap varchar(100)" json:"ldap"`
 	Properties map[string]string `json:"properties"`

@@ -28,8 +28,6 @@ type InitData struct {
 	Ldaps         []*Ldap         `json:"ldaps"`
 	Models        []*Model        `json:"models"`
 	Permissions   []*Permission   `json:"permissions"`
-	Payments      []*Payment      `json:"payments"`
-	Products      []*Product      `json:"products"`
 	Resources     []*Resource     `json:"resources"`
 	Roles         []*Role         `json:"roles"`
 	Syncers       []*Syncer       `json:"syncers"`
@@ -38,12 +36,9 @@ type InitData struct {
 	Groups        []*Group        `json:"groups"`
 	Adapters      []*Adapter      `json:"adapters"`
 	Enforcers     []*Enforcer     `json:"enforcers"`
-	Plans         []*Plan         `json:"plans"`
-	Pricings      []*Pricing      `json:"pricings"`
 	Invitations   []*Invitation   `json:"invitations"`
 	Records       []*Record       `json:"records"`
 	Sessions      []*Session      `json:"sessions"`
-	Subscriptions []*Subscription `json:"subscriptions"`
 	Transactions  []*Transaction  `json:"transactions"`
 	Sites         []*Site         `json:"sites"`
 	Rules         []*Rule         `json:"rules"`
@@ -90,12 +85,6 @@ func InitFromFile() {
 		for _, model := range initData.Models {
 			initDefinedModel(model)
 		}
-		for _, payment := range initData.Payments {
-			initDefinedPayment(payment)
-		}
-		for _, product := range initData.Products {
-			initDefinedProduct(product)
-		}
 		for _, resource := range initData.Resources {
 			initDefinedResource(resource)
 		}
@@ -124,12 +113,6 @@ func InitFromFile() {
 		for _, permission := range initData.Permissions {
 			initDefinedPermission(permission)
 		}
-		for _, plan := range initData.Plans {
-			initDefinedPlan(plan)
-		}
-		for _, pricing := range initData.Pricings {
-			initDefinedPricing(pricing)
-		}
 		for _, invitation := range initData.Invitations {
 			initDefinedInvitation(invitation)
 		}
@@ -138,9 +121,6 @@ func InitFromFile() {
 		}
 		for _, session := range initData.Sessions {
 			initDefinedSession(session)
-		}
-		for _, subscription := range initData.Subscriptions {
-			initDefinedSubscription(subscription)
 		}
 		for _, transaction := range initData.Transactions {
 			initDefinedTransaction(transaction)
@@ -173,8 +153,6 @@ func readInitDataFromFile(filePath string) (*InitData, error) {
 		Ldaps:         []*Ldap{},
 		Models:        []*Model{},
 		Permissions:   []*Permission{},
-		Payments:      []*Payment{},
-		Products:      []*Product{},
 		Resources:     []*Resource{},
 		Roles:         []*Role{},
 		Syncers:       []*Syncer{},
@@ -183,12 +161,9 @@ func readInitDataFromFile(filePath string) (*InitData, error) {
 		Groups:        []*Group{},
 		Adapters:      []*Adapter{},
 		Enforcers:     []*Enforcer{},
-		Plans:         []*Plan{},
-		Pricings:      []*Pricing{},
 		Invitations:   []*Invitation{},
 		Records:       []*Record{},
 		Sessions:      []*Session{},
-		Subscriptions: []*Subscription{},
 		Transactions:  []*Transaction{},
 		Sites:         []*Site{},
 		Rules:         []*Rule{},
@@ -267,16 +242,6 @@ func readInitDataFromFile(filePath string) (*InitData, error) {
 		}
 		if webhook.Headers == nil {
 			webhook.Headers = []*Header{}
-		}
-	}
-	for _, plan := range data.Plans {
-		if plan.PaymentProviders == nil {
-			plan.PaymentProviders = []string{}
-		}
-	}
-	for _, pricing := range data.Pricings {
-		if pricing.Plans == nil {
-			pricing.Plans = []string{}
 		}
 	}
 	for _, session := range data.Sessions {
@@ -487,56 +452,6 @@ func initDefinedPermission(permission *Permission) {
 	}
 	permission.CreatedTime = util.GetCurrentTime()
 	_, err = AddPermission(permission)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func initDefinedPayment(payment *Payment) {
-	existed, err := GetPayment(payment.GetId())
-	if err != nil {
-		panic(err)
-	}
-
-	if existed != nil {
-		if initDataNewOnly {
-			return
-		}
-		affected, err := DeletePayment(payment)
-		if err != nil {
-			panic(err)
-		}
-		if !affected {
-			panic("Fail to delete payment")
-		}
-	}
-	payment.CreatedTime = util.GetCurrentTime()
-	_, err = AddPayment(payment)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func initDefinedProduct(product *Product) {
-	existed, err := GetProduct(product.GetId())
-	if err != nil {
-		panic(err)
-	}
-
-	if existed != nil {
-		if initDataNewOnly {
-			return
-		}
-		affected, err := DeleteProduct(product)
-		if err != nil {
-			panic(err)
-		}
-		if !affected {
-			panic("Fail to delete product")
-		}
-	}
-	product.CreatedTime = util.GetCurrentTime()
-	_, err = AddProduct(product)
 	if err != nil {
 		panic(err)
 	}
@@ -760,54 +675,6 @@ func initDefinedEnforcer(enforcer *Enforcer, policies [][]string) {
 	}
 }
 
-func initDefinedPlan(plan *Plan) {
-	existed, err := getPlan(plan.Owner, plan.Name)
-	if err != nil {
-		panic(err)
-	}
-	if existed != nil {
-		if initDataNewOnly {
-			return
-		}
-		affected, err := DeletePlan(plan)
-		if err != nil {
-			panic(err)
-		}
-		if !affected {
-			panic("Fail to delete plan")
-		}
-	}
-	plan.CreatedTime = util.GetCurrentTime()
-	_, err = AddPlan(plan)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func initDefinedPricing(pricing *Pricing) {
-	existed, err := getPricing(pricing.Owner, pricing.Name)
-	if err != nil {
-		panic(err)
-	}
-	if existed != nil {
-		if initDataNewOnly {
-			return
-		}
-		affected, err := DeletePricing(pricing)
-		if err != nil {
-			panic(err)
-		}
-		if !affected {
-			panic("Fail to delete pricing")
-		}
-	}
-	pricing.CreatedTime = util.GetCurrentTime()
-	_, err = AddPricing(pricing)
-	if err != nil {
-		panic(err)
-	}
-}
-
 func initDefinedInvitation(invitation *Invitation) {
 	existed, err := getInvitation(invitation.Owner, invitation.Name)
 	if err != nil {
@@ -841,30 +708,6 @@ func initDefinedRecord(record *Record) {
 func initDefinedSession(session *Session) {
 	session.CreatedTime = util.GetCurrentTime()
 	_, err := AddSession(session)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func initDefinedSubscription(subscription *Subscription) {
-	existed, err := getSubscription(subscription.Owner, subscription.Name)
-	if err != nil {
-		panic(err)
-	}
-	if existed != nil {
-		if initDataNewOnly {
-			return
-		}
-		affected, err := DeleteSubscription(subscription)
-		if err != nil {
-			panic(err)
-		}
-		if !affected {
-			panic("Fail to delete subscription")
-		}
-	}
-	subscription.CreatedTime = util.GetCurrentTime()
-	_, err = AddSubscription(subscription)
 	if err != nil {
 		panic(err)
 	}

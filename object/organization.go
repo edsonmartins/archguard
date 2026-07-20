@@ -528,13 +528,6 @@ func organizationChangeTrigger(oldName string, newName string) error {
 		return err
 	}
 
-	payment := new(Payment)
-	payment.Owner = newName
-	_, err = session.Where("owner=?", oldName).Update(payment)
-	if err != nil {
-		return err
-	}
-
 	record := new(Record)
 	record.Owner = newName
 	record.Organization = newName

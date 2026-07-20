@@ -21,7 +21,6 @@ layeh.com/radius@v0.0.0-20231213012653-1006025d24f8|MPL-2.0|regime:ADR-0019
 
 # --- MPL-2.0 que saem por remoção de escopo ---
 github.com/go-sql-driver/mysql@v1.8.1|MPL-2.0|remocao:T-012
-github.com/hashicorp/go-cleanhttp@v0.5.2|MPL-2.0|remocao:T-008
 maunium.net/go/mautrix@v0.22.1|MPL-2.0|remocao:T-010
 go.mau.fi/util@v0.8.3|MPL-2.0|remocao:T-010
 
