@@ -1,0 +1,7 @@
+# Violações herdadas de INV-1, toleradas transitoriamente (design.md 001, nota transitória).
+# Formato: "INV-1 <arquivo>:<símbolo>" — correspondência EXATA; glob/regex/diretório proibidos.
+# Entrada que não corresponda mais a violação real FALHA a suíte (não deixe apodrecer).
+# Este arquivo é DELETADO pela subtarefa de T-011; existir depois disso é violação de INV-1.
+INV-1 object/application_util.go:MasterPassword
+INV-1 object/check.go:MasterPassword
+INV-1 object/organization.go:MasterPassword

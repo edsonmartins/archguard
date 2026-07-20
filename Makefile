@@ -17,12 +17,10 @@ test:
 	go test ./...
 
 invariants:
-	@echo "invariants: NÃO IMPLEMENTADO — suíte de invariantes (INV-1..8) é entregue em T-018."
-	@exit 1
+	go test ./test/invariants/ -count=1 -timeout 30m
 
 deps-check:
-	@echo "deps-check: NÃO IMPLEMENTADO — regra de dependência de pacotes (INV-3) é entregue em T-018/T-019."
-	@exit 1
+	go test ./test/invariants/ -count=1 -run 'TestINV3|TestSelfINV3'
 
 sbom:
 	@echo "sbom: NÃO IMPLEMENTADO — SBOM CycloneDX + license gate (INV-4) é entregue em T-019."
