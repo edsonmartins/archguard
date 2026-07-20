@@ -30,7 +30,7 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
 - [x] **T-002** Criar fork, congelar fork point e escrever `docs/upstream/FORK_POINT.md`.
 - [ ] **T-003** Configurar `vendor/upstream` como espelho somente-leitura e proteger `main`.
 - [ ] **T-004** Preservar `LICENSE`; redigir bloco de atribuição no `NOTICE` (ADR-0002).
-- [ ] **T-005** Definir política de cabeçalhos de copyright e aplicar em arquivos novos.
+- [x] **T-005** Definir política de cabeçalhos de copyright e aplicar em arquivos novos.
 - [ ] **T-006** Inicializar `docs/upstream/DIVERGENCE.md`.
 - [ ] **T-007** Mapear dependências internas dos módulos fora de escopo (relatório).
 - [ ] **T-008** Remover módulos de pagamento/produto/assinatura.
