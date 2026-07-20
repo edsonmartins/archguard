@@ -30,14 +30,15 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
       vigente e base de mantenedores; registrar evidência.
 - [x] **T-002** Criar fork, congelar fork point e escrever `docs/upstream/FORK_POINT.md`.
 - [ ] **T-003** Configurar `vendor/upstream` como espelho somente-leitura e proteger `main`
-      (bloqueada até ADR-0018 ratificado + forja provisionada). Inclui, conforme ADR-0018:
-      regra organizacional (nenhuma conta humana de trabalho é admin/owner; papéis Developer/
-      Maintainer; push a `main` = "No one"; merge exige pipeline verde); detecção
-      (verificador de proveniência de `main` com alerta de severidade máxima; audit events do
-      tier admin; commits assinados verificados; alerta imediato em canal de segurança);
-      Admin Mode habilitado (evidência empírica obrigatória: toggle demonstrado, funcionando).
-      **Aceite bloqueante:** evidência de que um Maintainer não-admin não consegue push a
-      `main`, merge com gate vermelho, nem force-push.
+      no **GitHub** (bloqueada até ADR-0018 ratificado). Conforme ADR-0018: ruleset em `main`
+      (PR obrigatório, aprovações mínimas, required status checks bloqueantes, up-to-date,
+      force-push/deleção bloqueados, `Require signed commits`); papéis de trabalho = Write,
+      admin da org não é conta de trabalho; detecção (verificador de proveniência de `main`
+      com alerta máximo; audit log da org p/ ações admin e alterações de ruleset; `bypass
+      actors` VAZIO e monitorado; alerta imediato). **Aceite bloqueante:** (1) conta Write não
+      consegue push direto a `main`, merge com check vermelho, nem force-push — evidência
+      anexada; (2) alteração de ruleset gera evento no audit log com alerta — demonstrado; (3)
+      `bypass actors` vazio, verificado.
 - [x] **T-004** Preservar `LICENSE`; redigir bloco de atribuição no `NOTICE` (ADR-0002).
 - [x] **T-005** Definir política de cabeçalhos de copyright e aplicar em arquivos novos.
 - [ ] **T-006** Inicializar `docs/upstream/DIVERGENCE.md`.

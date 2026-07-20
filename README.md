@@ -35,7 +35,7 @@ Seções 2 (licença), 3 (soberania) e 4 (segurança) são pétreas na v1.
 | [0015](docs/adr/ADR-0015-rebranding-e-reducao-de-escopo.md) | Rebranding e redução de superfície | Escopo |
 | [0016](docs/adr/ADR-0016-manutencao-do-framework-beego.md) | Manter Beego isolado atrás de fronteiras | Dívida técnica |
 | [0017](docs/adr/ADR-0017-perfis-de-implantacao-e-custodia-minima.md) | Perfis `dev`/`pilot`/`production` e custódia mínima — **emenda a I-1.3** | Implantação |
-| [0018](docs/adr/ADR-0018-forja-e-infraestrutura-de-ci.md) | Forja e CI: GitLab CE self-hosted — prevenção p/ papéis de trabalho + detecção de contorno admin (**submetido à ratificação**; aguarda 1 assinatura + insumos de Edson) | Infraestrutura |
+| [0018](docs/adr/ADR-0018-forja-e-infraestrutura-de-ci.md) | Forja e CI: **GitHub privado** (GitLab CE rejeitado com motivo) — prevenção p/ papéis de trabalho + detecção de contorno admin (**submetido à ratificação**; aguarda 1 assinatura) | Infraestrutura |
 | [0019](docs/adr/ADR-0019-matriz-de-licencas-mpl-e-remocao-ldap-server.md) | MPL linkado e remoção do servidor LDAP — **emenda a I-2.2 (pétreo)** · *aguarda 2 assinaturas* | Jurídico |
 
 ### RFCs — desenhos técnicos (`docs/rfc/`)
@@ -123,11 +123,11 @@ Caminho crítico: **001 → 002 → 003 → 005 → 004 → 007**.
    Bloqueia o fechamento do T-018 (INV-4). **Ao ratificar**: aplicar a emenda ao I-2.2
    (CONSTITUTION + Anexo B), a matriz de três estados no ADR-0002 e a linha do INV-4 no
    CLAUDE.md §3 (texto já fixado na decisão de 2026-07-20).
-5. **Ratificação do ADR-0018** (Edson) + insumos (GitLab existente? musculatura operacional).
-   Evidência (i) coletada em PoC descartável: prevenção mecânica confirmada para papéis de
-   trabalho; contorno do tier admin/owner registrado como **risco aceito** compensado por
-   detecção. Bloqueia T-019 e T-003. **Aceite bloqueante do T-003** (não da ratificação):
-   teste do Maintainer não-admin na forja definitiva.
+5. **Ratificação do ADR-0018** (Edson): forja = **GitHub privado** (já em uso). PoC descartável
+   demonstrou que o contorno do tier admin é **estrutural em qualquer forja** — sustenta o
+   "risco aceito" por demonstração. Bloqueia T-003 e T-019b (T-019a e o Bloco 3 seguem
+   liberados). **Aceite bloqueante do T-003:** conta Write não faz push/merge-vermelho/
+   force-push; alteração de ruleset alerta; `bypass actors` vazio.
 
 ## Questões em aberto (registradas nos RFCs)
 
