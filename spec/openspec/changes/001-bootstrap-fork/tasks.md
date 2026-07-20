@@ -12,7 +12,7 @@
 
 ## Bloco 0 — Preparação do ambiente
 
-- [ ] **T-000a** Inicializar repositório git e clonar o Casdoor como base do fork.
+- [x] **T-000a** Inicializar repositório git e clonar o Casdoor como base do fork.
 - [ ] **T-000b** Mover o corpus de governança de `spec/` para a raiz, conforme os caminhos do
       CLAUDE.md.
 - [ ] **T-000c** Criar o Makefile com os alvos do gate (`lint`, `test`, `invariants`,
