@@ -144,9 +144,13 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
       com os prefixos divergentes/removidos (DIVERGENCE.md), e alerta se o LICENSE do upstream
       mudou (ADR-0002 §6). `make upstream-triage` atualiza o espelho e emite a fila. 10 testes
       de classificação; rodado ponta a ponta. Gate verde.)*
-- [ ] **T-024** README de desenvolvimento e runbook mínimo de operação.
+- [x] **T-024** README de desenvolvimento e runbook mínimo de operação. *(docs/DEVELOPMENT.md
+      (build, gate, perfis/keystore, rodar local, triagem) + docs/RUNBOOK.md (perfis, roles.sql,
+      migrations, material de selagem, backup/DR, triagem 72h/48h, break-glass → 004).)*
 
-- [ ] **T-025** Registrar em `DIVERGENCE.md` as remoções e a introdução de perfis.
+- [x] **T-025** Registrar em `DIVERGENCE.md` as remoções e a introdução de perfis. *(DIVERGENCE.md
+      mantido ao longo do Bloco 3-5: todas as remoções de escopo, os perfis+keystore (T-020a/b/c),
+      as fronteiras internal/domain+adapters, e a seção da ferramenta de triagem.)*
 
 ## Gate de verificação
 CI verde ponta a ponta; suíte de invariantes falhando corretamente quando um comportamento
