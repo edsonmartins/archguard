@@ -35,6 +35,10 @@ produto (Apache 2.0, §6) — enquanto a **atribuição de autoria** exigida per
 - **Corporativos**: Microsoft Entra ID / Active Directory (LDAP e OIDC), Google Workspace,
   Okta, IdPs SAML 2.0 genéricos, OIDC genérico.
 - **Diretórios**: LDAP/AD via conector com sincronismo (RFC-0007).
+- **Borda legada**: apenas o servidor RADIUS embutido. O **servidor LDAP embutido está fora
+  do catálogo** — removido pelo ADR-0019 (aplicação do §5 deste ADR: sem caso de uso PAM em
+  12 meses, superfície de ataque, dependência GPL). O conector *cliente* LDAP/AD acima não é
+  afetado.
 - Provedor novo entra apenas por demanda concreta de cliente e com dono de manutenção
   designado.
 

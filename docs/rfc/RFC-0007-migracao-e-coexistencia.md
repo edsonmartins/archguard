@@ -74,13 +74,18 @@ Para cada fase:
   controle sobre acesso privilegiado.
 - *Just-in-time provisioning* cria membership, jamais identidade duplicada.
 
-## 6. Servidor LDAP e RADIUS embutidos
+## 6. Canal legado de borda: RADIUS *(revisado em 2026-07-20 pelo ADR-0019)*
 
-Mantidos do upstream (ADR-0015) como **compatibilidade de borda** para equipamentos e sistemas
-legados que não falam OIDC. Restrições normativas:
-- Escopo mínimo, desabilitados por padrão (I-4.4).
-- **Nunca** como caminho para operação privilegiada L3 — não carregam `acr` nem correlação.
-- Todo acesso por esses protocolos é auditado e sinalizado como canal legado.
+O **servidor RADIUS embutido** é o único canal legado de borda mantido (ADR-0015), como
+compatibilidade para equipamentos e sistemas que não falam OIDC. Restrições normativas:
+- Escopo mínimo, desabilitado por padrão (I-4.4).
+- **Nunca** como caminho para operação privilegiada L3 — não carrega `acr` nem correlação.
+- Todo acesso por esse protocolo é auditado e sinalizado como canal legado.
+
+O **servidor LDAP embutido foi removido** (ADR-0019): dependência GPL-2.0 (`goldap`) somada
+aos critérios do ADR-0015 §5. O **conector cliente LDAP/AD do §5 e do pacote 009 permanece
+integralmente** — é ele o caminho de integração com os diretórios dos clientes. Reabertura do
+servidor LDAP só por exigência contratual, em pacote próprio (ADR-0019, Parte III).
 
 ## 7. Plano de rollback
 

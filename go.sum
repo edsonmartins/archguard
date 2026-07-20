@@ -859,8 +859,6 @@ github.com/casdoor/go-sms-sender v0.25.0 h1:eF4cOCSbjVg7+0uLlJQnna/FQ0BWW+Fp/x4c
 github.com/casdoor/go-sms-sender v0.25.0/go.mod h1:bOm4H8/YfJmEHjBatEVQFOnAf0OOn1B0Wi5B7zDhws0=
 github.com/casdoor/gomail/v2 v2.2.0 h1:gVMk43qvqq4XYkAJ+CDY5WWKF9yYRipuyXfp7P0HWIg=
 github.com/casdoor/gomail/v2 v2.2.0/go.mod h1:GFzOD9RhY0nODiiPaQiOa6DfoKtmO9aTesu5qrp26OI=
-github.com/casdoor/ldapserver v1.2.0 h1:HdSYe+ULU6z9K+2BqgTrJKQRR4//ERAXB64ttOun6Ow=
-github.com/casdoor/ldapserver v1.2.0/go.mod h1:VwYU2vqQ2pA8sa00PRekH71R2XmgfzMKhmp1XrrDu2s=
 github.com/casdoor/notify2 v1.6.0 h1:iLW7Xg6+Sk+5BuLlic+UFnhQpl0HzCe2n5+P7fF5oNk=
 github.com/casdoor/notify2 v1.6.0/go.mod h1:yh8R0fhLZWlMD77WwR61Avd5WCOUyR+vs9kzj/KoMdM=
 github.com/casdoor/oss v1.8.0 h1:uuyKhDIp7ydOtV4lpqhAY23Ban2Ln8La8+QT36CwylM=
@@ -1438,8 +1436,6 @@ github.com/line/line-bot-sdk-go v7.8.0+incompatible h1:Uf9/OxV0zCVfqyvwZPH8CrdiH
 github.com/line/line-bot-sdk-go v7.8.0+incompatible/go.mod h1:0RjLjJEAU/3GIcHkC3av6O4jInAbt25nnZVmOFUgDBg=
 github.com/localtunnel/go-localtunnel v0.0.0-20170326223115-8a804488f275 h1:IZycmTpoUtQK3PD60UYBwjaCUHUP7cML494ao9/O8+Q=
 github.com/localtunnel/go-localtunnel v0.0.0-20170326223115-8a804488f275/go.mod h1:zt6UU74K6Z6oMOYJbJzYpYucqdcQwSMPBEdSvGiaUMw=
-github.com/lor00x/goldap v0.0.0-20180618054307-a546dffdd1a3 h1:wIONC+HMNRqmWBjuMxhatuSzHaljStc4gjDeKycxy0A=
-github.com/lor00x/goldap v0.0.0-20180618054307-a546dffdd1a3/go.mod h1:37YR9jabpiIxsb8X9VCIx8qFOjTDIIrIHHODa8C4gz0=
 github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 h1:6E+4a0GO5zZEnZ81pIr0yLvtUWk2if982qA3F3QD6H4=
 github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0/go.mod h1:zJYVVT2jmtg6P3p1VtQj7WsuWi/y4VnjVBn7F8KPB3I=
 github.com/lyft/protoc-gen-star v0.6.0/go.mod h1:TGAoBVkt8w7MPG72TrKIu85MIdXwDuzJYeZuUPFPNwA=
