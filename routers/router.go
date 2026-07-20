@@ -26,7 +26,6 @@ package routers
 import (
 	"github.com/beego/beego/v2/server/web"
 	"github.com/casdoor/casdoor/controllers"
-	"github.com/casdoor/casdoor/mcpself"
 )
 
 func InitAPI() {
@@ -131,36 +130,18 @@ func InitAPI() {
 	web.Router("/api/delete-resource", &controllers.ApiController{}, "POST:DeleteResource")
 	web.Router("/api/upload-resource", &controllers.ApiController{}, "POST:UploadResource")
 
-	web.Router("/api/get-agents", &controllers.ApiController{}, "GET:GetAgents")
-	web.Router("/api/get-agent", &controllers.ApiController{}, "GET:GetAgent")
 	web.Router("/api/update-agent", &controllers.ApiController{}, "POST:UpdateAgent")
 	web.Router("/api/add-agent", &controllers.ApiController{}, "POST:AddAgent")
 	web.Router("/api/delete-agent", &controllers.ApiController{}, "POST:DeleteAgent")
 
-	web.Router("/api/get-servers", &controllers.ApiController{}, "GET:GetServers")
-	web.Router("/api/get-online-servers", &controllers.ApiController{}, "GET:GetOnlineServers")
 	web.Router("/api/scan", &controllers.ApiController{}, "GET:Scan")
-	web.Router("/api/sync-intranet-servers", &controllers.ApiController{}, "POST:SyncIntranetServers")
-	web.Router("/api/get-server", &controllers.ApiController{}, "GET:GetServer")
-	web.Router("/api/update-server", &controllers.ApiController{}, "POST:UpdateServer")
 	web.Router("/api/sync-mcp-tool", &controllers.ApiController{}, "POST:SyncMcpTool")
-	web.Router("/api/add-server", &controllers.ApiController{}, "POST:AddServer")
-	web.Router("/api/delete-server", &controllers.ApiController{}, "POST:DeleteServer")
-	web.Router("/api/server/:owner/:name", &controllers.ApiController{}, "GET:ProxyServer")
-	web.Router("/api/server/:owner/:name", &controllers.ApiController{}, "POST:ProxyServer")
-	web.Router("/api/get-mcp-access-token", &controllers.ApiController{}, "GET:GetMcpAccessToken")
 
 	web.Router("/api/get-entries", &controllers.ApiController{}, "GET:GetEntries")
 	web.Router("/api/get-entry", &controllers.ApiController{}, "GET:GetEntry")
-	web.Router("/api/get-openclaw-session-graph", &controllers.ApiController{}, "GET:GetOpenClawSessionGraph")
-	web.Router("/api/get-openclaw-session-transcript", &controllers.ApiController{}, "GET:GetOpenClawSessionTranscript")
 	web.Router("/api/update-entry", &controllers.ApiController{}, "POST:UpdateEntry")
 	web.Router("/api/add-entry", &controllers.ApiController{}, "POST:AddEntry")
 	web.Router("/api/delete-entry", &controllers.ApiController{}, "POST:DeleteEntry")
-
-	web.Router("/api/v1/traces", &controllers.ApiController{}, "POST:AddOtlpTrace")
-	web.Router("/api/v1/metrics", &controllers.ApiController{}, "POST:AddOtlpMetrics")
-	web.Router("/api/v1/logs", &controllers.ApiController{}, "POST:AddOtlpLogs")
 
 	web.Router("/api/get-global-sites", &controllers.ApiController{}, "GET:GetGlobalSites")
 	web.Router("/api/get-sites", &controllers.ApiController{}, "GET:GetSites")
@@ -371,8 +352,6 @@ func InitAPI() {
 	web.Router("/cas/:organization/:application/samlValidate", &controllers.RootController{}, "POST:SamlValidate")
 
 	web.Router("/scim/*", &controllers.RootController{}, "*:HandleScim")
-
-	web.Router("/api/mcp", &mcpself.McpController{}, "POST:HandleMcp")
 
 	web.Router("/api/faceid-signin-begin", &controllers.ApiController{}, "GET:FaceIDSigninBegin")
 }

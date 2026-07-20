@@ -124,15 +124,6 @@ func getObject(ctx *context.Context) (string, string, error) {
 	method := ctx.Request.Method
 	path := ctx.Request.URL.Path
 
-	// Special handling for MCP requests
-	if path == "/api/mcp" && method == http.MethodPost {
-		return getMcpObject(ctx)
-	}
-
-	if strings.HasPrefix(path, "/api/server/") {
-		return ctx.Input.Param(":owner"), ctx.Input.Param(":name"), nil
-	}
-
 	if method == http.MethodGet {
 		if ctx.Request.URL.Path == "/api/get-policies" {
 			if ctx.Input.Query("id") == "/" {
@@ -280,21 +271,6 @@ func getUrlPath(ctx *context.Context) string {
 
 func getExtraInfo(ctx *context.Context, urlPath string) map[string]interface{} {
 	var extra map[string]interface{}
-	if urlPath == "/api/mcp" {
-		var m map[string]interface{}
-		if err := json.Unmarshal(ctx.Input.RequestBody, &m); err != nil {
-			return nil
-		}
-
-		method, ok := m["method"].(string)
-		if !ok {
-			return nil
-		}
-
-		return map[string]interface{}{
-			"detailPathUrl": method,
-		}
-	}
 	return extra
 }
 
@@ -384,11 +360,7 @@ func ApiFilter(ctx *context.Context) {
 	}
 
 	if !isAllowed {
-		if urlPath == "/api/mcp" || strings.HasPrefix(urlPath, "/api/server/") {
-			denyMcpRequest(ctx)
-		} else {
-			denyRequest(ctx)
-		}
+		denyRequest(ctx)
 		record, err := object.NewRecord(ctx)
 		if err != nil {
 			return

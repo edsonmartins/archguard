@@ -48,7 +48,11 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
       `User.Cart` e seeds/dump removidos; 38 rotas fora; `go-cleanhttp` sai do baseline. Gate
       verde.)* **Esquema pendente:** colunas órfãs `cart`/`balance`/`balanceCredit`/
       `balanceCurrency` só saem em migration explícita pós-T-013 (nunca auto-sync) — ver T-013.
-- [ ] **T-009** Remover funcionalidades de agentes IA/MCP.
+- [x] **T-009** Remover funcionalidades de agentes IA/MCP. *(Servidor MCP `/api/mcp`, registro
+      de servidores MCP (`Server`/`Tool`), entidade `Agent`, provider Agent/OpenClaw (transcrição
+      + telemetria OTLP), scanner de intranet MCP. Fronteira preservada: OAuth DCR (RFC 7591),
+      `Entry`/log-collector geral, Security Scan, RADIUS ficam. SDK MCP + otlp saem do grafo.
+      Redução de superfície, não de licença. Gate verde.)*
 - [ ] **T-010** Reduzir provedores ao catálogo curado (ADR-0015, §3).
 - [x] **T-010a** Remover o servidor LDAP embutido e a dependência `goldap` (GPL-2.0) —
       ADR-0019 Parte III / ADR-0015 §5. O conector **cliente** LDAP/AD (pacote 009) e o

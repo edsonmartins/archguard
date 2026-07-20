@@ -16,6 +16,7 @@ package object
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/casdoor/casdoor/util"
@@ -301,4 +302,16 @@ func DeleteDynamicClient(app *Application) *DcrError {
 		return &DcrError{Error: "server_error", ErrorDescription: "failed to delete client"}
 	}
 	return nil
+}
+
+// firstNonEmpty returns the first non-blank value, trimmed. Preserved here after
+// the OpenClaw provider (its original home) was removed in T-009; DCR relies on
+// it for RFC 7591 field defaults.
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }

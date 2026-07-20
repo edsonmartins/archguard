@@ -16,10 +16,8 @@ package routers
 
 import (
 	stdcontext "context"
-	"encoding/json"
 	"fmt"
 	"net"
-	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -27,7 +25,6 @@ import (
 	"github.com/beego/beego/v2/server/web/context"
 	"github.com/casdoor/casdoor/conf"
 	"github.com/casdoor/casdoor/i18n"
-	"github.com/casdoor/casdoor/mcpself"
 	"github.com/casdoor/casdoor/object"
 	"github.com/casdoor/casdoor/util"
 )
@@ -41,12 +38,6 @@ type Response struct {
 
 func responseError(ctx *context.Context, error string, data ...interface{}) {
 	// ctx.ResponseWriter.WriteHeader(http.StatusForbidden)
-	urlPath := ctx.Request.URL.Path
-	if urlPath == "/api/mcp" {
-		denyMcpRequest(ctx)
-		return
-	}
-
 	resp := Response{Status: "error", Msg: error}
 	switch len(data) {
 	case 2:
@@ -73,41 +64,6 @@ func T(ctx *context.Context, error string) string {
 
 func denyRequest(ctx *context.Context) {
 	responseError(ctx, T(ctx, "auth:Unauthorized operation"))
-}
-
-func denyMcpRequest(ctx *context.Context) {
-	req := mcpself.McpRequest{}
-	err := json.Unmarshal(ctx.Input.RequestBody, &req)
-	if err != nil {
-		ctx.Output.SetStatus(http.StatusBadRequest)
-		return
-	}
-
-	if req.ID == nil {
-		ctx.Output.SetStatus(http.StatusAccepted)
-		ctx.Output.Body([]byte{})
-		return
-	}
-
-	resp := mcpself.BuildMcpResponse(req.ID, nil, &mcpself.McpError{
-		Code:    -32001,
-		Message: "Unauthorized",
-		Data:    T(ctx, "auth:Unauthorized operation"),
-	})
-
-	// Add WWW-Authenticate header per MCP Authorization spec (RFC 9728)
-	// Use the same logic as getOriginFromHost to determine the scheme
-	host := ctx.Request.Host
-	scheme := "https"
-	if !strings.Contains(host, ".") {
-		// localhost:8000 or computer-name:80
-		scheme = "http"
-	}
-	resourceMetadataUrl := fmt.Sprintf("%s://%s/.well-known/oauth-protected-resource", scheme, host)
-	ctx.Output.Header("WWW-Authenticate", fmt.Sprintf("Bearer realm=\"casdoor\", resource_metadata=\"%s\"", resourceMetadataUrl))
-
-	ctx.Output.SetStatus(http.StatusUnauthorized)
-	_ = ctx.Output.JSON(resp, true, false)
 }
 
 func getUsernameByClientIdSecret(ctx *context.Context) (string, error) {

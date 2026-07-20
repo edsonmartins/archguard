@@ -88,48 +88,6 @@ func (c *ApiController) GetEntry() {
 	c.ResponseOk(entry)
 }
 
-// GetOpenClawSessionGraph
-// @Title GetOpenClawSessionGraph
-// @Tag Entry API
-// @Description get OpenClaw session graph
-// @Param   id     query    string  true        "The id ( owner/name ) of the entry"
-// @Success 200 {object} object.OpenClawSessionGraph The Response object
-// @router /get-openclaw-session-graph [get]
-func (c *ApiController) GetOpenClawSessionGraph() {
-	id := c.Ctx.Input.Query("id")
-
-	graph, err := object.GetOpenClawSessionGraph(id)
-	if err != nil {
-		c.ResponseError(err.Error())
-		return
-	}
-
-	c.ResponseOk(graph)
-}
-
-// GetOpenClawSessionTranscript
-// @Title GetOpenClawSessionTranscript
-// @Tag Entry API
-// @Description get OpenClaw raw session transcript
-// @Param   id     query    string  true        "The id ( owner/name ) of the entry"
-// @Success 200 {object} object.OpenClawSessionTranscriptPreview The raw JSONL transcript preview
-// @router /get-openclaw-session-transcript [get]
-func (c *ApiController) GetOpenClawSessionTranscript() {
-	id := c.Ctx.Input.Query("id")
-
-	preview, err := object.GetOpenClawSessionTranscript(id, c.GetAcceptLanguage())
-	if err != nil {
-		c.ResponseError(err.Error())
-		return
-	}
-	if preview == nil {
-		c.ResponseError("OpenClaw raw session transcript is not found")
-		return
-	}
-
-	c.ResponseOk(preview)
-}
-
 // UpdateEntry
 // @Title UpdateEntry
 // @Tag Entry API

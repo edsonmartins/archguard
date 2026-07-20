@@ -52,7 +52,6 @@ require (
 	github.com/markbates/goth v1.82.0
 	github.com/microsoft/go-mssqldb v1.9.0
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/modelcontextprotocol/go-sdk v1.4.0
 	github.com/nyaruka/phonenumbers v1.2.2
 	github.com/pquerna/otp v1.4.0
 	github.com/prometheus/client_golang v1.19.0
@@ -72,14 +71,12 @@ require (
 	github.com/xorm-io/builder v0.3.13
 	github.com/xorm-io/core v0.7.4
 	github.com/xorm-io/xorm v1.1.6
-	go.opentelemetry.io/proto/otlp v1.7.1
 	golang.org/x/crypto v0.47.0
 	golang.org/x/net v0.49.0
 	golang.org/x/oauth2 v0.34.0
 	golang.org/x/text v0.33.0
 	golang.org/x/time v0.8.0
 	google.golang.org/api v0.215.0
-	google.golang.org/protobuf v1.36.11
 	layeh.com/radius v0.0.0-20231213012653-1006025d24f8
 	maunium.net/go/mautrix v0.22.1
 	modernc.org/sqlite v1.18.2
@@ -171,14 +168,12 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/go-tpm v0.9.0 // indirect
-	github.com/google/jsonschema-go v0.4.2 // indirect
 	github.com/google/s2a-go v0.1.8 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.1 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/gregdel/pushover v1.3.1 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
@@ -231,8 +226,6 @@ require (
 	github.com/rs/zerolog v1.33.0 // indirect
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
 	github.com/scim2/filter-parser/v2 v2.2.0 // indirect
-	github.com/segmentio/asm v1.1.3 // indirect
-	github.com/segmentio/encoding v0.5.3 // indirect
 	github.com/sendgrid/rest v2.6.9+incompatible // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/shiena/ansicolor v0.0.0-20200904210342-c7312218db18 // indirect
@@ -263,7 +256,6 @@ require (
 	github.com/volcengine/volc-sdk-golang v1.0.117 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
-	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.mau.fi/util v0.8.3 // indirect
 	go.opencensus.io v0.24.0 // indirect
@@ -289,6 +281,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260128011058-8636f8732409 // indirect
 	google.golang.org/grpc v1.79.3 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect

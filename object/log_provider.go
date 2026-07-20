@@ -27,8 +27,7 @@ var (
 )
 
 // InitLogProviders scans all globally-configured Log providers and starts
-// background collection for pull-based providers (e.g. System Log, SELinux Log)
-// and registers passive providers (e.g. OpenClaw).
+// background collection for pull-based providers (System Log, SELinux Log).
 // It is called once from main() after the database is ready.
 func InitLogProviders() {
 	providers, err := GetGlobalProviders()
@@ -45,11 +44,6 @@ func InitLogProviders() {
 		switch p.Type {
 		case "System Log", "SELinux Log":
 			startLogCollector(p)
-		case "Agent":
-			if p.SubType == "OpenClaw" {
-				startOpenClawProvider(p)
-				startOpenClawTranscriptSync(p)
-			}
 		}
 	}
 }
@@ -105,23 +99,6 @@ func startLogCollector(provider *Provider) {
 	runningCollectors[id] = lp
 }
 
-// startOpenClawProvider registers an OpenClaw provider in runningCollectors so
-// that incoming OTLP requests can be routed to it by IP.
-func startOpenClawProvider(provider *Provider) {
-	id := provider.GetId()
-	stopCollector(id)
-
-	lp, err := GetLogProviderFromProvider(provider)
-	if err != nil {
-		fmt.Printf("InitLogProviders: failed to create OpenClaw provider %s: %v\n", provider.Name, err)
-		return
-	}
-
-	runningCollectorsMu.Lock()
-	defer runningCollectorsMu.Unlock()
-	runningCollectors[id] = lp
-}
-
 func refreshLogProviderRuntime(oldID string, provider *Provider) {
 	if provider == nil {
 		if oldID != "" {
@@ -142,11 +119,6 @@ func refreshLogProviderRuntime(oldID string, provider *Provider) {
 	switch provider.Type {
 	case "System Log", "SELinux Log":
 		startLogCollector(provider)
-	case "Agent":
-		if provider.SubType == "OpenClaw" {
-			startOpenClawProvider(provider)
-			startOpenClawTranscriptSync(provider)
-		}
 	}
 }
 
@@ -155,30 +127,4 @@ func stopLogProviderRuntime(providerID string) {
 		return
 	}
 	stopCollector(providerID)
-	stopOpenClawTranscriptSync(providerID)
-}
-
-// GetOpenClawProviderByIP returns the running OpenClawProvider whose Host field
-// matches clientIP, or whose Host is empty (meaning any IP is allowed).
-// Returns nil if no matching provider is registered.
-func GetOpenClawProviderByIP(clientIP string) (*log.OpenClawProvider, error) {
-	providers := []*Provider{}
-	err := ormer.Engine.Where("category = ? AND type = ? AND sub_type = ? AND (state = ? OR state = ?)", "Log", "Agent", "OpenClaw", "Enabled", "").Find(&providers)
-	if err != nil {
-		return nil, err
-	}
-
-	runningCollectorsMu.Lock()
-	defer runningCollectorsMu.Unlock()
-
-	for _, p := range providers {
-		if p.Host == "" || p.Host == clientIP {
-			if lp, ok := runningCollectors[p.GetId()]; ok {
-				if ocp, ok := lp.(*log.OpenClawProvider); ok {
-					return ocp, nil
-				}
-			}
-		}
-	}
-	return nil, nil
 }
