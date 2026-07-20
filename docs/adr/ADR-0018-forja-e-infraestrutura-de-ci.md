@@ -98,9 +98,47 @@ tem gate próprio: repetição das provas 1–3 na configuração real, anexada 
 Produzir a evidência apenas na forja definitiva foi rejeitado como via única: ratificar o ADR
 depois de já ter migrado inverteria a ordem e esvaziaria o teste.
 
-### Evidência (i) — anexo
+### Evidência (i) — demonstração em instância descartável (2026-07-20)
 
-*(pendente — a ser preenchido com a demonstração em instância descartável)*
+Ambiente: `gitlab/gitlab-ce` (arm64) em runtime de container local; projeto com `main`
+protegido (`push_access_level=No one`, `merge_access_level=Maintainer`,
+`allow_force_push=false`) e `only_allow_merge_if_pipeline_succeeds=true`. MR
+`poc/violation → main` reintroduzindo a senha-mestra, com status de gate **`failed`** no
+HEAD. A suíte de invariantes foi verificada localmente falhando de verdade nessa branch
+(INV-1 FAIL).
+
+| # | Ação | Ator | Resultado | Veredito |
+|---|---|---|---|---|
+| 1 | Merge do MR via API, gate vermelho | root (**admin + owner**) | **HTTP 405** *Method Not Allowed* | ✅ bloqueado |
+| 2 | Merge via API com flags `skip_ci=true`, `merge_when_pipeline_succeeds=false` | root | **HTTP 405** em todas | ✅ sem bypass por flag |
+| 3 | Force-push **não-fast-forward** a `main` | root (admin+owner) | *pre-receive hook declined* | ✅ bloqueado |
+| 4 | Push **fast-forward** direto a `main` (push=No one) | root (**admin + owner**) | **SUCESSO** — `main` avançou para o commit da violação | ❌ **bypass** |
+
+**Resultado 4 é uma ressalva material, não uma aprovação limpa.** Um **administrador de
+instância que também é owner** do projeto contorna o portão por push fast-forward direto,
+mesmo com push restrito a "No one". A recusa de force-push (não-ff) e a recusa de merge por
+API valem inclusive para o root; o que o GitLab CE **não** impede mecanicamente é o push de
+um admin/owner de instância — comportamento documentado do CE (administradores têm poderes
+amplos; *security policies* que restringem admins são recurso Ultimate).
+
+**Leitura para a decisão:**
+
+- O controle é **mecânico para os papéis que humanos usam no dia a dia** (Developer /
+  Maintainer): push a `main` é "No one", merge exige pipeline verde. *(O teste com um
+  Maintainer não-admin não foi fechado empiricamente nesta rodada — falha de formato de token
+  no PoC, não resultado de segurança; a inferência acima decorre da monotonicidade de papéis
+  do GitLab e de `push_access_level=No one`.)*
+- O bypass existe **apenas para admin-de-instância + owner** — tier que, pela própria
+  filosofia do ArchGuard, deve ser **minimizado e tratado como break-glass auditado**
+  (ADR-0008), não concedido a contas de trabalho.
+
+**Consequência para este ADR:** a escolha do GitLab CE **não é reprovada**, mas passa a exigir
+um controle organizacional explícito — *nenhuma conta humana de trabalho é admin-de-instância
+ou owner do repositório* — que precisa entrar na configuração do T-003 e ser você a decidir se
+é suficiente. Sem essa regra, o ADR-0003 é contornável por qualquer admin. **Decisão pendente
+do arquiteto antes da ratificação.**
+
+> Instância descartável destruída após a coleta; nenhum artefato do PoC entra em `main`.
 
 ## Insumos pendentes (Edson)
 
