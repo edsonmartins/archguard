@@ -19,7 +19,6 @@ import (
 	"strconv"
 
 	"github.com/casdoor/casdoor/conf"
-	"github.com/casdoor/casdoor/cred"
 	"github.com/casdoor/casdoor/i18n"
 	"github.com/casdoor/casdoor/util"
 	"github.com/xorm-io/builder"
@@ -73,7 +72,6 @@ type Organization struct {
 	Tags                   []string   `xorm:"mediumtext" json:"tags"`
 	Languages              []string   `xorm:"varchar(255)" json:"languages"`
 	ThemeData              *ThemeData `xorm:"json" json:"themeData"`
-	MasterPassword         string     `xorm:"varchar(200)" json:"masterPassword"`
 	DefaultPassword        string     `xorm:"varchar(200)" json:"defaultPassword"`
 	MasterVerificationCode string     `xorm:"varchar(100)" json:"masterVerificationCode"`
 	IpWhitelist            string     `xorm:"varchar(200)" json:"ipWhitelist"`
@@ -191,9 +189,6 @@ func GetMaskedOrganization(isAdmin bool, organization *Organization, errs ...err
 		return nil, nil
 	}
 
-	if organization.MasterPassword != "" {
-		organization.MasterPassword = "***"
-	}
 	if organization.DefaultPassword != "" {
 		organization.DefaultPassword = "***"
 	}
@@ -250,14 +245,6 @@ func UpdateOrganization(id string, organization *Organization, isGlobalAdmin boo
 		}
 	}
 
-	if organization.MasterPassword != "" && organization.MasterPassword != "***" {
-		credManager := cred.GetCredManager(organization.PasswordType)
-		if credManager != nil {
-			hashedPassword := credManager.GetHashedPassword(organization.MasterPassword, organization.PasswordSalt)
-			organization.MasterPassword = hashedPassword
-		}
-	}
-
 	if !isGlobalAdmin {
 		organization.NavItems = org.NavItems
 		organization.UserNavItems = org.UserNavItems
@@ -266,9 +253,6 @@ func UpdateOrganization(id string, organization *Organization, isGlobalAdmin boo
 
 	session := ormer.Engine.ID(core.PK{owner, name}).AllCols()
 
-	if organization.MasterPassword == "***" {
-		session.Omit("master_password")
-	}
 	if organization.DefaultPassword == "***" {
 		session.Omit("default_password")
 	}

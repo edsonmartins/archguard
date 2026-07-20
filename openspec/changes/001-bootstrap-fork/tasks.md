@@ -63,13 +63,18 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
       ADR-0019 Parte III / ADR-0015 §5. O conector **cliente** LDAP/AD (pacote 009) e o
       servidor RADIUS não são afetados. *(Antecipada ao Bloco 3 por ordem expressa; gate verde
       com o license-baseline — a GPL saiu da árvore, não figura no baseline.)*
-- [ ] **T-011** **Remover a senha-mestra do código** e a coluna correspondente via migration.
+- [x] **T-011** **Remover a senha-mestra do código** e a coluna correspondente via migration.
       Subtarefa obrigatória: **deletar `test/invariants/known_violations.txt`** — após T-011,
       a existência do arquivo é ela própria violação de INV-1 (design.md, nota transitória).
+      *(Backdoor de auth removido em object/check.go; campo `MasterPassword` + hashing/masking/
+      omit em organization.go; masking em application_util.go. `known_violations.txt` DELETADO
+      no mesmo commit. **INV-1 verde SEM allowlist**. Campo do struct removido ⇒ coluna
+      `master_password` não é criada em instalação nova (satisfaz o cenário INV-1 "coluna não
+      existe no esquema"); DROP explícito p/ bancos existentes em T-013. Gate verde.)*
 - [ ] **T-012** Remover dialetos de banco não-PostgreSQL.
 - [ ] **T-013** Implantar migrations versionadas com travamento de execução concorrente.
       Inclui a migration explícita de **drop das colunas órfãs de escopo removido**: `cart`,
-      `balance`, `balanceCredit`, `balanceCurrency` (T-008), `face_ids` + colunas de provedores
+      `balance`, `balanceCredit`, `balanceCurrency` (T-008), `master_password` (T-011), `face_ids` + colunas de provedores
       sociais removidos (T-010), e demais deixadas pelas remoções do Bloco 3. Nunca por
       auto-sync de ORM.
 - [ ] **T-014** Criar papéis de banco segregados (aplicação/migração/leitura).

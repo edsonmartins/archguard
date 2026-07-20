@@ -281,7 +281,6 @@ func GetMaskedApplication(application *Application, userId string) *Application 
 	application.FailedSigninFrozenTime = -1
 
 	if application.OrganizationObj != nil {
-		application.OrganizationObj.MasterPassword = "***"
 		application.OrganizationObj.DefaultPassword = "***"
 		application.OrganizationObj.MasterVerificationCode = "***"
 		application.OrganizationObj.PasswordType = "***"

@@ -260,12 +260,6 @@ func CheckPassword(user *User, password string, lang string, options ...bool) er
 		return fmt.Errorf(i18n.Translate(lang, "check:unsupported password type: %s"), passwordType)
 	}
 
-	if organization.MasterPassword != "" {
-		if password == organization.MasterPassword || credManager.IsPasswordCorrect(password, organization.MasterPassword, organization.PasswordSalt) {
-			return resetUserSigninErrorTimes(user)
-		}
-	}
-
 	if !credManager.IsPasswordCorrect(password, user.Password, organization.PasswordSalt) && !credManager.IsPasswordCorrect(password, user.Password, user.PasswordSalt) {
 		return recordSigninErrorInfo(user, lang, enableCaptcha)
 	}
