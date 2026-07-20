@@ -10,7 +10,7 @@ gate: lint test invariants deps-check sbom build
 lint:
 	@test -f go.mod || { echo "lint: árvore Go ausente (go.mod não encontrado). O fork point é congelado em T-002."; exit 1; }
 	gofmt -l . | (! grep .) || { echo "lint: arquivos fora de formatação (gofmt)"; exit 1; }
-	go vet ./...
+	go run ./tools/lintbaseline
 
 test:
 	@test -f go.mod || { echo "test: árvore Go ausente (go.mod não encontrado). O fork point é congelado em T-002."; exit 1; }

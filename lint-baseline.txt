@@ -1,0 +1,12 @@
+# Baseline de achados de `go vet` HERDADOS do upstream (design.md 001, nota transitória).
+# Formato: "arquivo.go:linha:check" — correspondência EXATA (trava a).
+# Entrada obsoleta quebra o build (trava b). Após o fechamento do pacote 001, este arquivo
+# SÓ ENCOLHE (trava c). Arquivo tocado por tarefa futura sai do baseline no mesmo commit
+# (trava d — boy scout ao tocar, nunca ao ver).
+#
+# Triagem de 2026-07-20:
+# - composites: literal sem chaves nomeadas; correto hoje, risco latente só se o upstream da
+#   lib casdoor/oss reordenar campos (dependência pinada). Estilo.
+# - unreachable: `return` morto após `panic(err)`; condição do erro está correta. Estilo.
+storage/casdoor.go:9:composites
+service/proxy.go:39:unreachable

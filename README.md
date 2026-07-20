@@ -120,7 +120,9 @@ Caminho crítico: **001 → 002 → 003 → 005 → 004 → 007**.
 4. **Ratificação do ADR-0019** (Edson + Neimar): até as duas assinaturas, as três dependências
    MPL-2.0 sobreviventes (`golang-lru` via Beego, `go-uuid` via gokrb5, `layeh.com/radius`)
    são **pendência conhecida documentada** — não violação a corrigir, não permissão a exercer.
-   Bloqueia o fechamento do T-018 (INV-4).
+   Bloqueia o fechamento do T-018 (INV-4). **Ao ratificar**: aplicar a emenda ao I-2.2
+   (CONSTITUTION + Anexo B), a matriz de três estados no ADR-0002 e a linha do INV-4 no
+   CLAUDE.md §3 (texto já fixado na decisão de 2026-07-20).
 5. **Evidência empírica do ADR-0018** (teste de aceitação da forja) + insumos de Edson
    (GitLab existente? musculatura operacional). Bloqueia T-019 e T-003.
 

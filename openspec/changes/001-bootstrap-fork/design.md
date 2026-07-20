@@ -74,7 +74,36 @@ T-011. Para não suspender a disciplina de gate verde durante o intervalo, exist
 
 Nenhum dos outros sete invariantes recebe allowlist, em nenhuma circunstância.
 
+### Nota transitória — baseline de lint herdado (decisão de 2026-07-20)
+
+Achados de `go vet` **herdados do upstream e triados como estilo** vivem em
+`lint-baseline.txt`, verificado por `tools/lintbaseline` dentro de `make lint`. Quatro travas
+— análogas às do `known_violations.txt`, mas com regra de saída própria (não expira numa
+tarefa):
+
+1. **Correspondência exata** — `arquivo:linha:check`. Sem glob, sem supressão por pacote.
+2. **Falha em entrada obsoleta** — entrada sem achado real correspondente quebra o build.
+3. **Só encolhe** — nenhuma entrada nova após o fechamento do pacote 001. Código novo nasce
+   limpo, sem exceção.
+4. **Limpeza ao tocar** — arquivo modificado por qualquer tarefa futura sai do baseline
+   naquele mesmo commit. *Boy scout ao tocar, nunca ao ver.*
+
+Triagem registrada no cabeçalho do próprio arquivo. Defeito real herdado **não** é
+baselinável: vira micro-tarefa.
+
 ## CI
 
 Etapas: lint → build → testes → **regra de dependência** → **suíte de invariantes** → SBOM
 (CycloneDX) → **license gate** → imagem assinada. Nenhuma etapa pode ser pulada por flag.
+
+O license gate (T-019) inclui, além da matriz de licenças:
+
+- **Detectores de transição MPL** (ADR-0019 §II.3) — qualquer um ⇒ vermelho:
+  (a) hash do módulo MPL difere do proxy oficial; (b) directive `replace` apontando para
+  cópia local de módulo MPL; (c) vendorização alterada de arquivo coberto.
+- **Licença dual** (decisão de 2026-07-20): dependência dual-licenciada exige **eleição
+  explícita** da licença adotada, registrada no `NOTICE` e no SBOM. Dual sem eleição
+  registrada = licença desconhecida ⇒ fail-closed. Caso `freetype`: eleger **FTL**
+  (permissiva); se a FTL não for elegível, a dependência sai — GPLv2 não tem leitura
+  permissiva. A eleição é feita na verificação manual do T-010, registrada, não apenas
+  "verificada".

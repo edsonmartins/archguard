@@ -51,7 +51,10 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
 - [ ] **T-016** Introduzir camada de persistência `pgx` para código novo.
 - [ ] **T-017** Rebranding: identificadores, cabeçalhos HTTP, assets, strings.
 - [ ] **T-018** Implementar suíte de invariantes (4 testes do design).
-- [ ] **T-019** Pipeline CI completo com SBOM e license gate bloqueante.
+- [ ] **T-019** Pipeline CI completo com SBOM e license gate bloqueante. Inclui: os três
+      detectores de transição MPL do ADR-0019 §II.3 (hash vs proxy, `replace` local,
+      vendorização alterada) e a regra de licença dual (eleição explícita registrada em
+      NOTICE + SBOM; dual sem eleição = desconhecida = vermelho).
 - [ ] **T-020a** Implementar perfis de implantação `dev`/`pilot`/`production` com declaração
       obrigatória e reporte no health check (ADR-0017).
 - [ ] **T-020b** Implementar keystore local selado do perfil `dev` (chave cifrada fora do banco;

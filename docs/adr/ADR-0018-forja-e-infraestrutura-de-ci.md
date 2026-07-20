@@ -74,10 +74,13 @@ do orçado; vulnerabilidade estrutural no GitLab CE sem correção tempestiva; m
 licenciamento do GitLab CE que afete o uso. Migração de saída: espelho git é trivial;
 pipelines exigem reescrita (contida — o gate é um Makefile, o CI apenas o invoca).
 
-## Teste de aceitação *(fixado em 2026-07-20 — pré-condição de ratificação)*
+## Teste de aceitação *(fixado em 2026-07-20; dividido em duas partes em 2026-07-20)*
 
-Forja não se ratifica por documentação de fornecedor; ratifica-se por **demonstração**.
-Evidência exigida, anexada a este ADR antes da ratificação:
+Forja não se ratifica por documentação de fornecedor; ratifica-se por **demonstração**. O
+teste responde a duas perguntas distintas, com gates distintos:
+
+**(i) A ferramenta consegue tornar o merge mecanicamente impossível?** — provada em
+**instância descartável**. É esta evidência que **ratifica o ADR-0018**:
 
 1. Um MR aberto com o gate de invariantes **vermelho**;
 2. Prova de que o merge é **mecanicamente impossível** — inclusive para quem tem permissão de
@@ -87,6 +90,17 @@ Evidência exigida, anexada a este ADR antes da ratificação:
 
 Qualquer caminho de contorno reprova a escolha, **seja qual for a ferramenta**: sem isso o
 ADR-0003 é convenção, não controle.
+
+**(ii) A NOSSA configuração na forja definitiva bloqueia de fato?** — só se prova na
+instância definitiva, após o provisionamento. É esta evidência que **fecha o T-003**, que
+tem gate próprio: repetição das provas 1–3 na configuração real, anexada ao commit do T-003.
+
+Produzir a evidência apenas na forja definitiva foi rejeitado como via única: ratificar o ADR
+depois de já ter migrado inverteria a ordem e esvaziaria o teste.
+
+### Evidência (i) — anexo
+
+*(pendente — a ser preenchido com a demonstração em instância descartável)*
 
 ## Insumos pendentes (Edson)
 
