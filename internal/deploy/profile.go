@@ -55,6 +55,13 @@ func (p Profile) IsDev() bool { return p == Dev }
 // configuration. Only pilot and production are; dev is explicitly not (§4).
 func (p Profile) Conformant() bool { return p == Pilot || p == Production }
 
+// DeniesL3 reports whether L3 (highest-assurance) operations must be denied in
+// this profile. The dev profile denies them (ADR-0017 §4): without real key
+// custody it does not open a privileged session, approve break-glass or rotate a
+// key. L3 operation handlers (packages 004/007) call this as their guard; the
+// hook exists now so the rule is in place before those operations are built.
+func (p Profile) DeniesL3() bool { return p == Dev }
+
 // KeyCustodian names the key custodian a profile uses, for reporting.
 func (p Profile) KeyCustodian() string {
 	if p == Dev {

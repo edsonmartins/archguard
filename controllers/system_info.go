@@ -16,6 +16,7 @@ package controllers
 
 import (
 	"errors"
+	"github.com/casdoor/casdoor/internal/deploy"
 
 	"github.com/casdoor/casdoor/util"
 	"github.com/go-git/go-git/v5"
@@ -66,9 +67,20 @@ func (c *ApiController) GetVersionInfo() {
 // Health
 // @Title Health
 // @Tag System API
-// @Description check if the system is live
+// @Description check if the system is live; reports the deployment profile,
+// key custodian and compliance (ADR-0017 §4)
 // @Success 200 {object} controllers.Response The Response object
 // @router /health [get]
 func (c *ApiController) Health() {
-	c.ResponseOk()
+	profile := deploy.Active()
+	compliance := "conformant"
+	if !profile.Conformant() {
+		compliance = "non_conformant"
+	}
+	c.ResponseOk(map[string]string{
+		"status":       "ok",
+		"profile":      string(profile),
+		"keyCustodian": profile.KeyCustodian(),
+		"compliance":   compliance,
+	})
 }

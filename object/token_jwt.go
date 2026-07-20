@@ -632,15 +632,21 @@ func generateJwtToken(application *Application, user *User, provider string, sig
 		key                interface{}
 	)
 
+	// Resolve the signing key through the key custodian (ADR-0017/I-4.3): in the
+	// dev profile the key comes from the sealed keystore, not the database.
+	privateKeyPEM, err := CertPrivateKeyPEM(cert)
+	if err != nil {
+		return "", "", "", err
+	}
 	if strings.Contains(application.TokenSigningMethod, "RS") || application.TokenSigningMethod == "" {
 		// RSA private key
-		key, err = jwt.ParseRSAPrivateKeyFromPEM([]byte(cert.PrivateKey))
+		key, err = jwt.ParseRSAPrivateKeyFromPEM([]byte(privateKeyPEM))
 	} else if strings.Contains(application.TokenSigningMethod, "ES") {
 		// ES private key
-		key, err = jwt.ParseECPrivateKeyFromPEM([]byte(cert.PrivateKey))
+		key, err = jwt.ParseECPrivateKeyFromPEM([]byte(privateKeyPEM))
 	} else if strings.Contains(application.TokenSigningMethod, "Ed") {
 		// Ed private key
-		key, err = jwt.ParseEdPrivateKeyFromPEM([]byte(cert.PrivateKey))
+		key, err = jwt.ParseEdPrivateKeyFromPEM([]byte(privateKeyPEM))
 	}
 	if err != nil {
 		return "", "", "", err

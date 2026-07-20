@@ -371,8 +371,14 @@ func GetSamlResponse(application *Application, user *User, samlRequest string, h
 		return "", "", "", fmt.Errorf("err: NewSamlResponse() error, %s", err.Error())
 	}
 
+	// Resolve through the key custodian (ADR-0017/I-4.3): dev keys come from the
+	// sealed keystore, not the database.
+	privateKeyPEM, err := CertPrivateKeyPEM(cert)
+	if err != nil {
+		return "", "", "", err
+	}
 	randomKeyStore := &X509Key{
-		PrivateKey:      cert.PrivateKey,
+		PrivateKey:      privateKeyPEM,
 		X509Certificate: certificate,
 	}
 	ctx := dsig.NewDefaultSigningContext(randomKeyStore)

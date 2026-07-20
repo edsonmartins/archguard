@@ -46,4 +46,7 @@ func TestConformanceAndCustodian(t *testing.T) {
 	if Production.KeyCustodian() != "openbao" {
 		t.Errorf("custodiante do production: %s", Production.KeyCustodian())
 	}
+	if !Dev.DeniesL3() || Pilot.DeniesL3() || Production.DeniesL3() {
+		t.Error("apenas o perfil dev nega operações L3 (ADR-0017 §4)")
+	}
 }

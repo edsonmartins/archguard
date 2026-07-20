@@ -120,12 +120,20 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
       ferramentas separado com versões fixadas, fail-closed em licença desconhecida.
 - [ ] **T-019b** Imposição pela forja: o gate vira status check obrigatório. **Bloqueada**
       (forja provisionada + ADR-0018 ratificado).
-- [ ] **T-020a** Implementar perfis de implantação `dev`/`pilot`/`production` com declaração
-      obrigatória e reporte no health check (ADR-0017).
-- [ ] **T-020b** Implementar keystore local selado do perfil `dev` (chave cifrada fora do banco;
-      material de selagem no boot; recusa de inicialização sem material).
-- [ ] **T-020c** Implementar travas do perfil `dev`: aviso, marca de não conformidade, negação
-      de L3 e recusa sob indício de exposição pública.
+- [x] **T-020a** Implementar perfis de implantação `dev`/`pilot`/`production` com declaração
+      obrigatória e reporte no health check (ADR-0017). *(internal/deploy: Profile + Parse
+      obrigatório (vazio/inválido = fatal); /health reporta profile/keyCustodian/compliance.)*
+- [x] **T-020b** Implementar keystore local selado do perfil `dev` (chave cifrada fora do banco;
+      material de selagem no boot; recusa de inicialização sem material). *(internal/adapters/
+      keystore: AES-256-GCM, unseal via env KEYSTORE_UNSEAL_KEY, recusa sem material,
+      tamper-evident. INTEGRAÇÃO COMPLETA (decisão do usuário): SealCerts move a chave de
+      assinatura do DB p/ o keystore (DB guarda referência keystore:<id>) e o resolvedor
+      CertPrivateKeyPEM roteia JWT + SAML idp — I-4.3 satisfeito p/ dev. 10 testes.)*
+- [x] **T-020c** Implementar travas do perfil `dev`: aviso, marca de não conformidade, negação
+      de L3 e recusa sob indício de exposição pública. *(Aviso no boot; /health
+      compliance=non_conformant; recusa de boot sob origin https público; DeniesL3() = hook p/
+      operações L3 dos pacotes 004/007. Gate verde.)* **Pendente:** boot real + assinatura de
+      token com chave selada validados no smoke test T-022 (instância + PG).
 - [ ] **T-020** Imagem de container reprodutível e assinada; usuário não-root.
 - [ ] **T-021** Stack Docker Swarm + Traefik mínima (core + PostgreSQL), TLS obrigatório.
 - [ ] **T-022** Smoke test ponta a ponta no perfil `dev`: subir, autenticar, emitir token OIDC,

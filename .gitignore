@@ -45,3 +45,7 @@ web/cypress/screenshots/
 
 # Artefatos de build gerados
 /sbom.json
+
+# Keystore selado do perfil dev (runtime, contém chaves cifradas)
+/conf/keystore.sealed
+/conf/keystore.sealed.tmp

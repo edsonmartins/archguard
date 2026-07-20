@@ -54,6 +54,8 @@ func main() {
 
 	routers.InitAPI()
 	object.InitFlag()
+	object.InitDeploymentProfile()
+	object.InitKeystore()
 	object.InitAdapter()
 	object.CreateTables()
 	object.RunMigrations()
@@ -78,6 +80,7 @@ func main() {
 	authz.InitApi()
 	object.InitUserManager()
 	object.InitFromFile()
+	object.SealCerts()
 	object.InitCleanupTokens()
 	object.InitCleanupDeviceAuthMap()
 
