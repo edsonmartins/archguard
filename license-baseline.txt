@@ -30,6 +30,5 @@ github.com/alibabacloud-go/tea-oss-sdk@v1.1.3|Unknown|remocao:T-010
 github.com/alibabacloud-go/tea-oss-utils@v1.1.0|Unknown|remocao:T-010
 github.com/alibabacloud-go/tea-utils@v1.3.6|Unknown|remocao:T-010
 modernc.org/mathutil@v1.5.0|Unknown|remocao:T-012
-github.com/mrjones/oauth@v0.0.0-20180629183705-f4e24b6d100c|Unknown|remocao:T-010
 
 # --- Indeterminado resolvido por eleição (freetype via fogleman/gg em object; FTL em T-010) ---

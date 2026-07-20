@@ -19,7 +19,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/casdoor/casdoor/idp"
 	"github.com/casdoor/casdoor/util"
 )
 
@@ -57,18 +56,6 @@ func GetOAuthToken(grantType string, clientId string, clientSecret string, code 
 			Error:            InvalidClient,
 			ErrorDescription: "client_id is invalid",
 		}, nil
-	}
-
-	// Handle WeChat Mini Program flow separately — it does not use standard OAuth grant types
-	if tag == "wechat_miniprogram" {
-		token, tokenError, err := GetWechatMiniProgramToken(application, code, host, username, avatar, lang)
-		if err != nil {
-			return nil, err
-		}
-		if tokenError != nil {
-			return tokenError, nil
-		}
-		return token, nil
 	}
 
 	// Check if grantType is allowed in the current application
@@ -485,121 +472,6 @@ func GetTokenByUser(application *Application, user *User, scope string, nonce st
 	}
 
 	return token, nil
-}
-
-// GetWechatMiniProgramToken handles the WeChat Mini Program flow.
-func GetWechatMiniProgramToken(application *Application, code string, host string, username string, avatar string, lang string) (*Token, *TokenError, error) {
-	mpProvider := GetWechatMiniProgramProvider(application)
-	if mpProvider == nil {
-		return nil, &TokenError{
-			Error:            InvalidClient,
-			ErrorDescription: "the application does not support wechat mini program",
-		}, nil
-	}
-	provider, err := GetProvider(util.GetId("admin", mpProvider.Name))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	mpIdp := idp.NewWeChatMiniProgramIdProvider(provider.ClientId, provider.ClientSecret)
-	session, err := mpIdp.GetSessionByCode(code)
-	if err != nil {
-		return nil, &TokenError{
-			Error:            InvalidGrant,
-			ErrorDescription: fmt.Sprintf("get wechat mini program session error: %s", err.Error()),
-		}, nil
-	}
-
-	openId, unionId := session.Openid, session.Unionid
-	if openId == "" && unionId == "" {
-		return nil, &TokenError{
-			Error:            InvalidRequest,
-			ErrorDescription: "the wechat mini program session is invalid",
-		}, nil
-	}
-	user, err := getUserByWechatId(application.Organization, openId, unionId)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if user == nil {
-		if !application.EnableSignUp {
-			return nil, &TokenError{
-				Error:            InvalidGrant,
-				ErrorDescription: "the application does not allow to sign up new account",
-			}, nil
-		}
-		// Add new user
-		var name string
-		if CheckUsername(username, lang) == "" {
-			name = username
-		} else {
-			name = fmt.Sprintf("wechat-%s", openId)
-		}
-
-		// Generate a unique user ID within the confines of the application
-		newUserId, idErr := GenerateIdForNewUser(application)
-		if idErr != nil {
-			// If we fail to generate a unique user ID, we can fallback to a random ID
-			newUserId = util.GenerateId()
-		}
-
-		user = &User{
-			Owner:             application.Organization,
-			Id:                newUserId,
-			Name:              name,
-			Avatar:            avatar,
-			SignupApplication: application.Name,
-			WeChat:            openId,
-			Type:              "normal-user",
-			CreatedTime:       util.GetCurrentTime(),
-			IsAdmin:           false,
-			IsForbidden:       false,
-			IsDeleted:         false,
-			Properties: map[string]string{
-				UserPropertiesWechatOpenId:  openId,
-				UserPropertiesWechatUnionId: unionId,
-			},
-		}
-		_, err = AddUser(user, "en")
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-
-	err = ExtendUserWithRolesAndPermissions(user)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	accessToken, refreshToken, tokenName, err := generateJwtToken(application, user, "", "", "", "", "", host)
-	if err != nil {
-		return nil, &TokenError{
-			Error:            EndpointError,
-			ErrorDescription: fmt.Sprintf("generate jwt token error: %s", err.Error()),
-		}, nil
-	}
-
-	token := &Token{
-		Owner:        application.Owner,
-		Name:         tokenName,
-		CreatedTime:  util.GetCurrentTime(),
-		Application:  application.Name,
-		Organization: user.Owner,
-		User:         user.Name,
-		Code:         session.SessionKey, // a trick, because miniprogram does not use the code, so use the code field to save the session_key
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		ExpiresIn:    int(application.ExpireInHours * float64(hourSeconds)),
-		Scope:        "",
-		TokenType:    "Bearer",
-		CodeIsUsed:   true,
-	}
-	_, err = AddToken(token)
-	if err != nil {
-		return nil, nil, err
-	}
-	return token, nil, nil
 }
 
 // GetTokenExchangeToken handles the Token Exchange Grant flow (RFC 8693).

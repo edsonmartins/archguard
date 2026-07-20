@@ -208,16 +208,6 @@ func GetProvider(id string) (*Provider, error) {
 	return getProvider(owner, name)
 }
 
-func GetWechatMiniProgramProvider(application *Application) *Provider {
-	providers := application.Providers
-	for _, provider := range providers {
-		if provider.Provider.Type == "WeChatMiniProgram" {
-			return provider.Provider
-		}
-	}
-	return nil
-}
-
 func UpdateProvider(id string, provider *Provider) (bool, error) {
 	owner, name, err := util.GetOwnerAndNameFromIdWithError(id)
 	if err != nil {
