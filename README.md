@@ -35,6 +35,7 @@ Seções 2 (licença), 3 (soberania) e 4 (segurança) são pétreas na v1.
 | [0015](docs/adr/ADR-0015-rebranding-e-reducao-de-escopo.md) | Rebranding e redução de superfície | Escopo |
 | [0016](docs/adr/ADR-0016-manutencao-do-framework-beego.md) | Manter Beego isolado atrás de fronteiras | Dívida técnica |
 | [0017](docs/adr/ADR-0017-perfis-de-implantacao-e-custodia-minima.md) | Perfis `dev`/`pilot`/`production` e custódia mínima — **emenda a I-1.3** | Implantação |
+| [0018](docs/adr/ADR-0018-forja-e-infraestrutura-de-ci.md) | Forja e CI: GitLab CE self-hosted (**Proposto**) | Infraestrutura |
 
 ### RFCs — desenhos técnicos (`docs/rfc/`)
 

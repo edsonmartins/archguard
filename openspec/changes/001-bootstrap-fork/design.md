@@ -58,6 +58,22 @@ Testes que **quebram o build** se:
 Esta suíte é a defesa real da estratégia de cherry-pick. Sem ela, o ADR-0003 é intenção, não
 controle.
 
+### Nota transitória — violações herdadas de INV-1 (decisão de 2026-07-20)
+
+A suíte nasce no Bloco 2, antes das remoções do Bloco 3; a senha-mestra herdada só sai em
+T-011. Para não suspender a disciplina de gate verde durante o intervalo, existe
+`test/invariants/known_violations.txt` com **três travas estruturais**:
+
+1. **Correspondência exata** — cada entrada identifica `arquivo:símbolo` específicos. Glob,
+   regex ou padrão de diretório são **proibidos**: absorveriam violação nova em silêncio.
+2. **Detecção de entrada obsoleta** — entrada listada que não corresponda mais a violação
+   real no código faz a suíte **falhar**. O arquivo não pode apodrecer.
+3. **Autodestruição** — escopo exclusivo de **INV-1**. T-011 inclui a subtarefa de deletar o
+   arquivo; após T-011, a **existência** do arquivo é, ela própria, violação (a suíte falha
+   se ele existir vazio ou com entradas obsoletas).
+
+Nenhum dos outros sete invariantes recebe allowlist, em nenhuma circunstância.
+
 ## CI
 
 Etapas: lint → build → testes → **regra de dependência** → **suíte de invariantes** → SBOM

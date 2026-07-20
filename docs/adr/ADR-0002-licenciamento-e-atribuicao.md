@@ -43,7 +43,24 @@ a capacidade de importar contribuições posteriores. Consequência operacional:
 | **Proibida** | AGPL-*, GPL-*, LGPL-* (linkado), SSPL, BUSL, Elastic License, "Community Edition" com corte por porte de empresa | Bloqueio de build |
 | **Revisão obrigatória** | CC-BY-*, EUPL, licenças duais, código sem licença declarada | Aprovação caso a caso registrada em PR |
 
-### 4. Gate automatizado
+### 3a. Classes de artefato *(acrescido em 2026-07-20, decisão de T-018/T-019)*
+
+A matriz acima governa a **dependência de árvore de build**: todo módulo que entra, direta ou
+transitivamente, no binário ou nos artefatos distribuídos do produto.
+
+**Ferramenta de CI** é classe distinta: executável usado apenas no pipeline (ex.:
+`go-licenses`, `cyclonedx-gomod`, linters), nunca linkado ao produto. Regras próprias:
+
+- Licença **permissiva** obrigatória (Apache-2.0, MIT, BSD, ISC);
+- **Versão fixada** em módulo de ferramentas separado (`tools/go.mod` ou equivalente) —
+  **nunca** no `go.mod` principal, para que as dependências da ferramenta não contaminem o
+  SBOM nem o scan de licenças do produto;
+- Aprovação explícita por ferramenta, registrada (as duas acima: aprovadas em 2026-07-20);
+- O scan de licenças opera **fail-closed**: licença não determinável é **vermelho**, não
+  aviso — é o INV-6 aplicado à cadeia de suprimento.
+
+A forja e a infraestrutura de execução do CI **não** são governadas por este ADR (são
+infraestrutura, não dependência) — ver ADR-0018.
 - Geração de **SBOM (CycloneDX)** em todo build.
 - **License gate** no CI: qualquer dependência (direta ou transitiva) fora da matriz
   **quebra o build**, sem exceção via flag.

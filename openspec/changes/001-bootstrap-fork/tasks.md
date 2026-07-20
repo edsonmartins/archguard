@@ -8,8 +8,9 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
 
 | Bloco | Tarefas | Motivo |
 |---|---|---|
-| 1 | T-000 a T-006 | Ambiente, fork point, licença, atribuição |
-| **2** | **T-018, T-019** | **Suíte de invariantes e CI ANTES das remoções**, para que a remoção da senha-mestra (T-011) nasça verificada por teste no momento em que acontece |
+| 1 | T-000a/b/c, T-001, T-002, **T-005, T-004** (antecipadas, nesta ordem — decisão de 2026-07-20) | Ambiente e fork point; política de copyright ANTES de arquivos novos; NOTICE com fork point fresco |
+| **2** | **T-018, T-019** | **Suíte de invariantes e CI ANTES das remoções**, para que a remoção da senha-mestra (T-011) nasça verificada por teste no momento em que acontece. **T-019 bloqueada até aprovação do ADR-0018 (forja)** |
+| 1b | T-003, T-006 | T-003 bloqueada pela decisão de forja: executar imediatamente após ADR-0018 aprovado e forja provisionada. T-006 materialmente satisfeita em T-002 (DIVERGENCE.md criado) — formalizar |
 | 3 | T-007 a T-014 | Remoções de escopo e PostgreSQL único |
 | 4 | T-015 a T-017 | Fronteiras de framework e rebranding |
 | 5 | T-020 a T-025 | Perfis, imagem, stack, smoke test, watcher, docs |
@@ -37,6 +38,8 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
 - [ ] **T-009** Remover funcionalidades de agentes IA/MCP.
 - [ ] **T-010** Reduzir provedores ao catálogo curado (ADR-0015, §3).
 - [ ] **T-011** **Remover a senha-mestra do código** e a coluna correspondente via migration.
+      Subtarefa obrigatória: **deletar `test/invariants/known_violations.txt`** — após T-011,
+      a existência do arquivo é ela própria violação de INV-1 (design.md, nota transitória).
 - [ ] **T-012** Remover dialetos de banco não-PostgreSQL.
 - [ ] **T-013** Implantar migrations versionadas com travamento de execução concorrente.
 - [ ] **T-014** Criar papéis de banco segregados (aplicação/migração/leitura).
