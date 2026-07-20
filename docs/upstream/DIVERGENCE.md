@@ -13,6 +13,14 @@ cherry-picks do ADR-0003. Ele é o ato de criação do fork, não sincronismo: *
 merge do ADR-0003 vale integralmente daqui em diante** — importação futura é exclusivamente
 cherry-pick com trailer `Upstream-Commit: <sha>`.
 
+## Ferramenta de triagem (ADR-0003)
+
+`make upstream-triage` (código em `tools/upstreamwatch`) atualiza o espelho `vendor/upstream` e
+emite a fila de commits novos desde `docs/upstream/LAST_SYNC.md`, classificados por natureza e
+cruzados com os prefixos divergentes/removidos registrados nesta tabela. **Ao adicionar uma
+divergência aqui, considere refletir o prefixo em `tools/upstreamwatch/classify.go`** para que a
+triagem futura marque corretamente os commits que a tocam.
+
 ## Divergências
 
 | Data | Subsistema / caminho | Divergência | Motivo | Referência |

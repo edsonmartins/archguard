@@ -138,7 +138,12 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
 - [ ] **T-021** Stack Docker Swarm + Traefik mínima (core + PostgreSQL), TLS obrigatório.
 - [ ] **T-022** Smoke test ponta a ponta no perfil `dev`: subir, autenticar, emitir token OIDC,
       validar JWKS e verificar estabilidade do JWKS entre reinícios.
-- [ ] **T-023** Watcher de upstream (diff semanal + fila de triagem) — ADR-0003.
+- [x] **T-023** Watcher de upstream (diff semanal + fila de triagem) — ADR-0003. *(`tools/
+      upstreamwatch`: lista commits novos de vendor/upstream desde LAST_SYNC.md, classifica
+      (SECURITY 72h / DIVERGENT-REVIEW / OUT-OF-SCOPE / REFACTOR / FEATURE-PAM / BUGFIX) cruzando
+      com os prefixos divergentes/removidos (DIVERGENCE.md), e alerta se o LICENSE do upstream
+      mudou (ADR-0002 §6). `make upstream-triage` atualiza o espelho e emite a fila. 10 testes
+      de classificação; rodado ponta a ponta. Gate verde.)*
 - [ ] **T-024** README de desenvolvimento e runbook mínimo de operação.
 
 - [ ] **T-025** Registrar em `DIVERGENCE.md` as remoções e a introdução de perfis.

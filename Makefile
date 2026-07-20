@@ -3,9 +3,16 @@
 # Bloco 0/1: invariants, deps-check e sbom são stubs que FALHAM até T-018/T-019 (gate parcial
 # esperado e aceito — ver openspec/changes/001-bootstrap-fork/tasks.md).
 
-.PHONY: gate lint test invariants deps-check sbom build
+.PHONY: gate lint test invariants deps-check sbom build upstream-triage
 
 gate: lint test invariants deps-check sbom build
+
+# Triagem semanal de upstream (ADR-0003): atualiza o espelho somente-leitura
+# vendor/upstream e emite a fila de triagem classificada. NUNCA faz merge em main.
+upstream-triage:
+	git fetch upstream master --tags
+	git branch -f vendor/upstream upstream/master
+	go run -C tools ./upstreamwatch "$(CURDIR)"
 
 lint:
 	@test -f go.mod || { echo "lint: árvore Go ausente (go.mod não encontrado). O fork point é congelado em T-002."; exit 1; }
