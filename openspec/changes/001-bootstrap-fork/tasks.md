@@ -15,7 +15,7 @@
 - [x] **T-000a** Inicializar repositório git e clonar o Casdoor como base do fork.
 - [x] **T-000b** Mover o corpus de governança de `spec/` para a raiz, conforme os caminhos do
       CLAUDE.md.
-- [ ] **T-000c** Criar o Makefile com os alvos do gate (`lint`, `test`, `invariants`,
+- [x] **T-000c** Criar o Makefile com os alvos do gate (`lint`, `test`, `invariants`,
       `deps-check`, `sbom`, `build`); `invariants`, `deps-check` e `sbom` como stubs que
       falham com mensagem clara até T-018/T-019.
 
