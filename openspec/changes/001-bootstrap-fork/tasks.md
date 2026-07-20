@@ -21,7 +21,7 @@
 
 ## Bloco 1 — Fork point, licença e atribuição
 
-- [ ] **T-001** Verificar na fonte primária (repositório upstream) release corrente, licença
+- [x] **T-001** Verificar na fonte primária (repositório upstream) release corrente, licença
       vigente e base de mantenedores; registrar evidência.
 - [ ] **T-002** Criar fork, congelar fork point e escrever `docs/upstream/FORK_POINT.md`.
 - [ ] **T-003** Configurar `vendor/upstream` como espelho somente-leitura e proteger `main`.
