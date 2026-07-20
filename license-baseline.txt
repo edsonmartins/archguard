@@ -1,0 +1,39 @@
+# Baseline de achados de licença HERDADOS do upstream (INV-4 / ADR-0002 / ADR-0019).
+# Cinco travas (design.md 001, nota transitória):
+#   (a) CORRESPONDÊNCIA EXATA: `modulo@versao|SPDX|resolucao`. Sem glob, sem wildcard.
+#   (b) ENTRADA OBSOLETA quebra o build: entrada sem achado real correspondente falha.
+#   (c) SÓ ENCOLHE: achado NOVO (fora do baseline) é vermelho, sempre.
+#   (d) RESOLUÇÃO OBRIGATÓRIA: cada entrada declara como morre —
+#         remocao:T-0XX | eleicao:LICENSE_ELECTIONS.md | regime:ADR-0019
+#       Entrada sem caminho válido é vermelho. Exigência de I-2.2 ser PÉTREO:
+#       as 3 MPL não estão ACEITAS, estão em QUARENTENA COM PRAZO.
+#   (e) DEVE ESTAR VAZIO para o pacote 001 fechar; existir não-vazio no gate de
+#       fechamento ⇒ pacote não fecha. Vazio, sua existência é ela própria violação.
+#
+# Estado inicial (2026-07-20): 16 módulos = 7 MPL-2.0 + 9 indeterminados. 0 GPL
+# (goldap removido em T-010a). Achados verificados contra o grafo de build real
+# (go list -deps ./...), sem fantasmas de go.sum.
+
+# --- MPL-2.0 sobreviventes: quarentena até o regime mudar (ADR-0019) ---
+github.com/hashicorp/golang-lru@v0.5.4|MPL-2.0|regime:ADR-0019
+github.com/hashicorp/go-uuid@v1.0.3|MPL-2.0|regime:ADR-0019
+layeh.com/radius@v0.0.0-20231213012653-1006025d24f8|MPL-2.0|regime:ADR-0019
+
+# --- MPL-2.0 que saem por remoção de escopo ---
+github.com/go-sql-driver/mysql@v1.8.1|MPL-2.0|remocao:T-012
+github.com/hashicorp/go-cleanhttp@v0.5.2|MPL-2.0|remocao:T-008
+maunium.net/go/mautrix@v0.22.1|MPL-2.0|remocao:T-010
+go.mau.fi/util@v0.8.3|MPL-2.0|remocao:T-010
+
+# --- Indeterminados que saem por remoção de escopo (faceId/idv/captcha Alibaba, SQLite, tumblr) ---
+github.com/alibabacloud-go/darabonba-number@v1.0.4|Unknown|remocao:T-010
+github.com/alibabacloud-go/endpoint-util@v1.1.0|Unknown|remocao:T-010
+github.com/alibabacloud-go/tea-fileform@v1.1.1|Unknown|remocao:T-010
+github.com/alibabacloud-go/tea-oss-sdk@v1.1.3|Unknown|remocao:T-010
+github.com/alibabacloud-go/tea-oss-utils@v1.1.0|Unknown|remocao:T-010
+github.com/alibabacloud-go/tea-utils@v1.3.6|Unknown|remocao:T-010
+modernc.org/mathutil@v1.5.0|Unknown|remocao:T-012
+github.com/mrjones/oauth@v0.0.0-20180629183705-f4e24b6d100c|Unknown|remocao:T-010
+
+# --- Indeterminado resolvido por eleição (freetype via fogleman/gg em object; FTL em T-010) ---
+github.com/golang/freetype@v0.0.0-20170609003504-e2365dfdc4a0|Unknown|eleicao:LICENSE_ELECTIONS.md

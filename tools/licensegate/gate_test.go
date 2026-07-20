@@ -150,6 +150,48 @@ func TestMPLTransitionDetectsVendoredMPL(t *testing.T) {
 	}
 }
 
+func TestParseBaselineLocks(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "license-baseline.txt")
+	content := strings.Join([]string{
+		"# comentário",
+		"github.com/hashicorp/golang-lru@v0.5.4|MPL-2.0|regime:ADR-0019", // ok
+		"github.com/x/y@v1.0.0|Unknown|remocao:T-012",                    // ok
+		"github.com/glob/*@v1|MIT|remocao:T-008",                         // trava a: glob
+		"github.com/z/w@v2|MPL-2.0|aceito",                               // trava d: resolução inválida
+	}, "\n")
+	os.WriteFile(p, []byte(content), 0o600)
+	entries, errs := parseBaseline(p)
+	if len(entries) != 2 {
+		t.Fatalf("esperado 2 entradas válidas, veio %d", len(entries))
+	}
+	joined := strings.Join(errs, "\n")
+	if !strings.Contains(joined, "trava a") {
+		t.Errorf("glob deveria violar trava a: %v", errs)
+	}
+	if !strings.Contains(joined, "trava d") {
+		t.Errorf("resolução inválida deveria violar trava d: %v", errs)
+	}
+	if e := entries["github.com/hashicorp/golang-lru@v0.5.4"]; e.resolution != "regime:ADR-0019" {
+		t.Errorf("resolução não lida: %+v", e)
+	}
+}
+
+func TestResolutionRegex(t *testing.T) {
+	ok := []string{"remocao:T-008", "remocao:T-010a", "eleicao:LICENSE_ELECTIONS.md", "regime:ADR-0019"}
+	bad := []string{"remocao:T008", "aceito", "remocao", "regime:ADR", "eleicao:outro.md"}
+	for _, s := range ok {
+		if !resolutionRe.MatchString(s) {
+			t.Errorf("resolução válida rejeitada: %q", s)
+		}
+	}
+	for _, s := range bad {
+		if resolutionRe.MatchString(s) {
+			t.Errorf("resolução inválida aceita: %q", s)
+		}
+	}
+}
+
 func TestParseElections(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "LICENSE_ELECTIONS.md")

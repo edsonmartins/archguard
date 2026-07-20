@@ -46,10 +46,10 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
 - [ ] **T-008** Remover módulos de pagamento/produto/assinatura.
 - [ ] **T-009** Remover funcionalidades de agentes IA/MCP.
 - [ ] **T-010** Reduzir provedores ao catálogo curado (ADR-0015, §3).
-- [ ] **T-010a** Remover o servidor LDAP embutido e a dependência `goldap` (GPL-2.0) —
+- [x] **T-010a** Remover o servidor LDAP embutido e a dependência `goldap` (GPL-2.0) —
       ADR-0019 Parte III / ADR-0015 §5. O conector **cliente** LDAP/AD (pacote 009) e o
-      servidor RADIUS não são afetados. *(Implementada em 2026-07-20 por ordem expressa,
-      antecipada ao Bloco 3 com a suíte de invariantes já ativa; `[x]` pende gate verde.)*
+      servidor RADIUS não são afetados. *(Antecipada ao Bloco 3 por ordem expressa; gate verde
+      com o license-baseline — a GPL saiu da árvore, não figura no baseline.)*
 - [ ] **T-011** **Remover a senha-mestra do código** e a coluna correspondente via migration.
       Subtarefa obrigatória: **deletar `test/invariants/known_violations.txt`** — após T-011,
       a existência do arquivo é ela própria violação de INV-1 (design.md, nota transitória).
@@ -59,8 +59,8 @@ Executar por blocos, **nesta ordem** — que difere da numeração sequencial:
 - [ ] **T-015** Criar `internal/domain/**` e a regra de dependência no CI (ADR-0016).
 - [ ] **T-016** Introduzir camada de persistência `pgx` para código novo.
 - [ ] **T-017** Rebranding: identificadores, cabeçalhos HTTP, assets, strings.
-- [ ] **T-018** Implementar suíte de invariantes (4 testes do design).
-- [ ] **T-019a** Implementação local (não depende da forja): os três detectores de transição
+- [x] **T-018** Implementar suíte de invariantes (4 testes do design).
+- [x] **T-019a** Implementação local (não depende da forja): os três detectores de transição
       MPL do ADR-0019 §II.3 (hash vs proxy oficial; ausência de `replace` local; ausência de
       vendorização alterada), regra de licença dual (eleição explícita registrada; sem eleição
       = desconhecida = vermelho), SBOM CycloneDX + license gate como alvo local, módulo de

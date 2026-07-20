@@ -24,10 +24,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -70,20 +72,48 @@ func main() {
 		os.Exit(1)
 	}
 
+	baseline, baseErrs := parseBaseline(filepath.Join(root, "license-baseline.txt"))
+	violations = append(violations, baseErrs...)
+
 	comps, err := runGoLicenses(root)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "license-gate: go-licenses falhou (fail-closed): %v\n", err)
 		os.Exit(1)
 	}
+	pkgMod, err := buildModuleMap(root)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "license-gate: `go list` falhou (fail-closed): %v\n", err)
+		os.Exit(1)
+	}
 
+	// findings: problematic module@version -> normalized license.
+	findings := map[string]string{}
 	var mplModules []string
 	for _, c := range comps {
 		v, isMPL := classify(c.Ref, c.License, elections)
-		if v != "" {
-			violations = append(violations, v)
+		if v == "" {
+			continue
 		}
+		modver := resolveModule(c.Ref, pkgMod)
+		findings[modver] = normalizeLicense(c.License)
 		if isMPL {
 			mplModules = append(mplModules, c.Ref)
+		}
+	}
+
+	// Reconcile against the baseline (locks b and c).
+	for modver, lic := range findings {
+		want, ok := baseline[modver]
+		switch {
+		case !ok:
+			violations = append(violations, fmt.Sprintf("license-gate: achado NOVO fora do baseline: %s [%s] — resolva a licença ou remova o módulo (trava c)", modver, lic))
+		case want.license != lic:
+			violations = append(violations, fmt.Sprintf("license-gate: %s está no baseline como %s mas foi detectado como %s — atualize a entrada", modver, want.license, lic))
+		}
+	}
+	for modver := range baseline {
+		if _, ok := findings[modver]; !ok {
+			violations = append(violations, fmt.Sprintf("license-gate: entrada OBSOLETA no baseline: %s — não corresponde a achado real; remova-a neste commit (trava b)", modver))
 		}
 	}
 
@@ -95,7 +125,105 @@ func main() {
 		}
 		os.Exit(1)
 	}
-	fmt.Printf("license-gate: ok (%d pacotes; %d MPL não modificados)\n", len(comps), len(mplModules))
+	fmt.Printf("license-gate: ok (%d pacotes; %d achados em quarentena no baseline; %d MPL não modificados)\n", len(comps), len(baseline), len(mplModules))
+}
+
+// normalizeLicense collapses undeterminable license strings to "Unknown" so
+// they compare cleanly against baseline entries.
+func normalizeLicense(license string) string {
+	license = strings.TrimSpace(license)
+	if license == "" || strings.EqualFold(license, "NOASSERTION") {
+		return "Unknown"
+	}
+	return license
+}
+
+// baselineEntry is a quarantined finding with its declared resolution path.
+type baselineEntry struct {
+	license    string
+	resolution string
+}
+
+var (
+	baselineLine = regexp.MustCompile(`^([^\s*?\[\]{}|]+@[^\s|]+)\|([^\s|]+)\|(\S+)$`)
+	resolutionRe = regexp.MustCompile(`^(remocao:T-\d+[a-z]?|eleicao:LICENSE_ELECTIONS\.md|regime:ADR-\d+)$`)
+)
+
+// parseBaseline reads license-baseline.txt enforcing lock (a) exact format and
+// lock (d) a valid resolution path. It returns the entries plus any format
+// violations (never a silent skip).
+func parseBaseline(path string) (map[string]baselineEntry, []string) {
+	out := map[string]baselineEntry{}
+	raw, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return out, nil
+	}
+	if err != nil {
+		return out, []string{fmt.Sprintf("license-gate: baseline ilegível (fail-closed): %v", err)}
+	}
+	var errs []string
+	for i, line := range strings.Split(string(raw), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		m := baselineLine.FindStringSubmatch(line)
+		if m == nil {
+			errs = append(errs, fmt.Sprintf("license-baseline.txt:%d: formato inválido %q — apenas `modulo@versao|SPDX|resolucao` (trava a)", i+1, line))
+			continue
+		}
+		if !resolutionRe.MatchString(m[3]) {
+			errs = append(errs, fmt.Sprintf("license-baseline.txt:%d: resolução inválida %q — use remocao:T-0XX | eleicao:LICENSE_ELECTIONS.md | regime:ADR-0019 (trava d)", i+1, m[3]))
+			continue
+		}
+		out[m[1]] = baselineEntry{license: m[2], resolution: m[3]}
+	}
+	return out, errs
+}
+
+// resolveModule maps a go-licenses finding path to its module@version. The
+// finding path is a license root, often the module root, while go list reports
+// the imported subpackages; so fall back to any build-graph package under the
+// finding path.
+func resolveModule(findingPath string, pkgMod map[string]string) string {
+	if mv, ok := pkgMod[findingPath]; ok {
+		return mv
+	}
+	for pkg, mv := range pkgMod {
+		if pkg == findingPath || strings.HasPrefix(pkg, findingPath+"/") {
+			return mv
+		}
+	}
+	return findingPath + "@?"
+}
+
+// buildModuleMap maps each package in the build graph to its module@version via
+// `go list -deps -json ./...`.
+func buildModuleMap(root string) (map[string]string, error) {
+	cmd := exec.Command("go", "list", "-deps", "-json", "./...")
+	cmd.Dir = root
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+	m := map[string]string{}
+	dec := json.NewDecoder(strings.NewReader(string(out)))
+	for {
+		var p struct {
+			ImportPath string `json:"ImportPath"`
+			Module     *struct {
+				Path    string `json:"Path"`
+				Version string `json:"Version"`
+			} `json:"Module"`
+		}
+		if err := dec.Decode(&p); err != nil {
+			break
+		}
+		if p.Module != nil && p.Module.Path != "" {
+			m[p.ImportPath] = p.Module.Path + "@" + p.Module.Version
+		}
+	}
+	return m, nil
 }
 
 // goLicensesVersion pins the authoritative license scanner (approved CI tool,

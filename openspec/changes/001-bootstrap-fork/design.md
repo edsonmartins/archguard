@@ -91,6 +91,38 @@ tarefa):
 Triagem registrada no cabeçalho do próprio arquivo. Defeito real herdado **não** é
 baselinável: vira micro-tarefa.
 
+### Nota transitória — baseline de licença herdado (decisão de 2026-07-20)
+
+Terceira aplicação do padrão de baseline (após `known_violations.txt` e `lint-baseline.txt`).
+Distingue **regressão** (INV-1/2/3/5/6/7/8: código novo violando ⇒ vermelho) de **passivo
+herdado** (os achados de licença do INV-4, presentes desde o commit 1, que o Bloco 3 elimina).
+`license-baseline.txt` registra o passivo com **cinco travas**:
+
+1. **Correspondência exata** — `modulo@versao|SPDX|resolucao`. Sem glob.
+2. **Entrada obsoleta** quebra o build (não apodrece após as remoções).
+3. **Só encolhe** — achado novo fora do baseline é vermelho, sempre.
+4. **Resolução obrigatória** — cada entrada declara como morre: `remocao:T-0XX` |
+   `eleicao:LICENSE_ELECTIONS.md` | `regime:ADR-0019`. Exigência de I-2.2 ser pétreo: as 3 MPL
+   não estão **aceitas**, estão em **quarentena com prazo**.
+5. **Vazio para fechar o pacote 001** — não-vazio no gate de fechamento ⇒ pacote não fecha;
+   vazio, a existência do arquivo é ela própria violação (autodestruição).
+
+Autoridade: `tools/licensegate` (`make sbom`) gerencia a quarentena com as cinco travas;
+`test/invariants` (INV-4, `make invariants`) lê o mesmo arquivo apenas para **tolerar** achados
+herdados, mantendo-se um teste que quebra o build para qualquer achado **novo**. Substitui e
+supera a "contagem em mensagem de commit": entrada removida do baseline é fato verificado pelo
+build, não prosa.
+
+**Achados enumerados do grafo de build real** (`go list -deps ./...`), nunca do `go.sum` — que
+retém módulos fora do build e geraria **achados fantasma**. Verificação de 2026-07-20: 297
+achados de licença, 0 fantasmas; contagem corrigida = **16 módulos** (7 MPL-2.0 + 9
+indeterminados), não 17 (os "17" eram por-pacote).
+
+Consequência: `make invariants` e `make sbom` verdes ⇒ `[x]` incremental por tarefa no Bloco 3;
+cada remoção **reduz o baseline de forma mecanicamente verificada**. T-018 e T-019a fecham
+quando o baseline entra e o gate fica verde — não dependem da ratificação; o que depende dela é
+o **esvaziamento das 3 entradas `regime:ADR-0019`**, condição de fechamento do pacote.
+
 ### Distinção: gate local verde × gate imposto (decisão de 2026-07-20)
 
 Dois conceitos que estavam colados e precisam ficar separados:

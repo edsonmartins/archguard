@@ -15,8 +15,11 @@
 package invariants
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -71,7 +74,13 @@ func classifyLicense(pkg, license string) string {
 	return fmt.Sprintf("INV-4: %s sob licença %s fora da matriz — classe de revisão obrigatória, aprovação caso a caso exigida (ADR-0002 §3)", pkg, license)
 }
 
-func classifyCSV(csv string) []string {
+// classifyCSV returns violations, tolerating findings whose module@version is
+// quarantined in license-baseline.txt. The authoritative quarantine manager
+// (with all five locks: exact match, stale-entry, shrink-only, resolution path,
+// empty-to-close) is tools/licensegate, run by `make sbom`; this suite reads the
+// same baseline file only to tolerate known-inherited findings, keeping INV-4 a
+// self-contained build-breaking check for any NEW violation.
+func classifyCSV(csv string, pkgMod, baseline map[string]string) []string {
 	var violations []string
 	for _, line := range strings.Split(csv, "\n") {
 		line = strings.TrimSpace(line)
@@ -83,11 +92,78 @@ func classifyCSV(csv string) []string {
 			violations = append(violations, fmt.Sprintf("INV-4: linha de relatório ilegível (fail-closed): %q", line))
 			continue
 		}
-		if v := classifyLicense(cols[0], cols[len(cols)-1]); v != "" {
+		pkg := cols[0]
+		if v := classifyLicense(pkg, cols[len(cols)-1]); v != "" {
+			if _, quarantined := baseline[resolveModuleVer(pkg, pkgMod)]; quarantined {
+				continue
+			}
 			violations = append(violations, v)
 		}
 	}
 	return violations
+}
+
+// resolveModuleVer maps a go-licenses finding path to module@version, falling
+// back to any build-graph package under the finding path.
+func resolveModuleVer(findingPath string, pkgMod map[string]string) string {
+	if mv, ok := pkgMod[findingPath]; ok {
+		return mv
+	}
+	for pkg, mv := range pkgMod {
+		if pkg == findingPath || strings.HasPrefix(pkg, findingPath+"/") {
+			return mv
+		}
+	}
+	return findingPath + "@?"
+}
+
+// baselineKeys reads the module@version keys quarantined in license-baseline.txt.
+func baselineKeys(t *testing.T, root string) map[string]string {
+	t.Helper()
+	keys := map[string]string{}
+	data, err := os.ReadFile(filepath.Join(root, "license-baseline.txt"))
+	if os.IsNotExist(err) {
+		return keys
+	}
+	if err != nil {
+		t.Fatalf("INV-4: baseline ilegível: %v", err)
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		if i := strings.Index(line, "|"); i > 0 {
+			keys[line[:i]] = line
+		}
+	}
+	return keys
+}
+
+// buildModuleMap maps each build-graph package to its module@version.
+func buildModuleMap(t *testing.T, root string) map[string]string {
+	t.Helper()
+	cmd := exec.Command("go", "list", "-deps", "-json", "./...")
+	cmd.Dir = root
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("INV-4: go list falhou: %v", err)
+	}
+	m := map[string]string{}
+	dec := json.NewDecoder(strings.NewReader(string(out)))
+	for {
+		var p struct {
+			ImportPath string
+			Module     *struct{ Path, Version string }
+		}
+		if err := dec.Decode(&p); err != nil {
+			break
+		}
+		if p.Module != nil && p.Module.Path != "" {
+			m[p.ImportPath] = p.Module.Path + "@" + p.Module.Version
+		}
+	}
+	return m
 }
 
 func TestINV4LicenseMatrix(t *testing.T) {
@@ -102,7 +178,9 @@ func TestINV4LicenseMatrix(t *testing.T) {
 		}
 		t.Fatalf("INV-4: scan de licenças falhou (fail-closed): %v\n%s", err, stderr)
 	}
-	for _, v := range classifyCSV(string(out)) {
+	pkgMod := buildModuleMap(t, root)
+	baseline := baselineKeys(t, root)
+	for _, v := range classifyCSV(string(out), pkgMod, baseline) {
 		t.Error(v)
 	}
 }

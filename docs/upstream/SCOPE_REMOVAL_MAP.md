@@ -5,11 +5,14 @@
 > que o ADR-0015 §"Negativas" adverte). Alimenta T-008…T-014 e o `DIVERGENCE.md`. Remoções em
 > commits pequenos e independentes, build+test a cada uma, contagem INV-4 antes/depois.
 
-## Contagem INV-4 de partida (2026-07-20)
+## Contagem INV-4 de partida (2026-07-20, verificada)
 
-17 achados: **7 MPL-2.0** (proibidas no regime vigente) + **~9 indeterminadas** (fail-closed) +
-0 GPL (goldap já removido em T-010a). Alvo: cada remoção abaixo reduz esta contagem de forma
-verificável.
+**16 módulos** (não 17 — os "17" eram por-pacote): **7 MPL-2.0** (proibidas no regime vigente)
++ **9 indeterminadas** (fail-closed) + 0 GPL (goldap já removido em T-010a). Achados enumerados
+do grafo de build real (`go list -deps ./...`), **0 fantasmas** de `go.sum` (297 achados de
+licença cruzados). Todos os 16 estão em quarentena no `license-baseline.txt` com caminho de
+resolução declarado. Alvo: cada remoção abaixo **remove a entrada correspondente do baseline**
+(fato verificado pelo build, trava (b)), não apenas reduz uma contagem em prosa.
 
 ## Alvos por tarefa
 

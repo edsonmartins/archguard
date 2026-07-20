@@ -93,7 +93,7 @@ func TestSelfINV4FailsClosedOnForbiddenConditionedAndUnknown(t *testing.T) {
 		"example.com/unk,https://x/LICENSE,Unknown",
 		"example.com/odd,https://x/LICENSE,EUPL-1.2",
 	}, "\n")
-	vs := classifyCSV(csv)
+	vs := classifyCSV(csv, nil, nil)
 	if len(vs) != 4 {
 		t.Fatalf("classificador INV-4 deveria acusar 4 de 5 (fail-closed), acusou %d: %v", len(vs), vs)
 	}
