@@ -85,7 +85,11 @@ func TestSelfINV3DetectsForbiddenImport(t *testing.T) {
 	}
 }
 
-func TestSelfINV4FailsClosedOnForbiddenConditionedAndUnknown(t *testing.T) {
+func TestSelfINV4FailsClosedOnForbiddenAndUnknown(t *testing.T) {
+	// Regime ADR-0019 (ratificado 2026-07-20): MIT permitida; MPL-2.0 (copyleft
+	// por arquivo, não modificada) permitida LINKADA — a suíte não a acusa, a
+	// modificação é decidida pelos detectores de transição do licensegate; GPL
+	// proibida; Unknown fail-closed; EUPL fora da matriz = revisão obrigatória.
 	csv := strings.Join([]string{
 		"example.com/ok,https://x/LICENSE,MIT",
 		"example.com/gpl,https://x/LICENSE,GPL-3.0",
@@ -94,12 +98,17 @@ func TestSelfINV4FailsClosedOnForbiddenConditionedAndUnknown(t *testing.T) {
 		"example.com/odd,https://x/LICENSE,EUPL-1.2",
 	}, "\n")
 	vs := classifyCSV(csv, nil, nil, nil)
-	if len(vs) != 4 {
-		t.Fatalf("classificador INV-4 deveria acusar 4 de 5 (fail-closed), acusou %d: %v", len(vs), vs)
+	if len(vs) != 3 {
+		t.Fatalf("classificador INV-4 deveria acusar 3 de 5 (GPL, Unknown, EUPL), acusou %d: %v", len(vs), vs)
 	}
-	for _, needle := range []string{"PROIBIDA", "condicionada", "não determinável", "revisão obrigatória"} {
-		if !strings.Contains(strings.Join(vs, "\n"), needle) {
+	joined := strings.Join(vs, "\n")
+	for _, needle := range []string{"PROIBIDA", "não determinável", "revisão obrigatória"} {
+		if !strings.Contains(joined, needle) {
 			t.Errorf("classificação esperada ausente: %s", needle)
 		}
+	}
+	// A MPL não modificada NÃO pode ser acusada pela suíte (ADR-0019).
+	if strings.Contains(joined, "example.com/mpl") {
+		t.Errorf("MPL-2.0 não modificada não deveria ser acusada pela suíte INV-4 (ADR-0019): %v", vs)
 	}
 }
