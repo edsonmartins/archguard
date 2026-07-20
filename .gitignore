@@ -42,3 +42,6 @@ web/cypress/screenshots/
 
 # ArchGuard
 .DS_Store
+
+# Artefatos de build gerados
+/sbom.json

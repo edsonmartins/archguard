@@ -118,10 +118,14 @@ func stripHashLines(s string) string {
 }
 
 func main() {
-	root, err := os.Getwd()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(2)
+	// Repo root is passed as argv[1] because this command lives in the nested
+	// `tools` module: when invoked via `go run -C tools`, the working directory
+	// is tools/, not the repository root.
+	root := "."
+	if len(os.Args) > 1 {
+		root = os.Args[1]
+	} else if wd, err := os.Getwd(); err == nil {
+		root = wd
 	}
 	baseline, err := loadBaseline(filepath.Join(root, baselineFile))
 	if err != nil {
