@@ -24,9 +24,29 @@
       índices por identity e por organization. Verificado em PG15 real: FKs, CHECK, NULL-sem-
       default e UNIQUE rejeitam inválidos; backfill de orgs pré-existentes com ids distintos.
       Gate local verde.)*
-- [ ] **T-003** Introduzir `email_hash` (HMAC) com índice único e caminho de login por hash.
-- [ ] **T-004** Introduzir interface `KeyCustodian` (implementação provisória marcada como
-      não suportada em produção).
+- [x] **T-004** Introduzir interface `KeyCustodian` (implementação provisória marcada como
+      não suportada em produção). *(Feito ANTES do T-003 por dependência: o `email_hash` precisa
+      da chave de deployment do custodiante. Porto `internal/domain/keycustodian.go`:
+      `KeyCustodian.HashEmail(email) → []byte` (a chave nunca sai do custodiante) + `NormalizeEmail`
+      (trim + lowercase Unicode; decisão do arquiteto: SEM canonicalização agressiva — fundir
+      titulares é inaceitável num PAM). Impl. provisória `internal/adapters/keycustodian`:
+      HMAC-SHA256, chave ≥ 256 bits com cópia defensiva, **marcada não-produção** (custódia/rotação
+      real = pacote 010/OpenBao). Unitários: determinismo, normalização, chave distinta → hash
+      distinto, rejeição de e-mail vazio e de chave fraca.)*
+- [x] **T-003** Introduzir `email_hash` (HMAC) com índice único e caminho de login por hash.
+      *(Migration `0005_identity_email_hash_unique.sql`: índice ÚNICO PARCIAL em
+      `identity(email_hash) WHERE email_hash IS NOT NULL` — contas de serviço/deprovisionadas sem
+      e-mail não colidem. `IdentityStore` pgx (`internal/adapters/postgres/identity_store.go`):
+      Create + FindByEmailHash + FindByEmail (login por hash: hasheia via custodiante e busca por
+      email_hash, nunca compara plaintext). Identity é cross-tenant → store sem contexto de tenant
+      (distinto do T-008); UUID trafega como texto (sem depender do codec pgx). Verificado em PG15
+      real: login case-insensitive acha a mesma identidade, unicidade de email_hash, not-found,
+      não-colisão de contas sem e-mail. Gate local verde.
+      **Achado de conformidade (I-3.3 pétreo):** os campos pessoais de 0002/0004
+      (primary_email_enc, email_hash, display_name_enc, attributes_enc) estavam SEM classificação
+      LGPD. Remediado na migration `0006_lgpd_classification.sql` (COMMENT ON COLUMN com categoria/
+      finalidade/base legal/retenção), com teste que exige a classificação. **Follow-up:** falta o
+      gate automatizado que REJEITE campo pessoal novo sem classificação — registrar no pacote 010.)*
 - [ ] **T-005** Migrar credenciais e fatores MFA para a identidade.
 - [ ] **T-006** Repontar papéis e permissões para `membership_id`.
 - [ ] **T-007** Backfill de `organization_id` nas tabelas de domínio.

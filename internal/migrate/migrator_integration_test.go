@@ -17,6 +17,7 @@ package migrate
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -201,6 +202,44 @@ func TestRunCreatesMembershipConstraints(t *testing.T) {
 	mustReject(t, conn, "par (identity_id, organization_id) duplicado (R3)",
 		"INSERT INTO membership (id, identity_id, organization_id, status) VALUES (gen_random_uuid(), $1, $2, 'invited')",
 		idnID, orgID)
+}
+
+// TestPersonalColumnsAreLGPDClassified proves the personal-data columns carry a
+// LGPD classification in the catalog (migration 0006), the I-3.3 requirement:
+// categoria, finalidade, base legal e retenção declaradas no modelo de dados.
+func TestPersonalColumnsAreLGPDClassified(t *testing.T) {
+	dsn := dsnFromEnv(t)
+	ctx := context.Background()
+	seedLegacyOrganization(t, connect(t, dsn))
+	if err := Run(ctx, dsn); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	conn := connect(t, dsn)
+
+	for _, col := range []struct{ table, column string }{
+		{"identity", "primary_email_enc"},
+		{"identity", "email_hash"},
+		{"identity", "display_name_enc"},
+		{"membership", "attributes_enc"},
+	} {
+		var comment *string
+		err := conn.QueryRow(ctx, `
+			SELECT col_description(($1||'.'||$2)::regclass, a.attnum)
+			FROM pg_attribute a
+			WHERE a.attrelid = ($1||'.'||$2)::regclass AND a.attname = $3`,
+			"public", col.table, col.column).Scan(&comment)
+		if err != nil {
+			t.Fatalf("%s.%s: leitura do comentário: %v", col.table, col.column, err)
+		}
+		if comment == nil || !strings.HasPrefix(*comment, "LGPD |") {
+			t.Errorf("%s.%s sem classificação LGPD (I-3.3): %v", col.table, col.column, comment)
+		}
+		for _, needle := range []string{"categoria=", "finalidade=", "base_legal=", "retencao="} {
+			if comment == nil || !strings.Contains(*comment, needle) {
+				t.Errorf("%s.%s: classificação LGPD sem %q", col.table, col.column, needle)
+			}
+		}
+	}
 }
 
 // mustReject asserts that an INSERT/UPDATE is rejected by the database. It runs
