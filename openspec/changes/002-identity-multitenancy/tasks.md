@@ -11,7 +11,19 @@
       login por hash ficam no T-003). Verificado em PostgreSQL 15 real: estrutura, idempotência,
       CHECKs e UNIQUE rejeitam inválidos, defaults. Teste de integração do migrator gated por
       `ARCHGUARD_TEST_DSN` (pula sem PG); domínio 100% unitário. Gate local verde.)*
-- [ ] **T-002** Modelar e migrar `membership` com unicidade `(identity_id, organization_id)`.
+- [x] **T-002** Modelar e migrar `membership` com unicidade `(identity_id, organization_id)`.
+      *(Decisão do arquiteto sobre `organization_id`: `organization` ganha `id uuid` estável
+      (migration `0003_organization_stable_id.sql`, DEFAULT gen_random_uuid + índice único;
+      backfill por linha validado; struct XORM intocado — id lido via pgx, RFC §5). Domínio
+      `internal/domain/membership.go`: `Membership` com `MembershipStatus`
+      (invited|active|suspended|revoked) e máquina de estados invited→active→suspended⇄active,
+      qualquer→revoked (terminal, R4); `NewMembership` (direto=active), `NewInvitedMembership`
+      (invited + invitedBy); atributos de tenant como ciphertext `[]byte`. Migration
+      `0004_create_membership.sql`: FKs para identity(id) e organization(id), status NOT NULL SEM
+      default (força invited/active explícito), UNIQUE (identity_id, organization_id) = R3,
+      índices por identity e por organization. Verificado em PG15 real: FKs, CHECK, NULL-sem-
+      default e UNIQUE rejeitam inválidos; backfill de orgs pré-existentes com ids distintos.
+      Gate local verde.)*
 - [ ] **T-003** Introduzir `email_hash` (HMAC) com índice único e caminho de login por hash.
 - [ ] **T-004** Introduzir interface `KeyCustodian` (implementação provisória marcada como
       não suportada em produção).

@@ -7,6 +7,22 @@ Base normativa: RFC-0002.
 Novas tabelas: `identity`, `membership`. `organization` estendida com políticas.
 Tabelas herdadas de usuário são migradas e passam a apontar para `identity`/`membership`.
 
+### Decisão — chave de tenant `organization_id` (2026-07-20, arquiteto)
+
+A `organization` herdada do Casdoor tem PK composta em string `(owner, name)`; `name` é
+renomeável, logo é fronteira de isolamento inadequada. **Decisão:** a `organization` ganha uma
+coluna **`id uuid` estável** (migration 0003, `DEFAULT gen_random_uuid()` — backfill por linha
+das orgs existentes, id automático nas inserções legadas). `membership.organization_id`, toda
+`organization_id` de tabela de domínio e a **chave de RLS** (Barreira 2) passam a referenciar
+esse UUID, desacoplando o isolamento do nome mutável. A PK legada composta permanece intacta; o
+struct Go de `organization` **não** ganha o campo (a camada de tenancy nova lê o id via pgx,
+mantendo o mundo novo fora do XORM — RFC-0002 §5). Alternativas rejeitadas: usar `name` como
+chave (mutável, text pesado p/ RLS); reimplementar `organization` em pgx agora (escopo grande,
+antecipa outros pacotes).
+
+Pré-requisito de ordem: as migrations rodam **após** o Sync2 do XORM (RUNBOOK), então a
+`organization` já existe quando a 0003 a estende — em instalação nova e existente.
+
 Campos pessoais (`primary_email_enc`, `display_name_enc`, `attributes_enc`) são cifrados por
 chave de titular; `email_hash` (HMAC com chave de deployment) sustenta unicidade e login sem
 descriptografar. A gestão de chaves entra plenamente no pacote 010 — aqui a interface
