@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -184,6 +185,13 @@ type AuditEvent struct {
 	Outcome Outcome
 	Reason  string
 	Context AuditContext
+	// OccurredAt is the trusted-time-source timestamp of the event (RFC-0003
+	// §2). It is stamped by the write path (T-004) from a trusted clock, NOT by
+	// the domain constructor, so the domain stays free of the wall clock; it is
+	// part of the canonical content (tampering with the time must be
+	// detectable). Canonicalization truncates it to microseconds — the storage
+	// precision — so a verifier reproduces the exact bytes from the stored row.
+	OccurredAt time.Time
 }
 
 // SerializedOutcome maps the domain outcome to the RFC-0003 §2 wire form:

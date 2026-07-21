@@ -16,7 +16,21 @@
       LGPD dos campos de origem (IP/UA) fica no COMMENT da tabela (T-005). Sem relógio no domínio
       (occurred_at carimbado na escrita). Testes cobrem catálogo fechado+níveis, sucesso/negado/
       erro, rejeições do construtor, composição do SealedEvent. Gate verde.)*
-- [ ] **T-002** Implementar canonicalização determinística + testes de vetor fixo.
+- [x] **T-002** Implementar canonicalização determinística + testes de vetor fixo. *(Domínio
+      `internal/domain/audit_canonical.go`: `Canonical(AuditEvent) []byte` — a entrada exata da
+      cadeia de hash (RFC-0003 §3). Decisão (§7, sem dependência nova): JSON canônico PRÓPRIO
+      sobre o schema fechado — chaves ordenadas (encoding/json ordena `map[string]any`), HTML
+      escaping OFF, strings normalizadas a **NFC** (`golang.org/x/text/unicode/norm`, já na
+      árvore, BSD-3), `occurred_at` como microssegundos inteiros UTC (precisão do timestamptz,
+      round-trip determinístico da linha), ponteiros nil (membership/session/act) OMITIDOS. Os
+      campos de cadeia (seq/prev_hash/hash) são AUSENTES por construção (vivem no SealedEvent) —
+      nunca vazam para o próprio hash. `occurred_at` adicionado ao AuditEvent (campo normativo,
+      carimbado na escrita, precisa ser hasheado — adulterar tempo tem de ser detectável).
+      **Testes de vetor fixo**: bytes canônicos exatos + SHA-256 golden de um evento totalmente
+      especificado (drift silencioso quebra o build = invalida verificação histórica);
+      determinismo, NFC (é composto == e+acento combinante), sensibilidade (mutar qualquer campo
+      muda os bytes), truncamento a microssegundo. Gate verde; go.mod/sum intactos; baseline de
+      licença inalterado.)*
 - [ ] **T-003** Implementar encadeamento por hash com `seq` por organização.
 - [ ] **T-004** Implementar serialização de escrita por tenant (sem lacunas, sem corrida).
 - [ ] **T-005** Criar tabela particionada por tempo e índices de consulta.
