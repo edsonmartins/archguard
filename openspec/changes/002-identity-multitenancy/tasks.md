@@ -239,7 +239,19 @@
       WebAuthn (multi-slot) e cada fator de slot único não carregado vai para `DroppedFactors`
       — nada descartado em silêncio, e a identidade fundida não perde TIPO de fator (gate do
       pacote). Unitários cobrem todas as recusas e o caminho feliz. Gate verde.)*
-- [ ] **T-017** Testes de travessia entre tenants (barreira 1 e barreira 2 isoladamente).
+- [x] **T-017** Testes de travessia entre tenants (barreira 1 e barreira 2 isoladamente).
+      *(Suíte dedicada `test/invariants/inv5_traversal_test.go` — INV-5/I-6.3 na suíte que
+      QUEBRA O BUILD (`make invariants`), como o RFC-0002 §4 exige. Fixture: identidade com
+      membership+papel+sessão em A e em B. **Barreira 1 ISOLADA** (= RLS desligada): roda como
+      superusuário, que ignora RLS — todo isolamento observado é dos predicados/guardas;
+      leitura de B por stores escopados em A vazia/not-found nas 3 tabelas novas, escrita
+      cross-tenant recusada, escopo nulo recusado. **Barreira 2 ISOLADA** (= aplicação
+      contornada): papel NOBYPASSRLS executa SQL cru SEM predicado de aplicação — contexto de A
+      vê A e NÃO vê B (membership, role_assignment, auth_session), sem contexto não vê nada,
+      WITH CHECK barra INSERT de linha de B sob contexto de A. Bônus: `TestINV5RLSStaysEnabled`
+      trava ENABLE+FORCE nas 3 tabelas (migration futura que desligue RLS quebra o build).
+      Gated por `ARCHGUARD_TEST_DSN` (o CI deve prover PG para o gate valer — nota p/ pacote
+      001/CI diferido). Gate verde.)*
 - [ ] **T-018** Teste automatizado que rejeita query sem predicado de tenant.
 - [ ] **T-019** Ensaio de migração em cópia de produção e relatório de resultado.
 - [ ] **T-020** Atualizar `DIVERGENCE.md` com o escopo da divergência de modelo de dados.
