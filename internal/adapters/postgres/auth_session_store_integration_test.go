@@ -109,23 +109,68 @@ func makeSessionFixture(t *testing.T, pool *pgxpool.Pool, label string) sessionF
 	return fx
 }
 
+// --- helpers: each store operation in one identity-pinned transaction ---
+
+func inIdentityTx(pool *pgxpool.Pool, scope domain.IdentityScope, fn func(*IdentitySessionStore) error) error {
+	return NewIdentityRepository(pool, scope).WithIdentityTx(context.Background(),
+		func(itx *IdentityTx) error { return fn(NewIdentitySessionStore(itx)) })
+}
+
+func createSession(pool *pgxpool.Pool, scope domain.IdentityScope, as domain.AuthSession) error {
+	return inIdentityTx(pool, scope, func(s *IdentitySessionStore) error {
+		return s.Create(context.Background(), as)
+	})
+}
+
+func getSession(pool *pgxpool.Pool, scope domain.IdentityScope, id uuid.UUID) (domain.AuthSession, error) {
+	var out domain.AuthSession
+	err := inIdentityTx(pool, scope, func(s *IdentitySessionStore) error {
+		var e error
+		out, e = s.Get(context.Background(), id)
+		return e
+	})
+	return out, err
+}
+
+// --- test doubles for the tenant-switch ports ---
+
+type staticAALPolicy struct {
+	aal domain.AAL
+	err error
+}
+
+func (p staticAALPolicy) RequiredAAL(_ context.Context, _ uuid.UUID) (domain.AAL, error) {
+	return p.aal, p.err
+}
+
+type memSwitchAuditor struct{ events []domain.TenantSwitchEvent }
+
+func (m *memSwitchAuditor) RecordTenantSwitch(_ context.Context, ev domain.TenantSwitchEvent) error {
+	m.events = append(m.events, ev)
+	return nil
+}
+
+type failSwitchAuditor struct{}
+
+func (failSwitchAuditor) RecordTenantSwitch(_ context.Context, _ domain.TenantSwitchEvent) error {
+	return errors.New("trilha indisponível")
+}
+
 // Um membership ativo: a sessão nasce ativa (auto-seleção) e persiste com o
 // contexto de tenant resolvido.
 func TestAuthSessionSingleMembershipAutoSelects(t *testing.T) {
 	pool := setupTenantPool(t)
-	ctx := context.Background()
 	fx := makeSessionFixture(t, pool, "auto")
 
 	sess, err := domain.NewAuthSession(fx.other.ID, domain.AAL2, []domain.Membership{fx.otherMemA})
 	if err != nil {
 		t.Fatalf("NewAuthSession: %v", err)
 	}
-	store := NewIdentitySessionStore(pool, fx.scopeOther)
-	if err := store.Create(ctx, sess); err != nil {
+	if err := createSession(pool, fx.scopeOther, sess); err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 
-	got, err := store.Get(ctx, sess.ID)
+	got, err := getSession(pool, fx.scopeOther, sess.ID)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
@@ -136,8 +181,8 @@ func TestAuthSessionSingleMembershipAutoSelects(t *testing.T) {
 	if mem != fx.otherMemA.ID || org != fx.orgA {
 		t.Fatalf("tenant ativo = (%s, %s), quero (%s, %s)", mem, org, fx.otherMemA.ID, fx.orgA)
 	}
-	if got.ProvenAAL != domain.AAL2 {
-		t.Fatalf("ProvenAAL = %s, quero aal2", got.ProvenAAL)
+	if got.ProvenAAL != domain.AAL2 || got.TokenGeneration != 1 {
+		t.Fatalf("aal/geração = %s/%d, quero aal2/1", got.ProvenAAL, got.TokenGeneration)
 	}
 }
 
@@ -153,12 +198,11 @@ func TestAuthSessionMultiMembershipRequiresSelection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewAuthSession: %v", err)
 	}
-	store := NewIdentitySessionStore(pool, fx.scopeIdn)
-	if err := store.Create(ctx, sess); err != nil {
+	if err := createSession(pool, fx.scopeIdn, sess); err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 
-	got, err := store.Get(ctx, sess.ID)
+	got, err := getSession(pool, fx.scopeIdn, sess.ID)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
@@ -172,12 +216,14 @@ func TestAuthSessionMultiMembershipRequiresSelection(t *testing.T) {
 	if err := got.SelectTenant(fx.memB); err != nil {
 		t.Fatalf("SelectTenant: %v", err)
 	}
-	if err := store.SaveSelection(ctx, got); err != nil {
+	if err := inIdentityTx(pool, fx.scopeIdn, func(s *IdentitySessionStore) error {
+		return s.SaveSelection(ctx, got)
+	}); err != nil {
 		t.Fatalf("SaveSelection: %v", err)
 	}
 
 	// Reler: a seleção persistiu; repetir a gravação falha (não está mais pendente).
-	reread, err := store.Get(ctx, sess.ID)
+	reread, err := getSession(pool, fx.scopeIdn, sess.ID)
 	if err != nil {
 		t.Fatalf("Get pós-seleção: %v", err)
 	}
@@ -188,7 +234,9 @@ func TestAuthSessionMultiMembershipRequiresSelection(t *testing.T) {
 	if mem != fx.memB.ID || org != fx.orgB {
 		t.Fatalf("tenant ativo = (%s, %s), quero o selecionado (%s, %s)", mem, org, fx.memB.ID, fx.orgB)
 	}
-	if err := store.SaveSelection(ctx, got); !errors.Is(err, ErrSessionNotPending) {
+	if err := inIdentityTx(pool, fx.scopeIdn, func(s *IdentitySessionStore) error {
+		return s.SaveSelection(ctx, got)
+	}); !errors.Is(err, ErrSessionNotPending) {
 		t.Fatalf("re-seleção: err = %v, quero ErrSessionNotPending", err)
 	}
 }
@@ -205,8 +253,7 @@ func TestAuthSessionDatabaseShapeGuards(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewAuthSession: %v", err)
 	}
-	store := NewIdentitySessionStore(pool, fx.scopeIdn)
-	if err := store.Create(ctx, sess); err != nil {
+	if err := createSession(pool, fx.scopeIdn, sess); err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 
@@ -245,19 +292,19 @@ func TestAuthSessionIdentityIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewAuthSession: %v", err)
 	}
-	own := NewIdentitySessionStore(pool, fx.scopeIdn)
-	if err := own.Create(ctx, sess); err != nil {
+	if err := createSession(pool, fx.scopeIdn, sess); err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 
-	foreign := NewIdentitySessionStore(pool, fx.scopeOther)
-	if _, err := foreign.Get(ctx, sess.ID); !errors.Is(err, ErrSessionNotFound) {
+	if _, err := getSession(pool, fx.scopeOther, sess.ID); !errors.Is(err, ErrSessionNotFound) {
 		t.Fatalf("Get alheio: err = %v, quero ErrSessionNotFound", err)
 	}
-	if err := foreign.Create(ctx, sess); !errors.Is(err, ErrCrossIdentityWrite) {
+	if err := createSession(pool, fx.scopeOther, sess); !errors.Is(err, ErrCrossIdentityWrite) {
 		t.Fatalf("Create alheio: err = %v, quero ErrCrossIdentityWrite", err)
 	}
-	if err := foreign.Revoke(ctx, sess.ID); !errors.Is(err, ErrSessionNotFound) {
+	if err := inIdentityTx(pool, fx.scopeOther, func(s *IdentitySessionStore) error {
+		return s.Revoke(ctx, sess.ID)
+	}); !errors.Is(err, ErrSessionNotFound) {
 		t.Fatalf("Revoke alheio: err = %v, quero ErrSessionNotFound", err)
 	}
 }
@@ -278,8 +325,7 @@ func TestTenantSessionStoreListsOnlyOwnActiveSessions(t *testing.T) {
 	if err := inB.SelectTenant(fx.memB); err != nil {
 		t.Fatalf("SelectTenant: %v", err)
 	}
-	storeIdn := NewIdentitySessionStore(pool, fx.scopeIdn)
-	if err := storeIdn.Create(ctx, inB); err != nil {
+	if err := createSession(pool, fx.scopeIdn, inB); err != nil {
 		t.Fatalf("Create inB: %v", err)
 	}
 	// Sessão pendente da mesma identidade (sem tenant) — invisível para ambos.
@@ -288,7 +334,7 @@ func TestTenantSessionStoreListsOnlyOwnActiveSessions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewAuthSession pendente: %v", err)
 	}
-	if err := storeIdn.Create(ctx, pending); err != nil {
+	if err := createSession(pool, fx.scopeIdn, pending); err != nil {
 		t.Fatalf("Create pendente: %v", err)
 	}
 	// Sessão da outra identidade, ativa em A.
@@ -297,7 +343,7 @@ func TestTenantSessionStoreListsOnlyOwnActiveSessions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewAuthSession other: %v", err)
 	}
-	if err := NewIdentitySessionStore(pool, fx.scopeOther).Create(ctx, inA); err != nil {
+	if err := createSession(pool, fx.scopeOther, inA); err != nil {
 		t.Fatalf("Create inA: %v", err)
 	}
 
@@ -335,15 +381,19 @@ func TestAuthSessionRevoke(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewAuthSession: %v", err)
 	}
-	store := NewIdentitySessionStore(pool, fx.scopeOther)
-	if err := store.Create(ctx, sess); err != nil {
+	if err := createSession(pool, fx.scopeOther, sess); err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 
-	if err := store.Revoke(ctx, sess.ID); err != nil {
+	revoke := func() error {
+		return inIdentityTx(pool, fx.scopeOther, func(s *IdentitySessionStore) error {
+			return s.Revoke(ctx, sess.ID)
+		})
+	}
+	if err := revoke(); err != nil {
 		t.Fatalf("Revoke: %v", err)
 	}
-	first, err := store.Get(ctx, sess.ID)
+	first, err := getSession(pool, fx.scopeOther, sess.ID)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
@@ -355,10 +405,10 @@ func TestAuthSessionRevoke(t *testing.T) {
 	}
 
 	// Idempotência: revogar de novo não erra nem move revoked_at.
-	if err := store.Revoke(ctx, sess.ID); err != nil {
+	if err := revoke(); err != nil {
 		t.Fatalf("Revoke idempotente: %v", err)
 	}
-	second, err := store.Get(ctx, sess.ID)
+	second, err := getSession(pool, fx.scopeOther, sess.ID)
 	if err != nil {
 		t.Fatalf("Get 2: %v", err)
 	}
@@ -367,5 +417,327 @@ func TestAuthSessionRevoke(t *testing.T) {
 	}
 	if _, _, err := second.ActiveTenant(); !errors.Is(err, domain.ErrSessionRevoked) {
 		t.Fatalf("ActiveTenant revogada: err = %v, quero ErrSessionRevoked", err)
+	}
+}
+
+// --- T-012: troca de tenant ---
+
+// activeSessionInA persists a session for fx.identity with tenant A selected.
+func activeSessionInA(t *testing.T, pool *pgxpool.Pool, fx sessionFixture) domain.AuthSession {
+	t.Helper()
+	sess, err := domain.NewAuthSession(fx.identity.ID, domain.AAL1,
+		[]domain.Membership{fx.memA, fx.memB})
+	if err != nil {
+		t.Fatalf("NewAuthSession: %v", err)
+	}
+	if err := sess.SelectTenant(fx.memA); err != nil {
+		t.Fatalf("SelectTenant: %v", err)
+	}
+	if err := createSession(pool, fx.scopeIdn, sess); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	return sess
+}
+
+// Cenário "Troca de tenant": novo contexto com o org do destino, geração de
+// token incrementada (o token anterior nunca coincide com a geração corrente) e
+// evento de auditoria registrado com origem e destino.
+func TestTenantSwitchReissuesAndAudits(t *testing.T) {
+	pool := setupTenantPool(t)
+	ctx := context.Background()
+	fx := makeSessionFixture(t, pool, "sw")
+	sess := activeSessionInA(t, pool, fx)
+
+	before, err := sess.TokenContext(fx.identity)
+	if err != nil {
+		t.Fatalf("TokenContext antes: %v", err)
+	}
+
+	aud := &memSwitchAuditor{}
+	sw := NewTenantSwitcher(NewIdentityRepository(pool, fx.scopeIdn),
+		staticAALPolicy{aal: domain.AAL1}, aud)
+	got, err := sw.Switch(ctx, sess.ID, fx.memB)
+	if err != nil {
+		t.Fatalf("Switch: %v", err)
+	}
+
+	// O que voltou e o que está no banco: destino B, geração 2.
+	persisted, err := getSession(pool, fx.scopeIdn, sess.ID)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	for name, s := range map[string]domain.AuthSession{"retorno": got, "banco": persisted} {
+		mem, org, err := s.ActiveTenant()
+		if err != nil {
+			t.Fatalf("%s: ActiveTenant: %v", name, err)
+		}
+		if mem != fx.memB.ID || org != fx.orgB {
+			t.Fatalf("%s: tenant = (%s, %s), quero o destino B", name, mem, org)
+		}
+		if s.TokenGeneration != 2 {
+			t.Fatalf("%s: geração = %d, quero 2", name, s.TokenGeneration)
+		}
+	}
+
+	// O novo token carrega o org do destino e geração nova — o anterior (geração
+	// 1, org A) nunca valida contra a sessão atual.
+	after, err := got.TokenContext(fx.identity)
+	if err != nil {
+		t.Fatalf("TokenContext depois: %v", err)
+	}
+	if after.OrganizationID != fx.orgB || after.TokenGeneration <= before.TokenGeneration {
+		t.Fatalf("claims novos errados: %+v (antes %+v)", after, before)
+	}
+
+	// Evento de auditoria: exatamente um, de A para B, com a geração nova.
+	if len(aud.events) != 1 {
+		t.Fatalf("quero 1 evento de troca auditado, veio %d", len(aud.events))
+	}
+	ev := aud.events[0]
+	if ev.SessionID != sess.ID || ev.FromOrganizationID != fx.orgA ||
+		ev.ToOrganizationID != fx.orgB || ev.TokenGeneration != 2 {
+		t.Fatalf("evento errado: %+v", ev)
+	}
+
+	// Mesmo destino de novo: não é troca — recusa sem novo evento.
+	if _, err := sw.Switch(ctx, sess.ID, fx.memB); !errors.Is(err, domain.ErrSameTenant) {
+		t.Fatalf("mesmo tenant: err = %v, quero ErrSameTenant", err)
+	}
+	if len(aud.events) != 1 {
+		t.Fatalf("recusa não pode gerar evento: %d", len(aud.events))
+	}
+}
+
+// Cenário "Política mais restritiva no destino": destino exige AAL3, sessão
+// comprovou AAL1 ⇒ troca negada, nada muda, nada é auditado como troca.
+func TestTenantSwitchStepUpDenied(t *testing.T) {
+	pool := setupTenantPool(t)
+	ctx := context.Background()
+	fx := makeSessionFixture(t, pool, "stepup")
+	sess := activeSessionInA(t, pool, fx)
+
+	aud := &memSwitchAuditor{}
+	sw := NewTenantSwitcher(NewIdentityRepository(pool, fx.scopeIdn),
+		staticAALPolicy{aal: domain.AAL3}, aud)
+	if _, err := sw.Switch(ctx, sess.ID, fx.memB); !errors.Is(err, domain.ErrStepUpRequired) {
+		t.Fatalf("Switch: err = %v, quero ErrStepUpRequired", err)
+	}
+
+	persisted, err := getSession(pool, fx.scopeIdn, sess.ID)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	mem, _, err := persisted.ActiveTenant()
+	if err != nil || mem != fx.memA.ID || persisted.TokenGeneration != 1 {
+		t.Fatalf("troca negada não pode alterar a sessão: mem=%s gen=%d err=%v",
+			mem, persisted.TokenGeneration, err)
+	}
+	if len(aud.events) != 0 {
+		t.Fatalf("troca negada não pode ser auditada como troca: %d eventos", len(aud.events))
+	}
+}
+
+// INV-6: política do destino indisponível ⇒ negação, nunca fail-open.
+func TestTenantSwitchPolicyErrorDenies(t *testing.T) {
+	pool := setupTenantPool(t)
+	ctx := context.Background()
+	fx := makeSessionFixture(t, pool, "pol")
+	sess := activeSessionInA(t, pool, fx)
+
+	sw := NewTenantSwitcher(NewIdentityRepository(pool, fx.scopeIdn),
+		staticAALPolicy{err: errors.New("pdp fora do ar")}, &memSwitchAuditor{})
+	if _, err := sw.Switch(ctx, sess.ID, fx.memB); !errors.Is(err, domain.ErrDestinationPolicyUnavailable) {
+		t.Fatalf("Switch: err = %v, quero ErrDestinationPolicyUnavailable", err)
+	}
+
+	persisted, err := getSession(pool, fx.scopeIdn, sess.ID)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if mem, _, _ := persisted.ActiveTenant(); mem != fx.memA.ID || persisted.TokenGeneration != 1 {
+		t.Fatalf("negação por política não pode alterar a sessão")
+	}
+}
+
+// I-5.4: se o evento de troca não pode ser registrado, a troca é desfeita —
+// o UPDATE roda na mesma transação e o rollback o descarta.
+func TestTenantSwitchAuditFailureRollsBack(t *testing.T) {
+	pool := setupTenantPool(t)
+	ctx := context.Background()
+	fx := makeSessionFixture(t, pool, "audfail")
+	sess := activeSessionInA(t, pool, fx)
+
+	sw := NewTenantSwitcher(NewIdentityRepository(pool, fx.scopeIdn),
+		staticAALPolicy{aal: domain.AAL1}, failSwitchAuditor{})
+	if _, err := sw.Switch(ctx, sess.ID, fx.memB); !errors.Is(err, domain.ErrSwitchAuditUnavailable) {
+		t.Fatalf("Switch: err = %v, quero ErrSwitchAuditUnavailable", err)
+	}
+
+	persisted, err := getSession(pool, fx.scopeIdn, sess.ID)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	mem, org, err := persisted.ActiveTenant()
+	if err != nil {
+		t.Fatalf("ActiveTenant: %v", err)
+	}
+	if mem != fx.memA.ID || org != fx.orgA || persisted.TokenGeneration != 1 {
+		t.Fatalf("troca sem auditoria deveria ter sido desfeita: mem=%s org=%s gen=%d",
+			mem, org, persisted.TokenGeneration)
+	}
+}
+
+// A gravação da troca é otimista: origem/geração esperadas que não batem com o
+// banco (sessão mudou concorrentemente) não atualizam nada.
+func TestSaveSwitchConflict(t *testing.T) {
+	pool := setupTenantPool(t)
+	ctx := context.Background()
+	fx := makeSessionFixture(t, pool, "conflict")
+	sess := activeSessionInA(t, pool, fx)
+
+	moved := sess
+	if _, err := moved.SwitchTenant(fx.memB, domain.AAL1); err != nil {
+		t.Fatalf("SwitchTenant: %v", err)
+	}
+
+	// Geração esperada errada (como se outra troca tivesse ocorrido no meio).
+	if err := inIdentityTx(pool, fx.scopeIdn, func(s *IdentitySessionStore) error {
+		return s.SaveSwitch(ctx, moved, fx.memA.ID, 99)
+	}); !errors.Is(err, ErrSwitchConflict) {
+		t.Fatalf("geração divergente: err = %v, quero ErrSwitchConflict", err)
+	}
+	// Origem esperada errada.
+	if err := inIdentityTx(pool, fx.scopeIdn, func(s *IdentitySessionStore) error {
+		return s.SaveSwitch(ctx, moved, fx.memB.ID, 1)
+	}); !errors.Is(err, ErrSwitchConflict) {
+		t.Fatalf("origem divergente: err = %v, quero ErrSwitchConflict", err)
+	}
+	// Esperados corretos aplicam.
+	if err := inIdentityTx(pool, fx.scopeIdn, func(s *IdentitySessionStore) error {
+		return s.SaveSwitch(ctx, moved, fx.memA.ID, 1)
+	}); err != nil {
+		t.Fatalf("SaveSwitch: %v", err)
+	}
+}
+
+// --- Barreira 2 (RLS da auth_session, migration 0013), como papel não-superusuário ---
+
+func TestAuthSessionRLSIsolation(t *testing.T) {
+	pool := setupTenantPool(t)
+	ctx := context.Background()
+	grantRLSRole(t, pool)
+	fx := makeSessionFixture(t, pool, "rls")
+
+	// Semeia como SUPERUSUÁRIO (ignora RLS): uma sessão PENDENTE da identidade
+	// principal (sem organização) e uma ATIVA da outra identidade em A.
+	pendingID := uuid.New()
+	if _, err := pool.Exec(ctx,
+		"INSERT INTO auth_session (id, identity_id, status, proven_aal) VALUES ($1, $2, 'pending_selection', 'aal1')",
+		pendingID.String(), fx.identity.ID.String()); err != nil {
+		t.Fatalf("seed pendente: %v", err)
+	}
+	activeID := uuid.New()
+	if _, err := pool.Exec(ctx,
+		`INSERT INTO auth_session (id, identity_id, membership_id, organization_id, status, proven_aal)
+		 VALUES ($1, $2, $3, $4, 'active', 'aal1')`,
+		activeID.String(), fx.other.ID.String(), fx.otherMemA.ID.String(), fx.orgA.String()); err != nil {
+		t.Fatalf("seed ativa: %v", err)
+	}
+
+	// visible executa como o papel NOBYPASSRLS com os contextos dados e devolve
+	// quais das duas sessões a RLS deixa ver.
+	visible := func(t *testing.T, identityCtx, orgCtx *uuid.UUID, globalRead bool) (pending, active bool) {
+		t.Helper()
+		conn, err := pool.Acquire(ctx)
+		if err != nil {
+			t.Fatalf("acquire: %v", err)
+		}
+		defer conn.Release()
+		tx, err := conn.Begin(ctx)
+		if err != nil {
+			t.Fatalf("begin: %v", err)
+		}
+		defer tx.Rollback(ctx)
+		if _, err := tx.Exec(ctx, "SET LOCAL ROLE "+rlsTestRole); err != nil {
+			t.Fatalf("set role: %v", err)
+		}
+		if identityCtx != nil {
+			if _, err := tx.Exec(ctx, "SELECT set_config($1,$2,true)",
+				domain.RLSIdentitySettingName, identityCtx.String()); err != nil {
+				t.Fatalf("set identity: %v", err)
+			}
+		}
+		if orgCtx != nil {
+			if _, err := tx.Exec(ctx, "SELECT set_config($1,$2,true)",
+				domain.RLSOrgSettingName, orgCtx.String()); err != nil {
+				t.Fatalf("set org: %v", err)
+			}
+		}
+		if globalRead {
+			if _, err := tx.Exec(ctx, "SELECT set_config($1,'on',true)",
+				domain.RLSGlobalReadSettingName); err != nil {
+				t.Fatalf("set global: %v", err)
+			}
+		}
+		for _, probe := range []struct {
+			id  uuid.UUID
+			dst *bool
+		}{{pendingID, &pending}, {activeID, &active}} {
+			var n int
+			if err := tx.QueryRow(ctx,
+				"SELECT count(*) FROM auth_session WHERE id = $1", probe.id.String()).Scan(&n); err != nil {
+				t.Fatalf("count: %v", err)
+			}
+			*probe.dst = n == 1
+		}
+		return pending, active
+	}
+
+	// Contexto da identidade principal: vê a própria pendente, não a alheia.
+	if p, a := visible(t, &fx.identity.ID, nil, false); !p || a {
+		t.Fatalf("contexto identidade: pendente=%v ativa-alheia=%v, quero true/false", p, a)
+	}
+	// Contexto da outra identidade: vê a própria ativa, não a pendente alheia.
+	if p, a := visible(t, &fx.other.ID, nil, false); p || !a {
+		t.Fatalf("contexto other: pendente-alheia=%v ativa=%v, quero false/true", p, a)
+	}
+	// Contexto de TENANT (org A, sem identidade): vê a ativa em A; a pendente
+	// não tem organização e só é alcançável pelo eixo da identidade.
+	if p, a := visible(t, nil, &fx.orgA, false); p || !a {
+		t.Fatalf("contexto org A: pendente=%v ativa=%v, quero false/true", p, a)
+	}
+	// Sem contexto nenhum: nada.
+	if p, a := visible(t, nil, nil, false); p || a {
+		t.Fatalf("sem contexto: pendente=%v ativa=%v, quero false/false", p, a)
+	}
+	// Leitura global (autorizada+auditada, T-009): tudo.
+	if p, a := visible(t, nil, nil, true); !p || !a {
+		t.Fatalf("leitura global: pendente=%v ativa=%v, quero true/true", p, a)
+	}
+
+	// WITH CHECK: no contexto da identidade principal, inserir sessão de OUTRA
+	// identidade é barrado pela política (mesmo com o predicado de aplicação
+	// contornado — Barreira 2 isolada).
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		t.Fatalf("acquire: %v", err)
+	}
+	defer conn.Release()
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	defer tx.Rollback(ctx)
+	if _, err := tx.Exec(ctx, "SET LOCAL ROLE "+rlsTestRole); err != nil {
+		t.Fatalf("set role: %v", err)
+	}
+	if _, err := tx.Exec(ctx, "SELECT set_config($1,$2,true)",
+		domain.RLSIdentitySettingName, fx.identity.ID.String()); err != nil {
+		t.Fatalf("set identity: %v", err)
+	}
+	if _, err := tx.Exec(ctx,
+		"INSERT INTO auth_session (id, identity_id, status, proven_aal) VALUES ($1, $2, 'pending_selection', 'aal1')",
+		uuid.New().String(), fx.other.ID.String()); err == nil {
+		t.Fatalf("WITH CHECK deveria barrar escrita de sessão de outra identidade")
 	}
 }

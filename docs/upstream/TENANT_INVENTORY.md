@@ -62,7 +62,7 @@ tenant-scoped acima são cross-tenant (org_id NULL), conforme a decisão de linh
 |---|---|---|
 | `membership` | NOT NULL (nasce assim, 0004) | ligada + FORCE (T-010) |
 | `role_assignment` | NOT NULL (nasce assim, 0009) | ligada + FORCE (T-010) |
-| `auth_session` | **nullable por desenho** (0012): sessão `pending_selection` — identidade autenticada com >1 membership, tenant ainda não selecionado — não tem organização; o CHECK `auth_session_tenant_shape` exige org NOT NULL quando `active` | **diferida para o T-012** (decisão do arquiteto, 2026-07-21): a escrita do fluxo de login não tem contexto de tenant e a policy do T-010 não tem escrita global; exigirá contexto de identidade no banco. Barreira 1 vale (predicados `identity_id`/`organization_id` nos stores) |
+| `auth_session` | **nullable por desenho** (0012): sessão `pending_selection` — identidade autenticada com >1 membership, tenant ainda não selecionado — não tem organização; o CHECK `auth_session_tenant_shape` exige org NOT NULL quando `active` | **ligada + FORCE (0013, T-012)** com o contexto de identidade `app.current_identity` (SET LOCAL pelo `IdentityRepository`): lê identidade própria OU org corrente OU `global_read`; escreve identidade própria OU org corrente. Linhas pendentes (org NULL) só pelo eixo da identidade |
 
 A tabela legada `session` (XORM, ids de sessão Beego) permanece e segue a regra tenant-scoped da
 tabela acima; a ponte de revogação entre `auth_session` e ela é o T-014.

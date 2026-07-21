@@ -69,6 +69,19 @@ func (a AAL) Valid() bool {
 	return a == AAL1 || a == AAL2 || a == AAL3
 }
 
+// aalRank orders the levels: aal1 < aal2 < aal3 (ADR-0010).
+var aalRank = map[AAL]int{AAL1: 1, AAL2: 2, AAL3: 3}
+
+// AtLeast reports whether a provides at least the assurance of min — the
+// comparison behind step-up decisions (a tenant demanding min rejects a weaker
+// proven level). Fail-closed: an undefined level on either side satisfies
+// nothing.
+func (a AAL) AtLeast(min AAL) bool {
+	ra, okA := aalRank[a]
+	rm, okMin := aalRank[min]
+	return okA && okMin && ra >= rm
+}
+
 // DefaultAAL is the conservative assurance level of a freshly-migrated factor.
 // WebAuthn is capped at AAL2 here: claiming AAL3 requires user-verification /
 // hardware-attestation evidence that a bulk migration does not have — it is

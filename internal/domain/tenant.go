@@ -33,6 +33,14 @@ const RLSOrgSettingName = "app.current_organization"
 // on. Set LOCAL, per transaction, only after authorization and audit succeed.
 const RLSGlobalReadSettingName = "app.global_read"
 
+// RLSIdentitySettingName is the PostgreSQL session setting that carries the
+// identity context of the login flow (T-012). auth_session rows pending tenant
+// selection have no organization, so the tenant setting cannot scope them; the
+// IdentityRepository sets this per transaction (SET LOCAL) and the auth_session
+// RLS policy (migration 0013) reads it. Same one-source-of-truth rule as the
+// other setting names: the migration must use this SAME literal string.
+const RLSIdentitySettingName = "app.current_identity"
+
 // ErrNoTenant is returned when a tenant-scoped repository is asked to operate
 // without a tenant. Barreira 1 (RFC-0002 §4): there is no data access without a
 // tenant context.

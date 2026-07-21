@@ -144,7 +144,32 @@
       composta recusam atalhos via SQL cru, isolamento por identidade e por tenant, revogação
       idempotente. Gate local verde; `make test` completo tem 7 pacotes LEGADOS quebrando
       pré-existentes em HEAD (testes env-dependent do upstream — ver nota da sessão).)*
-- [ ] **T-012** Implementar troca de tenant com reemissão de token e auditoria.
+- [x] **T-012** Implementar troca de tenant com reemissão de token e auditoria. *(Decisões do
+      arquiteto: reemissão materializada como `token_generation` na sessão (JWT real = 006) e
+      RLS da `auth_session` ligada AGORA com contexto de identidade. Domínio `tenantswitch.go`:
+      `AAL.AtLeast` (aal1<aal2<aal3, fail-closed p/ nível indefinido);
+      `AuthSession.SwitchTenant(dest, required)` — só de sessão active, destino ativo E da
+      própria identidade, mesmo-tenant recusado (`ErrSameTenant`, sem evento), destino mais
+      forte que o comprovado ⇒ `ErrStepUpRequired` = NEGAÇÃO (step-up real = 005), política
+      indecidível ⇒ `ErrDestinationPolicyUnavailable` (INV-6); sucesso move o contexto,
+      INCREMENTA a geração e produz `TenantSwitchEvent` (from/to validados). `TokenContext`
+      (sub/org/mid/sid/aal/geração — RFC-0006 §3) só deriva de sessão ATIVA: token nunca
+      carrega dois tenants; token pré-troca tem geração antiga e falha por construção. Portos
+      `TenantAuthPolicy` (real = 005) e `SessionAuditor` (real = 003); selos provisórios em
+      `internal/adapters/tenantswitch`: `ProfilePolicy` (dev=AAL1, pilot/prod=AAL3 — só
+      sobre-exige) e `MemorySwitchAuditor` (dev-only, valida evento). Migration 0013:
+      `token_generation` (CHECK ≥1) + RLS+FORCE na `auth_session` — lê identidade própria
+      (`app.current_identity`, novo `domain.RLSIdentitySettingName`) OU org corrente OU
+      global_read; escreve identidade própria OU org corrente. `IdentityRepository`/
+      `WithIdentityTx` (SET LOCAL, espelho do TenantRepository); `IdentitySessionStore`
+      refatorado para IdentityTx + `SaveSwitch` OTIMISTA (origem+geração esperadas; corrida ⇒
+      `ErrSwitchConflict`, geração estritamente serial). Orquestração `TenantSwitcher.Switch`:
+      política ANTES da tx (RFC-0004 §4) → transição → persistência → `RecordTenantSwitch`
+      DENTRO da tx — falha de auditoria ⇒ ROLLBACK da troca (I-5.4, provado em teste).
+      Verificado em PG15 real: troca persiste destino+geração 2 e audita from→to; step-up
+      nega sem alterar nada; política com erro nega; auditoria falhando desfaz a troca;
+      conflito otimista; RLS da auth_session como papel não-superusuário (pendente só pelo
+      eixo identidade, ativa pelo eixo tenant, WITH CHECK barra escrita alheia). Gate verde.)*
 - [ ] **T-013** Implementar fluxo de convite e vinculação de identidade existente.
 - [ ] **T-014** Implementar revogação em cascata (identidade → memberships → sessões).
 - [ ] **T-015** Ferramenta de inventário e deduplicação com relatório de conflito.

@@ -173,6 +173,7 @@ func grantRLSRole(t *testing.T, pool *pgxpool.Pool) {
 		END $$;`,
 		`GRANT USAGE ON SCHEMA public TO ` + rlsTestRole,
 		`GRANT SELECT, INSERT ON membership, role_assignment TO ` + rlsTestRole,
+		`GRANT SELECT, INSERT, UPDATE ON auth_session TO ` + rlsTestRole,
 	}
 	for _, s := range stmts {
 		if _, err := pool.Exec(ctx, s); err != nil {

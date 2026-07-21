@@ -37,41 +37,44 @@ var (
 	// ErrSessionNotPending is returned when persisting a tenant selection for a
 	// session that is no longer pending (already resolved elsewhere, or revoked).
 	ErrSessionNotPending = errors.New("postgres: sessão não está pendente de seleção de tenant")
+	// ErrSwitchConflict is returned when the optimistic tenant-switch UPDATE
+	// matched nothing: the session moved concurrently (another switch, a
+	// revocation) since it was read. The caller re-reads and re-decides — the
+	// stale switch is never applied over the newer state.
+	ErrSwitchConflict = errors.New("postgres: troca de tenant em conflito — a sessão mudou concorrentemente")
 )
 
 // IdentitySessionStore is the login-flow store for auth_session rows: create the
-// session at authentication, persist the explicit tenant selection, read and
-// revoke the identity's own sessions. It is scoped to ONE identity by
-// construction (domain.IdentityScope — no constructor without it): every query
-// carries an identity_id predicate, so a session of another identity is
-// unreachable. This is Barreira 1 on the identity axis; pending rows have no
-// tenant yet, so the tenant axis cannot scope them. (RLS for auth_session is
-// deferred to T-012 — see migration 0012.)
+// session at authentication, persist the explicit tenant selection, switch
+// tenants, read and revoke the identity's own sessions. It is built on an
+// IdentityTx, so every operation is confined to that identity two ways: an
+// explicit identity_id predicate/guard (Barreira 1, effective even with RLS
+// off) and the SET LOCAL identity setting the transaction already applied
+// (Barreira 2 — the auth_session RLS policy of migration 0013). There is no
+// constructor without an identity.
 type IdentitySessionStore struct {
-	q     Querier
-	scope domain.IdentityScope
+	itx *IdentityTx
 }
 
-// NewIdentitySessionStore builds the store over any Querier (pool or
-// transaction), bound to an identity scope.
-func NewIdentitySessionStore(q Querier, scope domain.IdentityScope) *IdentitySessionStore {
-	return &IdentitySessionStore{q: q, scope: scope}
+// NewIdentitySessionStore builds the store on an open identity transaction.
+func NewIdentitySessionStore(itx *IdentityTx) *IdentitySessionStore {
+	return &IdentitySessionStore{itx: itx}
 }
 
 // Create persists a freshly-resolved session (active or pending_selection). It
 // refuses a session of another identity (ErrCrossIdentityWrite). Timestamps are
 // stamped by the database.
 func (s *IdentitySessionStore) Create(ctx context.Context, as domain.AuthSession) error {
-	if as.IdentityID != s.scope.IdentityID() {
-		return fmt.Errorf("%w: alvo %s, escopo %s", ErrCrossIdentityWrite, as.IdentityID, s.scope.IdentityID())
+	if as.IdentityID != s.itx.scope.IdentityID() {
+		return fmt.Errorf("%w: alvo %s, escopo %s", ErrCrossIdentityWrite, as.IdentityID, s.itx.scope.IdentityID())
 	}
 	const q = `
-		INSERT INTO auth_session (id, identity_id, membership_id, organization_id, status, proven_aal)
-		VALUES ($1, $2, $3, $4, $5, $6)`
-	_, err := s.q.Exec(ctx, q,
+		INSERT INTO auth_session (id, identity_id, membership_id, organization_id, status, proven_aal, token_generation)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`
+	_, err := s.itx.tx.Exec(ctx, q,
 		as.ID.String(), as.IdentityID.String(),
 		uuidTextOrNil(as.MembershipID), uuidTextOrNil(as.OrganizationID),
-		string(as.Status), string(as.ProvenAAL))
+		string(as.Status), string(as.ProvenAAL), as.TokenGeneration)
 	if err != nil {
 		return fmt.Errorf("postgres: criação de auth_session falhou: %w", err)
 	}
@@ -83,10 +86,10 @@ func (s *IdentitySessionStore) Create(ctx context.Context, as domain.AuthSession
 func (s *IdentitySessionStore) Get(ctx context.Context, sessionID uuid.UUID) (domain.AuthSession, error) {
 	const q = `
 		SELECT id::text, identity_id::text, membership_id::text, organization_id::text,
-		       status, proven_aal, revoked_at, created_at, updated_at
+		       status, proven_aal, token_generation, revoked_at, created_at, updated_at
 		FROM auth_session
 		WHERE id = $1 AND identity_id = $2`
-	row := s.q.QueryRow(ctx, q, sessionID.String(), s.scope.IdentityID().String())
+	row := s.itx.tx.QueryRow(ctx, q, sessionID.String(), s.itx.scope.IdentityID().String())
 	as, err := scanAuthSession(row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.AuthSession{}, ErrSessionNotFound
@@ -99,8 +102,8 @@ func (s *IdentitySessionStore) Get(ctx context.Context, sessionID uuid.UUID) (do
 // UPDATE only matches a row still pending_selection: a session resolved or
 // revoked concurrently yields ErrSessionNotPending instead of being clobbered.
 func (s *IdentitySessionStore) SaveSelection(ctx context.Context, as domain.AuthSession) error {
-	if as.IdentityID != s.scope.IdentityID() {
-		return fmt.Errorf("%w: alvo %s, escopo %s", ErrCrossIdentityWrite, as.IdentityID, s.scope.IdentityID())
+	if as.IdentityID != s.itx.scope.IdentityID() {
+		return fmt.Errorf("%w: alvo %s, escopo %s", ErrCrossIdentityWrite, as.IdentityID, s.itx.scope.IdentityID())
 	}
 	if as.Status != domain.SessionActive || as.MembershipID == nil || as.OrganizationID == nil {
 		return fmt.Errorf("postgres: seleção de tenant exige sessão ativa com membership resolvido")
@@ -109,7 +112,7 @@ func (s *IdentitySessionStore) SaveSelection(ctx context.Context, as domain.Auth
 		UPDATE auth_session
 		SET membership_id = $3, organization_id = $4, status = $5, updated_at = now()
 		WHERE id = $1 AND identity_id = $2 AND status = 'pending_selection'`
-	tag, err := s.q.Exec(ctx, q,
+	tag, err := s.itx.tx.Exec(ctx, q,
 		as.ID.String(), as.IdentityID.String(),
 		as.MembershipID.String(), as.OrganizationID.String(), string(domain.SessionActive))
 	if err != nil {
@@ -117,6 +120,38 @@ func (s *IdentitySessionStore) SaveSelection(ctx context.Context, as domain.Auth
 	}
 	if tag.RowsAffected() == 0 {
 		return ErrSessionNotPending
+	}
+	return nil
+}
+
+// SaveSwitch persists a tenant switch (domain.AuthSession.SwitchTenant already
+// ran, so as carries the destination and the incremented generation). The
+// UPDATE is OPTIMISTIC: it only matches the still-active row whose membership
+// and token generation are the ones the switch departed from — a session that
+// switched or was revoked concurrently yields ErrSwitchConflict, never a lost
+// update (the generation counter must be strictly serial for token
+// invalidation to hold).
+func (s *IdentitySessionStore) SaveSwitch(ctx context.Context, as domain.AuthSession, fromMembershipID uuid.UUID, fromGeneration int) error {
+	if as.IdentityID != s.itx.scope.IdentityID() {
+		return fmt.Errorf("%w: alvo %s, escopo %s", ErrCrossIdentityWrite, as.IdentityID, s.itx.scope.IdentityID())
+	}
+	if as.Status != domain.SessionActive || as.MembershipID == nil || as.OrganizationID == nil {
+		return fmt.Errorf("postgres: troca de tenant exige sessão ativa com destino resolvido")
+	}
+	const q = `
+		UPDATE auth_session
+		SET membership_id = $3, organization_id = $4, token_generation = $5, updated_at = now()
+		WHERE id = $1 AND identity_id = $2
+		  AND status = 'active' AND membership_id = $6 AND token_generation = $7`
+	tag, err := s.itx.tx.Exec(ctx, q,
+		as.ID.String(), as.IdentityID.String(),
+		as.MembershipID.String(), as.OrganizationID.String(), as.TokenGeneration,
+		fromMembershipID.String(), fromGeneration)
+	if err != nil {
+		return fmt.Errorf("postgres: gravação da troca de tenant falhou: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrSwitchConflict
 	}
 	return nil
 }
@@ -129,7 +164,7 @@ func (s *IdentitySessionStore) Revoke(ctx context.Context, sessionID uuid.UUID) 
 		UPDATE auth_session
 		SET status = 'revoked', revoked_at = COALESCE(revoked_at, now()), updated_at = now()
 		WHERE id = $1 AND identity_id = $2`
-	tag, err := s.q.Exec(ctx, q, sessionID.String(), s.scope.IdentityID().String())
+	tag, err := s.itx.tx.Exec(ctx, q, sessionID.String(), s.itx.scope.IdentityID().String())
 	if err != nil {
 		return fmt.Errorf("postgres: revogação de auth_session falhou: %w", err)
 	}
@@ -159,7 +194,7 @@ func NewTenantSessionStore(ttx *TenantTx) *TenantSessionStore {
 func (s *TenantSessionStore) ListActive(ctx context.Context) ([]domain.AuthSession, error) {
 	const q = `
 		SELECT id::text, identity_id::text, membership_id::text, organization_id::text,
-		       status, proven_aal, revoked_at, created_at, updated_at
+		       status, proven_aal, token_generation, revoked_at, created_at, updated_at
 		FROM auth_session
 		WHERE organization_id = $1 AND status = 'active'
 		ORDER BY created_at`
@@ -190,7 +225,7 @@ func scanAuthSession(row pgx.Row) (domain.AuthSession, error) {
 	var idText, idnText, status, aal string
 	var memText, orgText *string
 	if err := row.Scan(&idText, &idnText, &memText, &orgText,
-		&status, &aal, &as.RevokedAt, &as.CreatedAt, &as.UpdatedAt); err != nil {
+		&status, &aal, &as.TokenGeneration, &as.RevokedAt, &as.CreatedAt, &as.UpdatedAt); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.AuthSession{}, err
 		}

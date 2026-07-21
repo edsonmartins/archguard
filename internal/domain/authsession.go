@@ -104,9 +104,15 @@ type AuthSession struct {
 	// (ADR-0010). The tenant switch (T-012) compares it against the destination
 	// tenant's policy to demand step-up when the destination is stricter.
 	ProvenAAL AAL
-	RevokedAt *time.Time
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	// TokenGeneration is the token-invalidation counter of the session (T-012).
+	// Every issued token carries the generation it was minted under; a tenant
+	// switch increments it, so tokens from before the switch fail validation by
+	// construction — "the previous token is never reused" (spec: "Troca de
+	// tenant"). Starts at 1.
+	TokenGeneration int
+	RevokedAt       *time.Time
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 // NewAuthSession resolves the tenant context of a fresh login from the
@@ -146,10 +152,11 @@ func NewAuthSession(identityID uuid.UUID, provenAAL AAL, memberships []Membershi
 		return AuthSession{}, fmt.Errorf("session: geração de UUIDv7 falhou: %w", err)
 	}
 	s := AuthSession{
-		ID:         id,
-		IdentityID: identityID,
-		ProvenAAL:  provenAAL,
-		Status:     SessionPendingSelection,
+		ID:              id,
+		IdentityID:      identityID,
+		ProvenAAL:       provenAAL,
+		Status:          SessionPendingSelection,
+		TokenGeneration: 1,
 	}
 	if len(active) == 1 {
 		s.setTenant(active[0])
