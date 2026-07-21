@@ -56,6 +56,17 @@ rota de remoção — não construir sobre elas.
 Além destas, as **linhas globais** (`owner=admin`, `built-in`, `IsShared`) dentro das tabelas
 tenant-scoped acima são cross-tenant (org_id NULL), conforme a decisão de linhas globais.
 
+## Tabelas novas do modelo (pgx) — nascidas com `organization_id`
+
+| Tabela | organization_id | RLS |
+|---|---|---|
+| `membership` | NOT NULL (nasce assim, 0004) | ligada + FORCE (T-010) |
+| `role_assignment` | NOT NULL (nasce assim, 0009) | ligada + FORCE (T-010) |
+| `auth_session` | **nullable por desenho** (0012): sessão `pending_selection` — identidade autenticada com >1 membership, tenant ainda não selecionado — não tem organização; o CHECK `auth_session_tenant_shape` exige org NOT NULL quando `active` | **diferida para o T-012** (decisão do arquiteto, 2026-07-21): a escrita do fluxo de login não tem contexto de tenant e a policy do T-010 não tem escrita global; exigirá contexto de identidade no banco. Barreira 1 vale (predicados `identity_id`/`organization_id` nos stores) |
+
+A tabela legada `session` (XORM, ids de sessão Beego) permanece e segue a regra tenant-scoped da
+tabela acima; a ponte de revogação entre `auth_session` e ela é o T-014.
+
 ## Fora de escopo PAM — sem coluna
 
 `coupon`, `transaction`, `ticket`, `form`, `entry`, `radius_accounting`, `site`, `rule`, `key`,

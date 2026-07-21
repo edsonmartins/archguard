@@ -119,7 +119,31 @@
       vínculo de B mesmo sem predicado de aplicação (Barreira 2 isolada), leitura global torna B
       visível, WITH CHECK bloqueia escrita cross-tenant. **As duas barreiras agora provadas
       independentemente** (T-008 com RLS off, T-010 com RLS on). Gate local verde.)*
-- [ ] **T-011** Implementar contexto de tenant ativo na sessão.
+- [x] **T-011** Implementar contexto de tenant ativo na sessão. *(Decisões do arquiteto:
+      sessão pendente É persistida (linha `pending_selection` sem tenant) e RLS da tabela
+      DIFERIDA para o T-012 — a escrita do login não tem contexto de tenant e a policy do
+      T-010 não tem escrita global. Domínio `authsession.go`: `AuthSession` carrega
+      identity_id + membership_id ATIVO; "exatamente um tenant ativo" é ESTRUTURAL (um único
+      campo). `NewAuthSession(identity, provenAAL, memberships)`: 0 membership ativo →
+      negação; 1 → auto-seleção (nasce active); >1 → nasce `pending_selection` e
+      `ActiveTenant()` retorna `ErrTenantSelectionRequired` — o cenário "Múltiplos
+      memberships no login" codificado no tipo (token só com sessão active, emissão = T-012).
+      `SelectTenant` só de pending, só membership ativo E da própria identidade (fail-closed
+      p/ membership alheio); re-seleção de sessão active é recusada (troca = T-012, com
+      reemissão + auditoria); revoked terminal, contexto preservado p/ trilha. `ProvenAAL`
+      (ADR-0010) registrado p/ o step-up do T-012/005. Migration `0012_create_auth_session.sql`:
+      `auth_session` (nome novo — `session` é a legada Beego; ponte = T-014), CHECK
+      `auth_session_tenant_shape` (active ⇒ tenant NOT NULL; pending ⇒ NULL) e FK COMPOSTA
+      (membership_id, identity_id, organization_id) → membership: o banco recusa tenant ativo
+      que não seja membership DESTA identidade NESTA org. Sem campo pessoal (IP/UA = auditoria,
+      RFC-0003). Stores: `IdentitySessionStore` (novo `domain.IdentityScope`, Barreira 1 no
+      eixo identidade — sem construtor sem identidade; Create/Get/SaveSelection/Revoke com
+      predicado identity_id; SaveSelection só de pending, anti-corrida) e `TenantSessionStore`
+      (via TenantTx, `ListActive` da org — insumo do T-014). `TENANT_INVENTORY.md` atualizado.
+      Verificado em PG15 real: auto-seleção, pendente→seleção explícita persistida, CHECK e FK
+      composta recusam atalhos via SQL cru, isolamento por identidade e por tenant, revogação
+      idempotente. Gate local verde; `make test` completo tem 7 pacotes LEGADOS quebrando
+      pré-existentes em HEAD (testes env-dependent do upstream — ver nota da sessão).)*
 - [ ] **T-012** Implementar troca de tenant com reemissão de token e auditoria.
 - [ ] **T-013** Implementar fluxo de convite e vinculação de identidade existente.
 - [ ] **T-014** Implementar revogação em cascata (identidade → memberships → sessões).
