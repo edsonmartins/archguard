@@ -224,7 +224,21 @@
       ordem = mesmo inventário; o ensaio T-019 diffa execuções). `Render` emite o relatório
       pt-BR **sem e-mail em claro** (minimização: owner/name + prefixo do hash), provado por
       teste. Gate verde.)*
-- [ ] **T-016** Rotina de fusão assistida (com aprovação humana obrigatória).
+- [x] **T-016** Rotina de fusão assistida (com aprovação humana obrigatória). *(Pacote
+      `internal/identfusion`, padrão dos mecanismos — persistência/execução em massa = T-019.
+      **Aprovação humana é ESTRUTURAL**: `Fuse` não roda sem `Approval{ApprovedBy, hash do
+      grupo, conta primária}` — aprovador vazio = `ErrFusionNotApproved`; aprovação AMARRADA ao
+      grupo pelo email_hash (aprovação do grupo X jamais autoriza Y = `ErrApprovalMismatch`);
+      a conta PRIMÁRIA (eleita pelo humano, tem de estar no grupo) decide os fatores de slot
+      único (senha/TOTP/recovery — o esquema permite 1 de cada por identidade). Defesa em
+      profundidade: classes de conflito do T-015 REVALIDADAS na execução (`ErrGroupNotFusable`:
+      <2 contas, mesma org=R3, conta de serviço). Saída: identidade humana única carregando o
+      email_hash do grupo (plaintext nunca necessário), 1 membership ATIVO por org (porto
+      `OrganizationResolver`, real=pgx no T-019), credenciais via `credmigration` (seed TOTP ao
+      cofre, senha em claro força reset INV-1/INV-7); contas não-primárias contribuem SÓ
+      WebAuthn (multi-slot) e cada fator de slot único não carregado vai para `DroppedFactors`
+      — nada descartado em silêncio, e a identidade fundida não perde TIPO de fator (gate do
+      pacote). Unitários cobrem todas as recusas e o caminho feliz. Gate verde.)*
 - [ ] **T-017** Testes de travessia entre tenants (barreira 1 e barreira 2 isoladamente).
 - [ ] **T-018** Teste automatizado que rejeita query sem predicado de tenant.
 - [ ] **T-019** Ensaio de migração em cópia de produção e relatório de resultado.
