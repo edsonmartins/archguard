@@ -170,7 +170,26 @@
       nega sem alterar nada; política com erro nega; auditoria falhando desfaz a troca;
       conflito otimista; RLS da auth_session como papel não-superusuário (pendente só pelo
       eixo identidade, ativa pelo eixo tenant, WITH CHECK barra escrita alheia). Gate verde.)*
-- [ ] **T-013** Implementar fluxo de convite e vinculação de identidade existente.
+- [x] **T-013** Implementar fluxo de convite e vinculação de identidade existente. *(Decisões do
+      arquiteto: (1) e-mail SEM identidade correspondente fica FORA do escopo — `Inviter` devolve
+      `ErrUnknownInviteEmail` sem criar nada silenciosamente; criação de identidade via convite
+      (onboarding/cifra por titular) chega com 008/009. (2) **R3 estrita**: par com membership
+      REVOGADO recusa readmissão (`ErrPreviouslyRevoked`) — o UNIQUE da R3 bloqueia segunda linha
+      e o revogado permanece na trilha; **QUESTÃO REGISTRADA para emenda do RFC-0002**: readmitir
+      (prestador que volta) exigiria índice único parcial `WHERE status != 'revoked'`, decisão
+      normativa pendente. `TenantMembershipStore` (sobre TenantTx, Barreira 1): `Create` classifica
+      colisão R3 (`ErrAlreadyMember`/`ErrPreviouslyRevoked`, corrida coberta pelo 23505), `Get`
+      org-scoped, `SaveActivation` só de invited (anti-corrida, carimba `activated_at`).
+      `Inviter` (padrão TenantSwitcher): `InviteByEmail` em UMA transação — busca por HASH via
+      `KeyCustodian` (plaintext nunca no banco), identidade não-ativa recusada
+      (`ErrIdentityNotInvitable`, fail-closed), `NewInvitedMembership` persistido no tenant
+      convidante com `invited_by`; `Accept` só pela identidade convidada (`ErrNotInviteOwner`) +
+      transição de domínio invited→active. Sem porto de auditoria aqui: mutação administrativa
+      entra na trilha no pacote 003. Verificado em PG15 real: convite vincula identidade
+      EXISTENTE sem criar identidade (contagem provada) e preserva o membership de A (2 vínculos,
+      1 conjunto de credenciais); case-insensitive como o login; e-mail desconhecido sem efeito
+      colateral; colisões R3 classificadas; aceite ativa/carimba e re-aceite recusa; guardas
+      cross-tenant de leitura e escrita. Gate verde.)*
 - [ ] **T-014** Implementar revogação em cascata (identidade → memberships → sessões).
 - [ ] **T-015** Ferramenta de inventário e deduplicação com relatório de conflito.
 - [ ] **T-016** Rotina de fusão assistida (com aprovação humana obrigatória).
