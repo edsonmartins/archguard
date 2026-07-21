@@ -66,17 +66,37 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO archguard_app;
 
 -- 6. BARREIRA FÍSICA DO INV-2: o role da aplicação NÃO pode alterar nem apagar
 --    registros de auditoria. Reafirme este bloco a cada nova tabela de auditoria
---    (o conjunto cresce no pacote 003 — audit_event, selos etc.). Hoje: record.
+--    (o conjunto cresce no pacote 003 — selos etc.).
+--
+--    `audit_event` (pacote 003, T-005/006) é APPEND-ONLY: a app só insere e lê.
+--    NÃO revogar em `audit_chain_head` — o cabeçalho de cadeia é um ponteiro
+--    mutável que a escrita avança (UPDATE do last_seq/head_hash) sob trava; ele
+--    não guarda evento, guarda o estado da cadeia. `record` é a auditoria legada.
+--
+--    Como `audit_event` é PARTICIONADA, o REVOKE precisa alcançar o pai E as
+--    partições (o privilégio de DML é verificado na partição concreta que
+--    recebe a linha). O bloco revoga no pai e em toda partição de `audit_event`.
 DO $$
 DECLARE
-  audit_tables text[] := ARRAY['record'];
+  audit_tables text[] := ARRAY['record', 'audit_event'];
   t text;
+  part text;
 BEGIN
   FOREACH t IN ARRAY audit_tables LOOP
     IF EXISTS (SELECT FROM information_schema.tables
                WHERE table_schema = 'public' AND table_name = t) THEN
-      EXECUTE format('REVOKE UPDATE, DELETE ON public.%I FROM archguard_app', t);
+      EXECUTE format('REVOKE UPDATE, DELETE, TRUNCATE ON public.%I FROM archguard_app', t);
     END IF;
+  END LOOP;
+  -- Partições de audit_event (herdam GRANT, precisam do REVOKE explícito).
+  FOR part IN
+    SELECT c.relname
+    FROM pg_inherits i
+    JOIN pg_class c ON c.oid = i.inhrelid
+    JOIN pg_class p ON p.oid = i.inhparent
+    WHERE p.relname = 'audit_event'
+  LOOP
+    EXECUTE format('REVOKE UPDATE, DELETE, TRUNCATE ON public.%I FROM archguard_app', part);
   END LOOP;
 END
 $$;

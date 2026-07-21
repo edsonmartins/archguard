@@ -68,8 +68,24 @@
       FOR UPDATE. Classificação LGPD (COMMENT) em actor_subject/context_ip/context_user_agent
       (decisão do arquiteto: IP/UA como coluna classificada). Verificado em PG15 real: parent
       particionado, DEFAULT, índices e chain_head criados.)*
-- [ ] **T-006** Configurar papel de banco sem `UPDATE`/`DELETE` na auditoria.
-- [ ] **T-007** Criar triggers de bloqueio de mutação (defesa em profundidade).
+- [x] **T-006** Configurar papel de banco sem `UPDATE`/`DELETE` na auditoria. *(Estende
+      `deploy/postgres/roles.sql`: o bloco INV-2 passa a revogar `UPDATE, DELETE, TRUNCATE` de
+      `archguard_app` em `audit_event` (append-only) — no PAI e em TODAS as partições (o
+      privilégio de DML é checado na partição concreta; partições herdam o GRANT e precisam do
+      REVOKE explícito, varridas via pg_inherits). `audit_chain_head` **fica de fora** de
+      propósito: é ponteiro mutável que a escrita avança sob trava (não guarda evento). Como no
+      pacote 001, a aplicação real do roles.sql é validada no smoke test de deploy (T-022 do 001,
+      diferido por falta de Docker); a barreira executável e testável agora é a de triggers
+      (T-007).)*
+- [x] **T-007** Criar triggers de bloqueio de mutação (defesa em profundidade). *(Migration
+      0018: função `audit_event_block_mutation` + triggers `BEFORE UPDATE/DELETE` (FOR EACH ROW,
+      cascateiam para as partições no PG13+) e `BEFORE TRUNCATE` (FOR EACH STATEMENT) em
+      `audit_event`, que abortam com `insufficient_privilege`. Complementa o privilégio (T-006):
+      aborta a mutação NO BANCO independentemente do papel — só `session_replication_role =
+      replica` (superusuário, ato deliberado) contorna. Verificado em PG15 real (cenários
+      "Tentativa de UPDATE" e "Tentativa de DELETE" + TRUNCATE): as três mutações são rejeitadas
+      mesmo como superusuário e o evento permanece íntegro. Cleanup dos testes de auditoria
+      passou a usar o bypass documentado. Gate verde.)*
 - [ ] **T-008** Implementar `AuditSink` síncrono durável (modo fail-closed).
 - [ ] **T-009** Implementar modo assíncrono com fila durável para eventos não privilegiados.
 - [ ] **T-010** Integrar assinatura Ed25519 via cofre para selagem.
