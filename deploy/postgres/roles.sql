@@ -25,14 +25,21 @@ BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'archguard_migrate') THEN
     CREATE ROLE archguard_migrate LOGIN PASSWORD 'CHANGE_ME_migrate';
   END IF;
+  -- NOBYPASSRLS é EXPLÍCITO: a Row-Level Security (Barreira 2, T-010) só contém o
+  -- acesso se o papel de runtime não puder ignorá-la. archguard_app também não é
+  -- dono das tabelas (quem as cria é archguard_migrate), então a RLS lhe aplica.
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'archguard_app') THEN
-    CREATE ROLE archguard_app LOGIN PASSWORD 'CHANGE_ME_app';
+    CREATE ROLE archguard_app LOGIN NOBYPASSRLS PASSWORD 'CHANGE_ME_app';
   END IF;
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'archguard_readonly') THEN
-    CREATE ROLE archguard_readonly LOGIN PASSWORD 'CHANGE_ME_readonly';
+    CREATE ROLE archguard_readonly LOGIN NOBYPASSRLS PASSWORD 'CHANGE_ME_readonly';
   END IF;
 END
 $$;
+
+-- Garante NOBYPASSRLS mesmo em papéis pré-existentes (idempotente).
+ALTER ROLE archguard_app NOBYPASSRLS;
+ALTER ROLE archguard_readonly NOBYPASSRLS;
 
 -- 2. Acesso ao banco e ao schema public.
 GRANT CONNECT ON DATABASE :db TO archguard_migrate, archguard_app, archguard_readonly;

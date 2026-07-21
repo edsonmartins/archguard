@@ -27,6 +27,12 @@ import (
 // literal string.
 const RLSOrgSettingName = "app.current_organization"
 
+// RLSGlobalReadSettingName is the PostgreSQL session setting the GlobalRepository
+// sets ('on') to perform an authorized, audited cross-tenant read. The RLS
+// policies (T-010) permit a row when it matches the active tenant OR this flag is
+// on. Set LOCAL, per transaction, only after authorization and audit succeed.
+const RLSGlobalReadSettingName = "app.global_read"
+
 // ErrNoTenant is returned when a tenant-scoped repository is asked to operate
 // without a tenant. Barreira 1 (RFC-0002 §4): there is no data access without a
 // tenant context.

@@ -99,8 +99,26 @@
       escrita cross-tenant (ErrCrossTenantWrite). Verificado em PG15 real: **travessia de leitura
       isolada** (repo de A não vê dados de B por membership de B), escrita cross-tenant recusada,
       parâmetro de sessão fixado no valor certo, UNIQUE R2. Gate local verde.)*
-- [ ] **T-009** Implementar `GlobalRepository` explícito, autorizado e auditado.
-- [ ] **T-010** Habilitar RLS por tabela e configurar papel da aplicação sem `BYPASSRLS`.
+- [x] **T-009** Implementar `GlobalRepository` explícito, autorizado e auditado. *(Tipo DISTINTO do
+      tenant-scoped — cruzar tenant nunca acontece por acaso. Portos de domínio `globalaccess.go`:
+      `GlobalAuthorizer` (INV-6: erro = negação) e `AccessAuditor` (I-5.4: falha de auditoria =
+      negação), com `GlobalAccess{Principal, Reason}` obrigatórios. `GlobalRepository.WithGlobalTx`:
+      valida → autoriza → audita → só então roda a tx com o flag `app.global_read=on` (SET LOCAL)
+      que a RLS honra. Selos provisórios `internal/adapters/globalaccess`: `ProfileAuthorizer`
+      (permite só em dev, nega em pilot/prod até o OpenFGA do 007 — fail-closed) e `MemoryAuditor`
+      (dev-only, não-durável; trilho real = 003). Demo `MembershipStore.ListByIdentity` (cross-tenant,
+      "meus tenants"). Verificado em PG15 real: lê 2 tenants + auditado; negado sem autz; negado
+      quando auditoria falha; recusa acesso sem motivo.)*
+- [x] **T-010** Habilitar RLS por tabela e configurar papel da aplicação sem `BYPASSRLS`. *(Barreira 2.
+      Migration `0011_enable_rls.sql`: RLS + FORCE em `membership` e `role_assignment` (só tabelas
+      NOVAS — ligar nas legadas quebraria o XORM que consulta sem o parâmetro; ativação incremental,
+      RFC §6). Policy: LÊ se `organization_id = app.current_organization` OU `app.global_read=on`;
+      ESCREVE (WITH CHECK) só se `= app.current_organization` — sem escrita global. `NULLIF(...,'')`
+      protege parâmetro ausente. `roles.sql`: `archguard_app`/`readonly` com **NOBYPASSRLS explícito**
+      (+ ALTER idempotente). Verificado em PG15 real como papel NÃO-superusuário: tenant A não vê
+      vínculo de B mesmo sem predicado de aplicação (Barreira 2 isolada), leitura global torna B
+      visível, WITH CHECK bloqueia escrita cross-tenant. **As duas barreiras agora provadas
+      independentemente** (T-008 com RLS off, T-010 com RLS on). Gate local verde.)*
 - [ ] **T-011** Implementar contexto de tenant ativo na sessão.
 - [ ] **T-012** Implementar troca de tenant com reemissão de token e auditoria.
 - [ ] **T-013** Implementar fluxo de convite e vinculação de identidade existente.
