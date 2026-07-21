@@ -75,7 +75,18 @@
       (`org/user`) → membership via porto `MembershipResolver` (real ligado no T-019), dedup por
       membership, não-resolvidos reportados. Verificado em PG15 real: Create/List, FKs, UNIQUE R2.
       Fronteira registrada: motor de permissões → OpenFGA (007); grupos/papéis aninhados adiados.)*
-- [ ] **T-007** Backfill de `organization_id` nas tabelas de domínio.
+- [x] **T-007** Backfill de `organization_id` nas tabelas de domínio. *(Decisões do arquiteto:
+      núcleo PAM curado + inventário completo; linhas globais cross-tenant com org_id NULL.
+      **Inventário** `docs/upstream/TENANT_INVENTORY.md` (o artefato que o R1 referencia): classifica
+      cada tabela como tenant-scoped / cross-tenant (identity, credential, organization + linhas
+      admin/built-in/IsShared) / fora de escopo PAM. Migration `0010_backfill_organization_id.sql`:
+      bloco `DO` dinâmico e idempotente que, para as ~16 tabelas do núcleo (user, group, role,
+      permission, token, session, invitation, resource, syncer, webhook, application, provider, cert,
+      adapter/enforcer/model), adiciona `organization_id uuid` (nullable), popula via `owner →
+      organization.id`, cria FK + índice; pula tabela ausente. **Linhas globais (owner=admin) ficam
+      NULL** (R1). NOT NULL fica para o T-010, por tabela, só onde 100% mapeia. Verificado em PG15
+      real: tenant→org.id, global→NULL, FK+índice; teste re-executa a 0010 real do FS embutido
+      (idempotente, order-independent). Gate local verde.)*
 - [ ] **T-008** Implementar repositório com contexto de tenant obrigatório (barreira 1).
 - [ ] **T-009** Implementar `GlobalRepository` explícito, autorizado e auditado.
 - [ ] **T-010** Habilitar RLS por tabela e configurar papel da aplicação sem `BYPASSRLS`.

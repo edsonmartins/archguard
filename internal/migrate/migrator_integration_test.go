@@ -244,6 +244,92 @@ func TestPersonalColumnsAreLGPDClassified(t *testing.T) {
 	}
 }
 
+// TestBackfillOrganizationId proves migration 0010 populates organization_id from
+// the legacy owner on a tenant-scoped table, and leaves a global row (owner not a
+// known organization) NULL (R1 cross-tenant exception). It uses `role`, the
+// tenant-scoped legacy table the harness already seeds.
+//
+// The integration tests share one database, so migrations may already be applied
+// when this test runs — the migrator will not re-run 0010 over freshly-seeded
+// rows. Because 0010 is idempotent by design (ADD COLUMN IF NOT EXISTS, UPDATE …
+// WHERE organization_id IS NULL, index/constraint guarded), the test seeds AFTER
+// Run and re-executes the real 0010 SQL from the embedded FS: it exercises the
+// actual migration, order-independently.
+func TestBackfillOrganizationId(t *testing.T) {
+	dsn := dsnFromEnv(t)
+	ctx := context.Background()
+	seedLegacyTables(t, connect(t, dsn))
+	if err := Run(ctx, dsn); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	conn := connect(t, dsn)
+
+	// Unique names so this test's rows never collide with other tests'.
+	const orgName = "acme-backfill"
+	if _, err := conn.Exec(ctx, "INSERT INTO organization (owner, name) VALUES ('admin', $1)", orgName); err != nil {
+		t.Fatalf("seed org: %v", err)
+	}
+	if _, err := conn.Exec(ctx,
+		"INSERT INTO role (owner, name) VALUES ($1, 'bf-tenant-role'), ('admin', 'bf-global-role')", orgName); err != nil {
+		t.Fatalf("seed roles: %v", err)
+	}
+	t.Cleanup(func() {
+		bg := context.Background()
+		_, _ = conn.Exec(bg, "DELETE FROM role WHERE name IN ('bf-tenant-role', 'bf-global-role')")
+		_, _ = conn.Exec(bg, "DELETE FROM organization WHERE name = $1", orgName)
+	})
+
+	// Re-run the real 0010 backfill (idempotent) over the freshly-seeded rows.
+	sql, err := migrationsFS.ReadFile("migrations/0010_backfill_organization_id.sql")
+	if err != nil {
+		t.Fatalf("ler 0010: %v", err)
+	}
+	if _, err := conn.Exec(ctx, string(sql)); err != nil {
+		t.Fatalf("re-exec 0010: %v", err)
+	}
+
+	// The org row got its stable id (0003); the tenant role must point to it.
+	var orgID string
+	if err := conn.QueryRow(ctx, "SELECT id::text FROM organization WHERE name = $1", orgName).Scan(&orgID); err != nil {
+		t.Fatalf("org id: %v", err)
+	}
+	var tenantRoleOrg *string
+	if err := conn.QueryRow(ctx,
+		"SELECT organization_id::text FROM role WHERE owner = $1 AND name = 'bf-tenant-role'", orgName).Scan(&tenantRoleOrg); err != nil {
+		t.Fatalf("tenant role org: %v", err)
+	}
+	if tenantRoleOrg == nil || *tenantRoleOrg != orgID {
+		t.Errorf("role tenant: organization_id = %v, quer %s", tenantRoleOrg, orgID)
+	}
+
+	// The global role (owner=admin) must stay NULL — cross-tenant (R1).
+	var globalRoleOrg *string
+	if err := conn.QueryRow(ctx,
+		"SELECT organization_id::text FROM role WHERE owner = 'admin' AND name = 'bf-global-role'").Scan(&globalRoleOrg); err != nil {
+		t.Fatalf("global role org: %v", err)
+	}
+	if globalRoleOrg != nil {
+		t.Errorf("role global: organization_id = %v, quer NULL", *globalRoleOrg)
+	}
+
+	// The FK and index must exist.
+	var hasFK, hasIdx bool
+	if err := conn.QueryRow(ctx,
+		"SELECT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'role_organization_id_fkey')").Scan(&hasFK); err != nil {
+		t.Fatal(err)
+	}
+	if !hasFK {
+		t.Error("FK role_organization_id_fkey ausente")
+	}
+	if err := conn.QueryRow(ctx,
+		"SELECT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'role_organization_id_idx')").Scan(&hasIdx); err != nil {
+		t.Fatal(err)
+	}
+	if !hasIdx {
+		t.Error("índice role_organization_id_idx ausente")
+	}
+}
+
 // mustReject asserts that an INSERT/UPDATE is rejected by the database. It runs
 // the statement in its own subtransaction so the aborted statement does not
 // poison the shared connection for later assertions.
