@@ -63,7 +63,18 @@
       público. Verificado em PG15 real: 4 tipos persistem, guarda de app e CHECK do banco rejeitam
       forma INV-7-inválida, unicidade de senha; unitários provam que o seed vai ao cofre e nunca à
       credencial. Gate local verde.)*
-- [ ] **T-006** Repontar papéis e permissões para `membership_id`.
+- [x] **T-006** Repontar papéis e permissões para `membership_id`. *(Decisões do arquiteto:
+      estender `role` legada com UUID estável — como organization — e permissões Casbin superadas
+      pelo OpenFGA (pacote 007), fora do escopo. Migration `0008_role_stable_id.sql`: `role.id uuid`
+      + índice único (mesma mecânica de organization). `0009_create_role_assignment.sql`: tabela
+      `role_assignment` por MEMBERSHIP (R2), FKs para organization(id)/role(id)/membership(id),
+      `organization_id NOT NULL` (R1, pronta p/ RLS T-010), UNIQUE (role_id, membership_id) —
+      substitui o `Role.Users[]` denormalizado. Domínio `role_assignment.go`: `NewRoleAssignment`
+      referencia membership, **sem campo identity** (R2 no tipo). `RoleAssignmentStore` pgx
+      (Create + ListByMembership). Mecanismo `internal/rolemigration`: resolve `Role.Users[]`
+      (`org/user`) → membership via porto `MembershipResolver` (real ligado no T-019), dedup por
+      membership, não-resolvidos reportados. Verificado em PG15 real: Create/List, FKs, UNIQUE R2.
+      Fronteira registrada: motor de permissões → OpenFGA (007); grupos/papéis aninhados adiados.)*
 - [ ] **T-007** Backfill de `organization_id` nas tabelas de domínio.
 - [ ] **T-008** Implementar repositório com contexto de tenant obrigatório (barreira 1).
 - [ ] **T-009** Implementar `GlobalRepository` explícito, autorizado e auditado.

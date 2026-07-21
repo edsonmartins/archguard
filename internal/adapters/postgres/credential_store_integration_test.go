@@ -38,11 +38,7 @@ func setupCredentialStore(t *testing.T) (*pgxpool.Pool, *CredentialStore, domain
 		t.Fatalf("pool: %v", err)
 	}
 	t.Cleanup(pool.Close)
-	if _, err := pool.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS organization (
-			owner text NOT NULL, name text NOT NULL, PRIMARY KEY (owner, name))`); err != nil {
-		t.Fatalf("seed organization: %v", err)
-	}
+	seedLegacyTables(t, pool)
 	if err := migrate.Run(ctx, dsn); err != nil {
 		t.Fatalf("migrate.Run: %v", err)
 	}

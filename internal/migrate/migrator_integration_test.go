@@ -46,21 +46,23 @@ func connect(t *testing.T, dsn string) *pgx.Conn {
 	return conn
 }
 
-// seedLegacyOrganization creates the minimal `organization` table the way the
-// XORM Sync2 would before migrations run at boot (composite string PK). Migration
-// 0003 then extends it with the stable UUID id, and 0004's membership FK targets
-// that id — so the migrator's own tests must stand this up first, exactly as the
-// real boot order guarantees (RUNBOOK: migrations run after Sync2).
-func seedLegacyOrganization(t *testing.T, conn *pgx.Conn) {
+// seedLegacyTables creates the minimal legacy tables (organization, role) the way
+// the XORM Sync2 would before migrations run at boot (composite string PKs).
+// Migrations 0003/0008 then extend them with stable UUID ids, and the FKs of
+// 0004 (membership) and 0009 (role_assignment) target those ids — so the
+// migrator's own tests must stand these up first, exactly as the real boot order
+// guarantees (RUNBOOK: migrations run after Sync2).
+func seedLegacyTables(t *testing.T, conn *pgx.Conn) {
 	t.Helper()
-	_, err := conn.Exec(context.Background(), `
-		CREATE TABLE IF NOT EXISTS organization (
-			owner text NOT NULL,
-			name  text NOT NULL,
-			PRIMARY KEY (owner, name)
-		)`)
-	if err != nil {
-		t.Fatalf("seed organization: %v", err)
+	for _, ddl := range []string{
+		`CREATE TABLE IF NOT EXISTS organization (
+			owner text NOT NULL, name text NOT NULL, PRIMARY KEY (owner, name))`,
+		`CREATE TABLE IF NOT EXISTS role (
+			owner text NOT NULL, name text NOT NULL, PRIMARY KEY (owner, name))`,
+	} {
+		if _, err := conn.Exec(context.Background(), ddl); err != nil {
+			t.Fatalf("seed legacy: %v", err)
+		}
 	}
 }
 
@@ -70,7 +72,7 @@ func seedLegacyOrganization(t *testing.T, conn *pgx.Conn) {
 func TestRunAppliesMigrationsIdempotently(t *testing.T) {
 	dsn := dsnFromEnv(t)
 	ctx := context.Background()
-	seedLegacyOrganization(t, connect(t, dsn))
+	seedLegacyTables(t, connect(t, dsn))
 
 	if err := Run(ctx, dsn); err != nil {
 		t.Fatalf("Run (1ª vez): %v", err)
@@ -121,7 +123,7 @@ func TestRunAppliesMigrationsIdempotently(t *testing.T) {
 func TestRunCreatesIdentityConstraints(t *testing.T) {
 	dsn := dsnFromEnv(t)
 	ctx := context.Background()
-	seedLegacyOrganization(t, connect(t, dsn))
+	seedLegacyTables(t, connect(t, dsn))
 	if err := Run(ctx, dsn); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -154,7 +156,7 @@ func TestRunCreatesIdentityConstraints(t *testing.T) {
 func TestRunCreatesMembershipConstraints(t *testing.T) {
 	dsn := dsnFromEnv(t)
 	ctx := context.Background()
-	seedLegacyOrganization(t, connect(t, dsn))
+	seedLegacyTables(t, connect(t, dsn))
 	if err := Run(ctx, dsn); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -210,7 +212,7 @@ func TestRunCreatesMembershipConstraints(t *testing.T) {
 func TestPersonalColumnsAreLGPDClassified(t *testing.T) {
 	dsn := dsnFromEnv(t)
 	ctx := context.Background()
-	seedLegacyOrganization(t, connect(t, dsn))
+	seedLegacyTables(t, connect(t, dsn))
 	if err := Run(ctx, dsn); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
