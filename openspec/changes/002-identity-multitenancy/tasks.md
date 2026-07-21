@@ -47,7 +47,22 @@
       LGPD. Remediado na migration `0006_lgpd_classification.sql` (COMMENT ON COLUMN com categoria/
       finalidade/base legal/retenção), com teste que exige a classificação. **Follow-up:** falta o
       gate automatizado que REJEITE campo pessoal novo sem classificação — registrar no pacote 010.)*
-- [ ] **T-005** Migrar credenciais e fatores MFA para a identidade.
+- [x] **T-005** Migrar credenciais e fatores MFA para a identidade. *(Escopo: esquema + domínio +
+      mecanismo — execução em massa é o T-019, ver decisões do arquiteto. **INV-7 codificado no
+      tipo e no banco:** o legado guarda TotpSecret/RecoveryCodes em claro; o modelo novo não tem
+      coluna de segredo reversível. Porto `SecretStore` (`internal/domain/secretstore.go`,
+      Put/Get por referência) com impl provisória sobre o keystore selado (`internal/adapters/
+      secretstore`, não-produção; prod=OpenBao). Domínio `credential.go`: `FactorType`
+      (password|totp|webauthn|recovery_code) + `AAL` (ADR-0010); construtores tornam impossível um
+      TOTP segurar o seed (só `SecretRef`); `WellFormed()` = a forma INV-7 exata. Migration
+      `0007_create_credential.sql`: tabela cross-tenant, CHECK `credential_shape` amarra cada tipo
+      ao seu material (segredo reversível só como secret_ref), 1 senha/1 TOTP por identidade,
+      classificação LGPD inline. `CredentialStore` pgx (Create com guarda WellFormed + ListByIdentity).
+      Mecanismo `internal/credmigration`: move seed TOTP ao cofre, hasheia recovery codes (SHA-256),
+      **senha em claro do legado NÃO é carregada — força reset** (INV-1/INV-7), carrega WebAuthn
+      público. Verificado em PG15 real: 4 tipos persistem, guarda de app e CHECK do banco rejeitam
+      forma INV-7-inválida, unicidade de senha; unitários provam que o seed vai ao cofre e nunca à
+      credencial. Gate local verde.)*
 - [ ] **T-006** Repontar papéis e permissões para `membership_id`.
 - [ ] **T-007** Backfill de `organization_id` nas tabelas de domínio.
 - [ ] **T-008** Implementar repositório com contexto de tenant obrigatório (barreira 1).
