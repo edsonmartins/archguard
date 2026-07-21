@@ -71,12 +71,21 @@ type Report struct {
 	PendingApproval []string
 	// Conflicts are the T-015 findings needing human review. Not migrated.
 	Conflicts []identdedup.Conflict
-	// FactorLoss lists identities that would LOSE an MFA factor TYPE
-	// (TOTP/WebAuthn present in some source account but absent after
-	// migration). The gate requires this EMPTY.
+	// FactorLoss lists identities that would LOSE an authentication factor: a
+	// TOTP/WebAuthn factor present in some source account but absent after
+	// migration, or a password that vanished without a forced reset (leaving no
+	// login path). The gate requires this EMPTY.
 	FactorLoss []string
+	// PreExisting lists accounts skipped because an identity with their e-mail
+	// hash already existed (a prior rehearsal run on the same copy, or an
+	// identity created by the invite flow). Skipping makes Run idempotent and
+	// avoids both a mid-run unique-violation abort and an orphaned vault write.
+	PreExisting []string
 	// DuplicateHumanEmails counts email_hash values shared by more than one
-	// human identity after the run. The gate requires ZERO.
+	// human identity after the run. The DB's unique partial index on
+	// identity(email_hash) already makes this impossible, so this is a
+	// belt-and-suspenders cross-check, not the primary enforcement. The gate
+	// requires ZERO.
 	DuplicateHumanEmails int
 	RoleAssignments      int
 	RolesUnresolved      []string
@@ -113,7 +122,7 @@ func Run(ctx context.Context, pool *pgxpool.Pool, custodian domain.KeyCustodian,
 
 	accounts, err := extractLegacyAccounts(ctx, pool)
 	if err != nil {
-		return Report{}, err
+		return report, err
 	}
 	refs := make([]identdedup.LegacyAccount, 0, len(accounts))
 	byKey := map[identfusion.AccountKey]account{}
@@ -123,7 +132,7 @@ func Run(ctx context.Context, pool *pgxpool.Pool, custodian domain.KeyCustodian,
 	}
 	inventory, err := identdedup.BuildInventory(refs, custodian)
 	if err != nil {
-		return Report{}, err
+		return report, err
 	}
 	report.Conflicts = inventory.Conflicts
 
@@ -142,9 +151,12 @@ func Run(ctx context.Context, pool *pgxpool.Pool, custodian domain.KeyCustodian,
 				return err
 			}
 			for _, m := range memberships {
-				// Direct insert under the identity axis (RLS 0014): one fused
-				// identity may span several organizations in this single
-				// transaction, which no single tenant scope could write.
+				// One fused identity may span several organizations in this single
+				// transaction, which no single tenant scope could write. Since
+				// migration 0015 restricts membership INSERT to the tenant axis
+				// (no self-grant under identity context), the rehearsal — a
+				// migration operation — runs as a privileged migration role that
+				// bypasses RLS, like every other step of the data migration.
 				if _, err := itx.Tx().Exec(ctx,
 					"INSERT INTO membership (id, identity_id, organization_id, status) VALUES ($1, $2, $3, $4)",
 					m.ID.String(), m.IdentityID.String(), m.OrganizationID.String(), string(m.Status)); err != nil {
@@ -177,13 +189,21 @@ func Run(ctx context.Context, pool *pgxpool.Pool, custodian domain.KeyCustodian,
 
 	// 1:1 accounts and e-mail-less accounts: one identity + one membership each.
 	for _, g := range inventory.Singles {
+		exists, err := identityExistsByHash(ctx, pool, mustHash(g.EmailHashHex))
+		if err != nil {
+			return report, err
+		}
+		if exists {
+			report.PreExisting = append(report.PreExisting, g.Accounts[0].Owner+"/"+g.Accounts[0].Name)
+			continue
+		}
 		if err := migrateSingle(ctx, g.Accounts[0], mustHash(g.EmailHashHex), byKey, orgs, secrets, persist, &report); err != nil {
-			return Report{}, err
+			return report, err
 		}
 	}
 	for _, ref := range inventory.NoEmail {
 		if err := migrateSingle(ctx, ref, nil, byKey, orgs, secrets, persist, &report); err != nil {
-			return Report{}, err
+			return report, err
 		}
 	}
 
@@ -191,7 +211,15 @@ func Run(ctx context.Context, pool *pgxpool.Pool, custodian domain.KeyCustodian,
 	for _, g := range inventory.FusionCandidates {
 		approval, ok := approvals[g.EmailHashHex]
 		if !ok {
-			report.PendingApproval = append(report.PendingApproval, hashPrefix(g.EmailHashHex))
+			report.PendingApproval = append(report.PendingApproval, identdedup.HashPrefix(g.EmailHashHex))
+			continue
+		}
+		exists, err := identityExistsByHash(ctx, pool, mustHash(g.EmailHashHex))
+		if err != nil {
+			return report, err
+		}
+		if exists {
+			report.PreExisting = append(report.PreExisting, identdedup.HashPrefix(g.EmailHashHex)+" (grupo fundido)")
 			continue
 		}
 		plan := identfusion.Plan{Group: g, Approval: approval,
@@ -202,7 +230,7 @@ func Run(ctx context.Context, pool *pgxpool.Pool, custodian domain.KeyCustodian,
 		}
 		fused, err := identfusion.Fuse(ctx, plan, orgs, secrets)
 		if err != nil {
-			return Report{}, err
+			return report, err
 		}
 		orgNames := make([]string, len(g.Accounts))
 		userNames := make([]string, len(g.Accounts))
@@ -210,29 +238,33 @@ func Run(ctx context.Context, pool *pgxpool.Pool, custodian domain.KeyCustodian,
 			orgNames[i], userNames[i] = ref.Owner, ref.Name
 		}
 		if err := persist(fused.Identity, fused.Memberships, fused.Credentials, orgNames, userNames); err != nil {
-			return Report{}, err
+			cleanupVault(ctx, secrets, fused.Credentials)
+			return report, err
 		}
 		report.DroppedFactors = append(report.DroppedFactors, fused.DroppedFactors...)
 		if fused.ForcePasswordReset {
 			report.ForcedResets = append(report.ForcedResets,
 				fmt.Sprintf("%s/%s (grupo fundido)", approval.Primary.Owner, approval.Primary.Name))
 		}
-		checkFactorPreservation(g.Accounts, fused.Credentials, hashPrefix(g.EmailHashHex), &report)
+		checkFactorPreservation(g.Accounts, fused.Credentials, fused.ForcePasswordReset, identdedup.HashPrefix(g.EmailHashHex), &report)
 	}
 
 	// Roles: re-point Role.Users[] to memberships (T-006), per organization.
 	if err := migrateRoles(ctx, pool, membershipByOrgUser, orgs, &report); err != nil {
-		return Report{}, err
+		return report, err
 	}
 
-	// Final validation: no duplicated human identity by e-mail hash.
+	// Belt-and-suspenders: the DB's unique partial index already forbids two
+	// human identities sharing an email_hash, so this can only ever read 0 — it
+	// is a cross-check that the index is present and honored, not the primary
+	// guard (the pre-existing skip above is what keeps the run idempotent).
 	if err := pool.QueryRow(ctx, `
 		SELECT count(*) FROM (
 			SELECT email_hash FROM identity
 			WHERE email_hash IS NOT NULL AND type = 'human'
 			GROUP BY email_hash HAVING count(*) > 1
 		) dup`).Scan(&report.DuplicateHumanEmails); err != nil {
-		return Report{}, fmt.Errorf("migrehearsal: verificação de duplicatas falhou: %w", err)
+		return report, fmt.Errorf("migrehearsal: verificação de duplicatas falhou: %w", err)
 	}
 
 	sort.Strings(report.PendingApproval)
@@ -275,24 +307,48 @@ func migrateSingle(ctx context.Context, ref identdedup.AccountRef, emailHash []b
 	}
 	if err := persist(idn, []domain.Membership{m}, migrated.Credentials,
 		[]string{ref.Owner}, []string{ref.Name}); err != nil {
+		// The vault Put in credmigration.Migrate happened before the persistence
+		// transaction (RFC-0004 §4); if persistence failed, the seed is orphaned
+		// — compensate by deleting it so no vaulted secret outlives its row.
+		cleanupVault(ctx, secrets, migrated.Credentials)
 		return err
 	}
-	checkFactorPreservation([]identdedup.AccountRef{ref}, migrated.Credentials, ref.Owner+"/"+ref.Name, report)
+	checkFactorPreservation([]identdedup.AccountRef{ref}, migrated.Credentials, migrated.ForcePasswordReset, ref.Owner+"/"+ref.Name, report)
 	return nil
 }
 
-// checkFactorPreservation compares the MFA factor TYPES present in the source
-// accounts against the migrated credentials: a type present before and absent
-// after is a FACTOR LOSS — the finding that fails the gate.
-func checkFactorPreservation(sources []identdedup.AccountRef, creds []domain.Credential, label string, report *Report) {
+// cleanupVault best-effort deletes the vault references of the given
+// credentials — compensation for a vault write whose database transaction
+// failed. Errors are ignored: this runs on an already-failing path and must
+// not mask the original error.
+func cleanupVault(ctx context.Context, secrets domain.SecretStore, creds []domain.Credential) {
+	for _, c := range creds {
+		if c.SecretRef != "" {
+			_ = secrets.Delete(ctx, c.SecretRef)
+		}
+	}
+}
+
+// checkFactorPreservation compares the authentication factors present in the
+// source accounts against the migrated credentials: a factor present before and
+// absent after is a LOSS — the finding that fails the gate. A password is not
+// "lost" when a reset was intentionally forced (INV-1/INV-7): the reset flow
+// still gives the identity a login path. But a password that vanishes with NO
+// surviving password credential AND NO forced reset leaves the identity without
+// a knowledge factor — a silent loss the gate must catch.
+func checkFactorPreservation(sources []identdedup.AccountRef, creds []domain.Credential, passwordReset bool, label string, report *Report) {
 	has := map[domain.FactorType]bool{}
 	for _, c := range creds {
 		has[c.Type] = true
 	}
-	wantTOTP, wantWebAuthn := false, false
+	wantPassword, wantTOTP, wantWebAuthn := false, false, false
 	for _, s := range sources {
+		wantPassword = wantPassword || s.HasPassword
 		wantTOTP = wantTOTP || s.HasTOTP
 		wantWebAuthn = wantWebAuthn || s.HasWebAuthn
+	}
+	if wantPassword && !has[domain.FactorPassword] && !passwordReset {
+		report.FactorLoss = append(report.FactorLoss, label+": senha presente na origem, ausente após a migração e sem reset forçado — identidade sem caminho de login")
 	}
 	if wantTOTP && !has[domain.FactorTOTP] {
 		report.FactorLoss = append(report.FactorLoss, label+": TOTP presente na origem e ausente após a migração")
@@ -430,6 +486,25 @@ func extractLegacyAccounts(ctx context.Context, pool *pgxpool.Pool) ([]account, 
 	return out, nil
 }
 
+// identityExistsByHash reports whether an identity already carries this e-mail
+// hash. A nil/empty hash (a no-e-mail account) is never "already there" by
+// hash, so it returns false — those accounts are minted fresh each run. The
+// pre-check keeps the rehearsal idempotent: a re-run, or an identity created by
+// the invite flow, is skipped instead of aborting the whole run on the unique
+// index (and it avoids the vault write that would otherwise be orphaned by that
+// abort).
+func identityExistsByHash(ctx context.Context, pool *pgxpool.Pool, emailHash []byte) (bool, error) {
+	if len(emailHash) == 0 {
+		return false, nil
+	}
+	var exists bool
+	if err := pool.QueryRow(ctx,
+		"SELECT EXISTS (SELECT 1 FROM identity WHERE email_hash = $1)", emailHash).Scan(&exists); err != nil {
+		return false, fmt.Errorf("migrehearsal: verificação de identidade existente falhou: %w", err)
+	}
+	return exists, nil
+}
+
 // orgResolver resolves legacy organization names to stable UUIDs (0003) via
 // pgx — the real implementation of identfusion.OrganizationResolver.
 type orgResolver struct {
@@ -470,13 +545,6 @@ func mustHash(hexHash string) []byte {
 		return nil
 	}
 	return b
-}
-
-func hashPrefix(h string) string {
-	if len(h) > 12 {
-		return h[:12] + "…"
-	}
-	return h
 }
 
 // Render writes the rehearsal report (pt-BR, no plaintext personal data).

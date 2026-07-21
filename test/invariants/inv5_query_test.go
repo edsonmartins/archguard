@@ -64,11 +64,26 @@ var (
 	scopeColRe  = regexp.MustCompile(`(?is)\b(organization_id|identity_id)\b`)
 )
 
-// tableTouchRe matches a query position reference (FROM/JOIN/UPDATE/INSERT
-// INTO) of the table.
-func tableTouchRe(table string) *regexp.Regexp {
-	return regexp.MustCompile(`(?is)\b(from|join|update|insert\s+into)\s+` + table + `\b`)
+// tableMatcher holds the per-table regexps, compiled ONCE (the detector runs
+// over every string literal under internal/, so recompiling per literal would
+// be pure CI waste).
+type tableMatcher struct {
+	table  string
+	touch  *regexp.Regexp // any read/write position: FROM/JOIN/UPDATE/DELETE FROM/INSERT INTO
+	insert *regexp.Regexp // INSERT INTO <table> ( <column list> ) — group 1 is the columns
 }
+
+var tableMatchers = func() []tableMatcher {
+	ms := make([]tableMatcher, 0, len(tenantScopedPgxTables))
+	for _, t := range tenantScopedPgxTables {
+		ms = append(ms, tableMatcher{
+			table:  t,
+			touch:  regexp.MustCompile(`(?is)\b(from|join|update|insert\s+into)\s+` + t + `\b`),
+			insert: regexp.MustCompile(`(?is)\binsert\s+into\s+` + t + `\s*\(([^)]*)\)`),
+		})
+	}
+	return ms
+}()
 
 // analyzeQueryLiteral reports the guarded tables the literal queries without a
 // tenant-scope predicate.
@@ -77,24 +92,24 @@ func analyzeQueryLiteral(lit string) []string {
 		return nil // not a query — error messages etc.
 	}
 	var bad []string
-	lower := strings.ToLower(lit)
-	for _, table := range tenantScopedPgxTables {
-		touch := tableTouchRe(table).FindString(lower)
-		if touch == "" {
-			continue
-		}
-		if strings.HasPrefix(strings.Fields(touch)[0], "insert") ||
-			regexp.MustCompile(`(?is)insert\s+into\s+`+table+`\b`).MatchString(lower) {
-			// INSERT: the scope column must be among the inserted columns.
-			if !scopeColRe.MatchString(lower) {
-				bad = append(bad, table)
+	for _, m := range tableMatchers {
+		// INSERT: the scope column must be among the INSERTED columns — check the
+		// column list captured between the parens, NOT the whole literal (a
+		// column of a joined/selected table appearing elsewhere must not count).
+		if cols := m.insert.FindStringSubmatch(lit); cols != nil {
+			if !scopeColRe.MatchString(cols[1]) {
+				bad = append(bad, m.table)
 			}
 			continue
 		}
-		// SELECT/UPDATE/DELETE: a WHERE with a scope predicate is mandatory.
-		_, after, found := strings.Cut(lower, "where")
+		if m.touch.FindString(lit) == "" {
+			continue
+		}
+		// SELECT/UPDATE/DELETE (or an INSERT without an explicit column list): a
+		// WHERE with a scope predicate is mandatory.
+		_, after, found := strings.Cut(strings.ToLower(lit), "where")
 		if !found || !scopePredRe.MatchString(after) {
-			bad = append(bad, table)
+			bad = append(bad, m.table)
 		}
 	}
 	return bad
@@ -197,6 +212,9 @@ func TestSelfINV5IgnoresNonQueries(t *testing.T) {
 		`UPDATE role_assignment SET role_id = $1 WHERE membership_id = $2 AND organization_id = $3`,
 		`INSERT INTO membership (id, identity_id, organization_id, status) VALUES ($1,$2,$3,$4)`,
 		`SELECT relrowsecurity FROM pg_class WHERE relname = $1`,
+		// INSERT ... SELECT com a coluna de escopo NA LISTA de colunas inseridas
+		// (a fonte é `role`, não guardada) passa.
+		`INSERT INTO role_assignment (id, organization_id, role_id, membership_id) SELECT gen_random_uuid(), $1, r.id, $2 FROM role r WHERE r.id = $3`,
 	} {
 		if bad := analyzeQueryLiteral(ok); len(bad) != 0 {
 			t.Errorf("falso positivo para %q: %v", ok, bad)
@@ -206,6 +224,10 @@ func TestSelfINV5IgnoresNonQueries(t *testing.T) {
 		`SELECT id FROM membership WHERE status = 'active'`,
 		`UPDATE auth_session SET status = 'revoked'`,
 		`DELETE FROM role_assignment WHERE role_id = $1`,
+		// A regressão do achado: INSERT cuja LISTA de colunas omite o escopo, mas
+		// que menciona organization_id só no WHERE de uma tabela DIFERENTE. O
+		// detector antigo (varria o literal inteiro) deixava passar.
+		`INSERT INTO auth_session (id, membership_id) SELECT id, membership_id FROM membership m WHERE m.organization_id = $1 AND m.identity_id = $2`,
 	} {
 		if got := analyzeQueryLiteral(bad); len(got) == 0 {
 			t.Errorf("falso negativo: %q deveria violar", bad)

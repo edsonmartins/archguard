@@ -49,6 +49,11 @@ func (f *fakeSecretStore) Get(_ context.Context, ref string) ([]byte, error) {
 	return v, nil
 }
 
+func (f *fakeSecretStore) Delete(_ context.Context, ref string) error {
+	delete(f.m, ref)
+	return nil
+}
+
 func newID(t *testing.T) uuid.UUID {
 	t.Helper()
 	id, err := uuid.NewV7()

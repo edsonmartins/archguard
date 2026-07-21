@@ -216,6 +216,18 @@ func sortRefs(refs []AccountRef) {
 	})
 }
 
+// HashPrefix truncates an e-mail hash to a short, operator-facing label (never
+// the plaintext e-mail). It is the single labeling used by BOTH the T-015
+// inventory report and the T-019 rehearsal report, so a fusion group reads the
+// same across both — the operator can correlate "pendente de aprovação" between
+// them. Keep it here as the one source of that format.
+func HashPrefix(h string) string {
+	if len(h) > 12 {
+		return h[:12] + "…"
+	}
+	return h
+}
+
 // Render writes the human-readable conflict report (pt-BR). It contains NO
 // plaintext e-mail — accounts are referenced by owner/name and groups by hash
 // prefix, which is enough for the operator to locate the rows.
@@ -240,13 +252,6 @@ func (inv Inventory) Render(w io.Writer) error {
 		}
 		return out
 	}
-	hashPrefix := func(h string) string {
-		if len(h) > 12 {
-			return h[:12] + "…"
-		}
-		return h
-	}
-
 	if err := p("# Inventário de deduplicação de identidades (T-015)\n\n"); err != nil {
 		return err
 	}
@@ -260,7 +265,7 @@ func (inv Inventory) Render(w io.Writer) error {
 			return err
 		}
 		for _, g := range inv.FusionCandidates {
-			if err := p("- hash %s (%d contas):\n", hashPrefix(g.EmailHashHex), len(g.Accounts)); err != nil {
+			if err := p("- hash %s (%d contas):\n", HashPrefix(g.EmailHashHex), len(g.Accounts)); err != nil {
 				return err
 			}
 			for _, r := range g.Accounts {

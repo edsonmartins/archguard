@@ -41,4 +41,10 @@ type SecretStore interface {
 	// Get resolves a reference back to the secret, or ErrSecretNotFound. The
 	// secret is returned for use in memory; it is never persisted by the caller.
 	Get(ctx context.Context, ref string) (secret []byte, err error)
+	// Delete removes the secret at ref. It is idempotent: deleting a reference
+	// that does not exist is not an error. Its purpose is compensation — a caller
+	// that wrote a secret before a database transaction (RFC-0004 §4) and then
+	// saw the transaction fail deletes the now-orphaned reference, so a vaulted
+	// secret never outlives the row that was supposed to point at it.
+	Delete(ctx context.Context, ref string) error
 }

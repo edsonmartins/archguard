@@ -115,6 +115,18 @@ func (k *SealedKeystore) Put(name, privateKeyPEM string) error {
 	return k.persistLocked()
 }
 
+// Delete removes the key stored under name and persists the keystore
+// atomically. It is idempotent: deleting an absent name is a no-op success.
+func (k *SealedKeystore) Delete(name string) error {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	if _, ok := k.keys[name]; !ok {
+		return nil
+	}
+	delete(k.keys, name)
+	return k.persistLocked()
+}
+
 // persistLocked encrypts the whole key map and writes it atomically. Caller
 // holds the write lock.
 func (k *SealedKeystore) persistLocked() error {

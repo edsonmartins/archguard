@@ -58,6 +58,11 @@ func (v *memVault) Get(_ context.Context, ref string) ([]byte, error) {
 	return s, nil
 }
 
+func (v *memVault) Delete(_ context.Context, ref string) error {
+	delete(v.secrets, ref)
+	return nil
+}
+
 // fusablePlan builds a valid two-account plan (org-a primary with pwd+totp,
 // org-b with pwd+webauthn).
 func fusablePlan() (Plan, mapResolver) {

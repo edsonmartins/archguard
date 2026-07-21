@@ -71,3 +71,23 @@ func TestSecretStoreNotFound(t *testing.T) {
 		t.Errorf("erro = %v, quer ErrSecretNotFound", err)
 	}
 }
+
+func TestSecretStoreDelete(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+
+	ref, err := s.Put(ctx, []byte("seed-a-remover"))
+	if err != nil {
+		t.Fatalf("Put: %v", err)
+	}
+	if err := s.Delete(ctx, ref); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+	if _, err := s.Get(ctx, ref); !errors.Is(err, domain.ErrSecretNotFound) {
+		t.Errorf("após Delete, Get = %v, quer ErrSecretNotFound", err)
+	}
+	// Idempotente: apagar uma referência inexistente não é erro (compensação).
+	if err := s.Delete(ctx, ref); err != nil {
+		t.Errorf("Delete idempotente: %v", err)
+	}
+}

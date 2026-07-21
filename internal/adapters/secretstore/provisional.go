@@ -66,5 +66,11 @@ func (p *Provisional) Get(_ context.Context, ref string) ([]byte, error) {
 	return base64.StdEncoding.DecodeString(enc)
 }
 
+// Delete removes a sealed secret. Idempotent (an absent reference is a no-op),
+// so it is safe as compensation after a failed transaction.
+func (p *Provisional) Delete(_ context.Context, ref string) error {
+	return p.ks.Delete(ref)
+}
+
 // compile-time check that Provisional satisfies the port.
 var _ domain.SecretStore = (*Provisional)(nil)

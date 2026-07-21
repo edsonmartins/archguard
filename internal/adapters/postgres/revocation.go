@@ -39,10 +39,10 @@ func NewIdentityMembershipStore(itx *IdentityTx) *IdentityMembershipStore {
 }
 
 // SuspendAllActive suspends every ACTIVE membership of the identity — the
-// recoverable cascade of identity suspension (decisão do arquiteto,
-// 2026-07-21: suspensão da identidade suspende vínculos, não os revoga;
-// terminal é reservado ao deprovisionamento). Invited, suspended and revoked
-// rows are untouched. Returns how many memberships moved.
+// recoverable cascade of identity suspension (architect's decision, 2026-07-21:
+// suspending an identity suspends its memberships, it does not revoke them;
+// terminal is reserved for deprovisioning). Invited, suspended and revoked rows
+// are untouched. Returns how many memberships moved.
 func (s *IdentityMembershipStore) SuspendAllActive(ctx context.Context) (int, error) {
 	const q = `
 		UPDATE membership

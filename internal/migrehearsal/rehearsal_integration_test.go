@@ -48,6 +48,11 @@ func (v *memVault) Get(_ context.Context, ref string) ([]byte, error) {
 	return s, nil
 }
 
+func (v *memVault) Delete(_ context.Context, ref string) error {
+	delete(v.secrets, ref)
+	return nil
+}
+
 func setupRehearsal(t *testing.T) (*pgxpool.Pool, domain.KeyCustodian) {
 	t.Helper()
 	dsn := os.Getenv("ARCHGUARD_TEST_DSN")
@@ -331,5 +336,42 @@ func TestRehearsalDetectsFactorLoss(t *testing.T) {
 	}
 	if err := report.Validate(); err == nil {
 		t.Fatalf("Validate deveria falhar com perda de fator")
+	}
+}
+
+// Idempotência: rodar o ensaio de novo na mesma cópia não recria identidades
+// nem aborta no índice único — as contas já migradas caem em PreExisting, e o
+// segundo relatório não cria nada.
+func TestRehearsalIsIdempotent(t *testing.T) {
+	pool, cust := setupRehearsal(t)
+	ctx := context.Background()
+	org := "reh-idem"
+	cleanupOrgs(t, pool, org)
+	seedOrg(t, pool, org)
+	seedUser(t, pool, legacyUserRow{owner: org, name: "frank", email: "frank@reh.example",
+		password: "h1", salt: "s", ptype: "pbkdf2-salt", totp: "SEED-FRANK"})
+
+	first, err := Run(ctx, pool, cust, &memVault{}, nil)
+	if err != nil {
+		t.Fatalf("primeira execução: %v", err)
+	}
+	if first.IdentitiesCreated != 1 || len(first.PreExisting) != 0 {
+		t.Fatalf("primeira execução: criadas=%d preexistentes=%d, quero 1/0", first.IdentitiesCreated, len(first.PreExisting))
+	}
+
+	second, err := Run(ctx, pool, cust, &memVault{}, nil)
+	if err != nil {
+		t.Fatalf("segunda execução (deveria ser idempotente): %v", err)
+	}
+	if second.IdentitiesCreated != 0 {
+		t.Fatalf("segunda execução criou %d identidades, quero 0", second.IdentitiesCreated)
+	}
+	if len(second.PreExisting) != 1 {
+		t.Fatalf("segunda execução: preexistentes=%d, quero 1 (frank)", len(second.PreExisting))
+	}
+
+	// Continua sem duplicata humana.
+	if second.DuplicateHumanEmails != 0 {
+		t.Fatalf("duplicata humana após re-execução: %d", second.DuplicateHumanEmails)
 	}
 }
