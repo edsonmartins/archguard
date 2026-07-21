@@ -31,7 +31,18 @@
       determinismo, NFC (é composto == e+acento combinante), sensibilidade (mutar qualquer campo
       muda os bytes), truncamento a microssegundo. Gate verde; go.mod/sum intactos; baseline de
       licença inalterado.)*
-- [ ] **T-003** Implementar encadeamento por hash com `seq` por organização.
+- [x] **T-003** Implementar encadeamento por hash com `seq` por organização. *(Domínio
+      `internal/domain/audit_chain.go` — a fórmula do RFC-0003 §3, sem material de chave (a
+      assinatura Ed25519 é T-010). `GenesisHash(org, nonce)` = `H(org || genesis_nonce)` (nonce
+      de 32 bytes por organização — dois tenants não compartilham cadeia); `SealEvent(event,
+      prevHash, seq)` = canonicaliza e computa `hash = H(prev_hash || canonical)`, devolvendo o
+      `SealedEvent`. Concatenação não-ambígua porque prev_hash é fixo em 32 bytes. O `seq` é
+      atribuído pela camada de escrita (serialização por org, T-004); o domínio só exige seq≥1 e
+      prev_hash de 32 bytes (ErrInvalidPrevHash/ErrInvalidSeq/ErrInvalidGenesisNonce).
+      `VerifyLink` recomputa o elo e detecta adulteração de conteúdo OU de prev_hash (base do
+      verificador completo, T-013). Vetores fixos: gênese e primeiro hash da cadeia pinados
+      (drift quebra o build); testes de encadeamento de 2 elos, gênese distinta por nonce,
+      detecção de adulteração. Gate verde.)*
 - [ ] **T-004** Implementar serialização de escrita por tenant (sem lacunas, sem corrida).
 - [ ] **T-005** Criar tabela particionada por tempo e índices de consulta.
 - [ ] **T-006** Configurar papel de banco sem `UPDATE`/`DELETE` na auditoria.
