@@ -284,7 +284,16 @@
       secundária, descartes reportados), bob com reset forçado, conta de serviço sem e-mail,
       carol em conflito R3 não migrada, dave pendente de aprovação não migrado, papel vinculado
       ao membership com fantasma reportado, seed TOTP no cofre e NUNCA no banco. Gate verde.)*
-- [ ] **T-020** Atualizar `DIVERGENCE.md` com o escopo da divergência de modelo de dados.
+- [x] **T-020** Atualizar `DIVERGENCE.md` com o escopo da divergência de modelo de dados.
+      *(Linha 2026-07-21 no `docs/upstream/DIVERGENCE.md`: a maior divergência estrutural do
+      fork (prevista no ADR-0006) — tabelas novas (identity/membership/credential/
+      role_assignment/auth_session), extensões das legadas (id uuid em organization/role,
+      organization_id em ~16 tabelas), duas barreiras de isolamento com os três contextos de
+      sessão de banco, mecanismos de migração e impacto de triagem: o modelo user=identidade-
+      por-org do upstream está SUPERADO — commits que mudem semântica de user/organization/
+      role/session/invitation exigem revisão manual. Prefixos refletidos em
+      `tools/upstreamwatch/classify.go` (role.go, session.go, invitation) como o próprio
+      DIVERGENCE.md pede. Gate verde.)*
 
 ## Gate de verificação
 Testes de travessia verdes com RLS ligada **e** desligada (provando as duas barreiras);

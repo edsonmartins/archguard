@@ -59,6 +59,10 @@ var divergentPrefixes = []string{
 	"object/token_jwt.go", "object/provider.go", "object/user.go",
 	"object/init_data", "object/syncer_database.go", "conf/app.conf",
 	"main.go", "routers/",
+	// Pacote 002 (identity-multitenancy): o modelo de identidade/membership/
+	// sessão do ArchGuard convive com estas superfícies legadas — commit do
+	// upstream que mude a semântica delas exige revisão manual (DIVERGENCE.md).
+	"object/role.go", "object/session.go", "object/invitation",
 }
 
 // outOfScopePrefixes are paths for removed features (ADR-0015/ADR-0019). A commit
