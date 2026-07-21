@@ -210,7 +210,20 @@
       suspensão (2 memberships suspensos, 3 sessões revogadas) e deprovisionamento (terminal),
       RLS da 0014 como papel não-superusuário (eixo identidade só alcança as próprias linhas,
       UPDATE alheio atinge 0 linhas, eixo tenant preservado). Gate verde.)*
-- [ ] **T-015** Ferramenta de inventário e deduplicação com relatório de conflito.
+- [x] **T-015** Ferramenta de inventário e deduplicação com relatório de conflito. *(Pacote
+      `internal/identdedup` — RFC-0002 §6 passos 1–2, padrão dos mecanismos: função PURA sobre
+      primitivos legados (sem XORM/banco), extração em massa fica no T-019. `BuildInventory`
+      hasheia cada e-mail via `KeyCustodian` (case-insensitive pela normalização) e classifica:
+      1:1 (e-mail único), **candidata a fusão** (mesmo hash em orgs distintas → 1 identidade +
+      N memberships, SÓ PROPOSTA — execução exige aprovação humana no T-016), sem e-mail
+      (identidade própria, sem hash — índice único parcial permite) e **conflitos p/ revisão
+      humana**: `same_org_duplicate` (mesmo e-mail 2× na MESMA org — fusão violaria R3),
+      `mixed_types` (e-mail compartilhado por humana e serviço) e `unhashable_email`. Grupo
+      conflitado NUNCA vaza para as propostas. Flags de fator (senha/totp/webauthn) viajam por
+      conta — insumo do "sem perda de fator MFA" do gate. Determinística (mesma base em qualquer
+      ordem = mesmo inventário; o ensaio T-019 diffa execuções). `Render` emite o relatório
+      pt-BR **sem e-mail em claro** (minimização: owner/name + prefixo do hash), provado por
+      teste. Gate verde.)*
 - [ ] **T-016** Rotina de fusão assistida (com aprovação humana obrigatória).
 - [ ] **T-017** Testes de travessia entre tenants (barreira 1 e barreira 2 isoladamente).
 - [ ] **T-018** Teste automatizado que rejeita query sem predicado de tenant.
