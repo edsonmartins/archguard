@@ -212,6 +212,29 @@ func TestRevokeIsTerminalAndIdempotent(t *testing.T) {
 	}
 }
 
+// Fail-closed: a malformed session (zero value, or an unrecognized status
+// string) must DENY, never panic on the nil tenant pointers.
+func TestActiveTenantFailsClosedOnMalformedSession(t *testing.T) {
+	// Zero-value session: Status == "", both pointers nil.
+	var zero AuthSession
+	if _, _, err := zero.ActiveTenant(); !errors.Is(err, ErrInvalidSession) {
+		t.Fatalf("sessão zero: err = %v, quero ErrInvalidSession (sem panic)", err)
+	}
+
+	// Unrecognized status string (e.g. scanned from an unexpected row value).
+	weird := AuthSession{Status: SessionStatus("bogus")}
+	if _, _, err := weird.ActiveTenant(); !errors.Is(err, ErrInvalidSession) {
+		t.Fatalf("status desconhecido: err = %v, quero ErrInvalidSession", err)
+	}
+
+	// Status active but pointers nil (impossible via constructors, but must not
+	// panic if ever constructed by hand or scanned malformed).
+	active := AuthSession{Status: SessionActive}
+	if _, _, err := active.ActiveTenant(); !errors.Is(err, ErrInvalidSession) {
+		t.Fatalf("active sem tenant: err = %v, quero ErrInvalidSession", err)
+	}
+}
+
 func TestIdentityScopeRefusesNil(t *testing.T) {
 	if _, err := NewIdentityScope(uuid.Nil); !errors.Is(err, ErrNoIdentity) {
 		t.Fatalf("escopo nulo: err = %v, quero ErrNoIdentity", err)

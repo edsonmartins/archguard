@@ -29,8 +29,8 @@ var (
 	// existing identity. T-013 covers LINKING an existing identity to a new
 	// organization (spec: "Vinculação a nova organização"); creating a brand-new
 	// identity from an invite (first-access onboarding, per-holder encryption)
-	// is out of scope here — decisão do arquiteto (2026-07-21), fluxo chega com
-	// os pacotes 008/009. Nothing is created silently.
+	// is out of scope here (architect's decision, 2026-07-21; that flow arrives
+	// with packages 008/009). Nothing is created silently.
 	ErrUnknownInviteEmail = errors.New("postgres: e-mail convidado não corresponde a identidade existente — criação de identidade está fora do escopo do convite")
 	// ErrIdentityNotInvitable is returned when the identity exists but is not
 	// active (suspended or deprovisioned): a retired or blocked identity does
@@ -109,6 +109,18 @@ func (i *Inviter) Accept(ctx context.Context, membershipID, identityID uuid.UUID
 		}
 		if m.IdentityID != identityID {
 			return fmt.Errorf("%w: membership %s", ErrNotInviteOwner, m.ID)
+		}
+		// Fail-closed: an identity that is no longer active (suspended or
+		// deprovisioned) does not gain a new tenant by accepting an invite. The
+		// suspension cascade leaves invited memberships untouched (they grant
+		// nothing), so without this check a suspended identity could activate a
+		// pending invite. Mirror the invite-side ErrIdentityNotInvitable guard.
+		idn, err := NewIdentityStore(ttx.Tx()).Get(ctx, identityID)
+		if err != nil {
+			return err
+		}
+		if idn.Status != domain.IdentityActive {
+			return fmt.Errorf("%w: status %s", ErrIdentityNotInvitable, idn.Status)
 		}
 		if err := m.Activate(); err != nil {
 			return err

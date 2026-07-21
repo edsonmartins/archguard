@@ -170,12 +170,23 @@ func NewAuthSession(identityID uuid.UUID, provenAAL AAL, memberships []Membershi
 // case is there a tenant to put in the `org` claim.
 func (s *AuthSession) ActiveTenant() (membershipID, organizationID uuid.UUID, err error) {
 	switch s.Status {
-	case SessionRevoked:
-		return uuid.Nil, uuid.Nil, ErrSessionRevoked
+	case SessionActive:
+		// Belt-and-suspenders: an active session always carries both pointers
+		// (setTenant sets them together), but never deref a nil — a malformed
+		// row must deny, not panic (fail-closed).
+		if s.MembershipID == nil || s.OrganizationID == nil {
+			return uuid.Nil, uuid.Nil, fmt.Errorf("%w: sessão ativa sem tenant", ErrInvalidSession)
+		}
+		return *s.MembershipID, *s.OrganizationID, nil
 	case SessionPendingSelection:
 		return uuid.Nil, uuid.Nil, ErrTenantSelectionRequired
+	case SessionRevoked:
+		return uuid.Nil, uuid.Nil, ErrSessionRevoked
+	default:
+		// Zero-value or an unrecognized status (e.g. an unexpected value scanned
+		// from the row): deny, never fall through to a nil deref.
+		return uuid.Nil, uuid.Nil, fmt.Errorf("%w: status %q", ErrInvalidSession, s.Status)
 	}
-	return *s.MembershipID, *s.OrganizationID, nil
 }
 
 // SelectTenant resolves a pending session to the given membership — the

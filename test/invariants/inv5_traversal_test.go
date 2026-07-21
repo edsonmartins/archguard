@@ -314,6 +314,40 @@ func TestINV5TraversalBarrier2(t *testing.T) {
 		fx.orgB.String(), fx.roleA.String(), fx.memB.String()); err == nil {
 		t.Errorf("Barreira 2: WITH CHECK deveria barrar escrita de linha de B sob contexto de A")
 	}
+	_ = tx.Rollback(ctx)
+
+	// EIXO DE IDENTIDADE (migration 0015): sob app.current_identity, um self-grant
+	// — INSERIR uma membership 'active' da própria identidade numa organização que
+	// nunca a convidou — deve ser BARRADO, pois a policy de INSERT da membership é
+	// só do eixo de tenant (sem eixo de identidade). Antes da 0015 isto passava.
+	var victimOrg uuid.UUID
+	if err := pool.QueryRow(ctx,
+		"INSERT INTO organization (owner, name) VALUES ('inv5', $1) RETURNING id",
+		"victim-"+uuid.NewString()[:8]).Scan(&victimOrg); err != nil {
+		t.Fatalf("org vítima: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), "DELETE FROM membership WHERE organization_id = $1", victimOrg.String())
+		_, _ = pool.Exec(context.Background(), "DELETE FROM organization WHERE id = $1", victimOrg.String())
+	})
+
+	tx2, err := conn.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	defer tx2.Rollback(ctx)
+	if _, err := tx2.Exec(ctx, "SET LOCAL ROLE "+inv5Role); err != nil {
+		t.Fatalf("set role: %v", err)
+	}
+	if _, err := tx2.Exec(ctx, "SELECT set_config($1,$2,true)",
+		domain.RLSIdentitySettingName, fx.identity.String()); err != nil {
+		t.Fatalf("set identity: %v", err)
+	}
+	if _, err := tx2.Exec(ctx,
+		"INSERT INTO membership (id, identity_id, organization_id, status) VALUES (gen_random_uuid(), $1, $2, 'active')",
+		fx.identity.String(), victimOrg.String()); err == nil {
+		t.Errorf("Barreira 2: policy de INSERT deveria barrar self-grant de membership sob contexto de identidade")
+	}
 }
 
 // TestINV5RLSStaysEnabled trava o estado da Barreira 2: RLS LIGADA e FORÇADA
@@ -322,7 +356,10 @@ func TestINV5TraversalBarrier2(t *testing.T) {
 func TestINV5RLSStaysEnabled(t *testing.T) {
 	pool, _ := setupTraversal(t)
 	ctx := context.Background()
-	for _, table := range []string{"membership", "role_assignment", "auth_session"} {
+	// Single source of truth: the same list the static query detector guards
+	// (inv5_query_test.go). Adding a tenant-scoped pgx table there also makes
+	// this RLS lock cover it — the two invariants can no longer drift apart.
+	for _, table := range tenantScopedPgxTables {
 		var enabled, forced bool
 		if err := pool.QueryRow(ctx,
 			"SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE relname = $1", table).Scan(&enabled, &forced); err != nil {

@@ -92,9 +92,13 @@ type TenantAuthPolicy interface {
 	RequiredAAL(ctx context.Context, organizationID uuid.UUID) (AAL, error)
 }
 
-// SessionAuditor records a tenant switch durably BEFORE the switch commits.
-// The append-only trail is pacote 003; this port is the seam. I-5.4: if
-// RecordTenantSwitch fails, the caller rolls the switch back (fail-closed).
+// SessionAuditor drains a tenant-switch event from the transactional outbox to
+// the durable, tamper-evident trail (pacote 003). It runs ASYNCHRONOUSLY,
+// OUTSIDE the switch transaction — so a remote call here is allowed (RFC-0004
+// §4). The switch's own I-5.4 guarantee (audit-or-deny) is provided structurally
+// by the outbox: the event row is written in the SAME transaction as the switch
+// (migration 0016), so it commits or rolls back atomically with it. This port
+// is the seam for that later drain, not something called inside the switch.
 type SessionAuditor interface {
 	RecordTenantSwitch(ctx context.Context, event TenantSwitchEvent) error
 }
@@ -107,9 +111,10 @@ type SessionAuditor interface {
 // validation — the previous token is never reused, and the new token carries
 // the destination's `org` alone (a token never spans two tenants).
 //
-// It returns the audit event of the move; the caller MUST record it via a
-// SessionAuditor within the same transaction that persists the switch (I-5.4:
-// unrecorded switch = no switch).
+// It returns the audit event of the move; the caller MUST write it to the
+// transactional outbox within the same transaction that persists the switch,
+// so the record is atomic with the switch (I-5.4: unrecorded switch = no
+// switch). The durable trail drains that outbox out of band (pacote 003).
 func (s *AuthSession) SwitchTenant(dest Membership, required AAL) (TenantSwitchEvent, error) {
 	switch s.Status {
 	case SessionRevoked:

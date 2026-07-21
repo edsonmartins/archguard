@@ -40,8 +40,10 @@ var (
 	// ErrSwitchConflict is returned when the optimistic tenant-switch UPDATE
 	// matched nothing: the session moved concurrently (another switch, a
 	// revocation) since it was read. The caller re-reads and re-decides — the
-	// stale switch is never applied over the newer state.
-	ErrSwitchConflict = errors.New("postgres: troca de tenant em conflito — a sessão mudou concorrentemente")
+	// stale switch is never applied over the newer state. It also covers the
+	// destination membership having been revoked/suspended between the in-memory
+	// validation and the write (the UPDATE re-checks it must still be active).
+	ErrSwitchConflict = errors.New("postgres: troca de tenant em conflito — a sessão ou o membership de destino mudou concorrentemente")
 )
 
 // IdentitySessionStore is the login-flow store for auth_session rows: create the
@@ -108,10 +110,19 @@ func (s *IdentitySessionStore) SaveSelection(ctx context.Context, as domain.Auth
 	if as.Status != domain.SessionActive || as.MembershipID == nil || as.OrganizationID == nil {
 		return fmt.Errorf("postgres: seleção de tenant exige sessão ativa com membership resolvido")
 	}
+	// The EXISTS clause re-reads the destination membership WITHIN this
+	// transaction: the selection only commits if that membership is still active
+	// for this identity in that organization. This closes the TOCTOU where the
+	// membership was validated in memory at login-listing time but revoked or
+	// suspended before the explicit selection is persisted.
 	const q = `
 		UPDATE auth_session
 		SET membership_id = $3, organization_id = $4, status = $5, updated_at = now()
-		WHERE id = $1 AND identity_id = $2 AND status = 'pending_selection'`
+		WHERE id = $1 AND identity_id = $2 AND status = 'pending_selection'
+		  AND EXISTS (
+			SELECT 1 FROM membership m
+			WHERE m.id = $3 AND m.identity_id = $2 AND m.organization_id = $4
+			  AND m.status = 'active')`
 	tag, err := s.itx.tx.Exec(ctx, q,
 		as.ID.String(), as.IdentityID.String(),
 		as.MembershipID.String(), as.OrganizationID.String(), string(domain.SessionActive))
@@ -138,11 +149,21 @@ func (s *IdentitySessionStore) SaveSwitch(ctx context.Context, as domain.AuthSes
 	if as.Status != domain.SessionActive || as.MembershipID == nil || as.OrganizationID == nil {
 		return fmt.Errorf("postgres: troca de tenant exige sessão ativa com destino resolvido")
 	}
+	// The EXISTS clause re-reads the DESTINATION membership WITHIN this
+	// transaction: the switch only commits if that membership is still active for
+	// this identity in that organization. This closes the TOCTOU where the
+	// destination was validated in memory (caller-supplied snapshot) but revoked
+	// or suspended concurrently — a switch must never bind a session to a
+	// membership that is no longer live in its tenant.
 	const q = `
 		UPDATE auth_session
 		SET membership_id = $3, organization_id = $4, token_generation = $5, updated_at = now()
 		WHERE id = $1 AND identity_id = $2
-		  AND status = 'active' AND membership_id = $6 AND token_generation = $7`
+		  AND status = 'active' AND membership_id = $6 AND token_generation = $7
+		  AND EXISTS (
+			SELECT 1 FROM membership m
+			WHERE m.id = $3 AND m.identity_id = $2 AND m.organization_id = $4
+			  AND m.status = 'active')`
 	tag, err := s.itx.tx.Exec(ctx, q,
 		as.ID.String(), as.IdentityID.String(),
 		as.MembershipID.String(), as.OrganizationID.String(), as.TokenGeneration,

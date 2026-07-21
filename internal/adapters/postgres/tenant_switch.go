@@ -24,19 +24,21 @@ import (
 
 // TenantSwitcher orchestrates the tenant-switch business operation (T-012,
 // design 002 §"Sessão e tenant ativo"): destination policy → domain transition
-// → optimistic persist → audit, all but the policy inside ONE transaction
-// (RFC-0002 §5). Like the GlobalRepository, neither port is optional: there is
-// no switch without a policy decision and no switch without a record.
+// → optimistic persist → outbox enqueue, all but the policy inside ONE
+// transaction (RFC-0002 §5). The policy port is mandatory (no switch without a
+// decision); the audit record is written to the transactional outbox in the
+// same transaction, so it is atomic with the switch by construction.
 type TenantSwitcher struct {
 	repo   *IdentityRepository
 	policy domain.TenantAuthPolicy
-	audit  domain.SessionAuditor
 }
 
 // NewTenantSwitcher wires the identity-scoped repository with the destination
-// policy and audit ports.
-func NewTenantSwitcher(repo *IdentityRepository, policy domain.TenantAuthPolicy, audit domain.SessionAuditor) *TenantSwitcher {
-	return &TenantSwitcher{repo: repo, policy: policy, audit: audit}
+// policy port. The audit record is written to the transactional outbox
+// (migration 0016) within the switch transaction; the durable trail (pacote
+// 003) drains that outbox asynchronously, outside this transaction.
+func NewTenantSwitcher(repo *IdentityRepository, policy domain.TenantAuthPolicy) *TenantSwitcher {
+	return &TenantSwitcher{repo: repo, policy: policy}
 }
 
 // Switch moves the session to the destination membership. Order is
@@ -47,10 +49,13 @@ func NewTenantSwitcher(repo *IdentityRepository, policy domain.TenantAuthPolicy,
 //  2. inside one identity-pinned transaction: the session is re-read, the
 //     domain transition runs (step-up denial, foreign/inactive destination,
 //     same-tenant no-op — all fail-closed), and the switch is persisted
-//     optimistically (a concurrent change yields ErrSwitchConflict);
-//  3. the audit event is recorded still inside the transaction — if the record
-//     fails, the transaction rolls back and the switch DID NOT HAPPEN (I-5.4:
-//     ErrSwitchAuditUnavailable). An unaudited context change cannot exist.
+//     optimistically (a concurrent change, or a destination membership no longer
+//     active, yields ErrSwitchConflict);
+//  3. the audit event is written to the transactional outbox STILL INSIDE the
+//     transaction — if the enqueue fails, the transaction rolls back and the
+//     switch DID NOT HAPPEN (I-5.4). An unaudited context change cannot exist,
+//     and no remote call is made inside the transaction (the durable trail
+//     drains the outbox later, out of band).
 //
 // On success the returned session carries the destination tenant and the new
 // token generation — the caller derives the new token's claims from it
@@ -79,7 +84,7 @@ func (s *TenantSwitcher) Switch(ctx context.Context, sessionID uuid.UUID, dest d
 		if err := store.SaveSwitch(ctx, sess, *fromMembership, fromGeneration); err != nil {
 			return err
 		}
-		if err := s.audit.RecordTenantSwitch(ctx, event); err != nil {
+		if err := NewSessionOutbox(itx.Tx()).EnqueueTenantSwitch(ctx, event); err != nil {
 			return fmt.Errorf("%w: %v", domain.ErrSwitchAuditUnavailable, err)
 		}
 		out = sess

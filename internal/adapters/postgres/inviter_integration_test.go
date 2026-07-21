@@ -271,6 +271,33 @@ func TestAcceptInvitation(t *testing.T) {
 	}
 }
 
+// Fail-closed: uma identidade suspensa NÃO ativa um convite pendente — a
+// suspensão deixa memberships invited intactos, então sem a checagem de status
+// no Accept ela ganharia um tenant novo enquanto suspensa.
+func TestAcceptRejectsSuspendedIdentity(t *testing.T) {
+	pool := setupTenantPool(t)
+	ctx := context.Background()
+	fx := makeInviteFixture(t, pool, "accsusp")
+	inv := NewInviter(NewTenantRepository(pool, fx.scopeB), fx.custodian)
+
+	m, err := inv.InviteByEmail(ctx, fx.email, fx.inviter)
+	if err != nil {
+		t.Fatalf("InviteByEmail: %v", err)
+	}
+	// A identidade é suspensa DEPOIS do convite (o membership invited sobrevive).
+	if _, err := pool.Exec(ctx,
+		"UPDATE identity SET status = 'suspended' WHERE id = $1", fx.identity.ID.String()); err != nil {
+		t.Fatalf("suspende identidade: %v", err)
+	}
+	if _, err := inv.Accept(ctx, m.ID, fx.identity.ID); !errors.Is(err, ErrIdentityNotInvitable) {
+		t.Fatalf("aceite de identidade suspensa: err = %v, quero ErrIdentityNotInvitable", err)
+	}
+	// O membership continua invited — não foi ativado.
+	if got := membershipStatus(t, pool, m.ID); got != "invited" {
+		t.Fatalf("membership = %s, deveria continuar invited", got)
+	}
+}
+
 // Barreira 1: o store tenant-scoped não escreve membership de outra organização
 // e não enxerga membership de outro tenant.
 func TestTenantMembershipStoreCrossTenantGuards(t *testing.T) {

@@ -143,17 +143,17 @@ func (p staticAALPolicy) RequiredAAL(_ context.Context, _ uuid.UUID) (domain.AAL
 	return p.aal, p.err
 }
 
-type memSwitchAuditor struct{ events []domain.TenantSwitchEvent }
-
-func (m *memSwitchAuditor) RecordTenantSwitch(_ context.Context, ev domain.TenantSwitchEvent) error {
-	m.events = append(m.events, ev)
-	return nil
-}
-
-type failSwitchAuditor struct{}
-
-func (failSwitchAuditor) RecordTenantSwitch(_ context.Context, _ domain.TenantSwitchEvent) error {
-	return errors.New("trilha indisponível")
+// outboxCount returns how many tenant-switch events the outbox holds for a
+// session — the durable, in-transaction audit record the switch writes.
+func outboxCount(t *testing.T, pool *pgxpool.Pool, sessionID uuid.UUID) int {
+	t.Helper()
+	var n int
+	if err := pool.QueryRow(context.Background(),
+		"SELECT count(*) FROM session_event_outbox WHERE event_type = 'tenant_switch' AND session_id = $1",
+		sessionID.String()).Scan(&n); err != nil {
+		t.Fatalf("contagem do outbox: %v", err)
+	}
+	return n
 }
 
 // Um membership ativo: a sessão nasce ativa (auto-seleção) e persiste com o
@@ -453,9 +453,8 @@ func TestTenantSwitchReissuesAndAudits(t *testing.T) {
 		t.Fatalf("TokenContext antes: %v", err)
 	}
 
-	aud := &memSwitchAuditor{}
 	sw := NewTenantSwitcher(NewIdentityRepository(pool, fx.scopeIdn),
-		staticAALPolicy{aal: domain.AAL1}, aud)
+		staticAALPolicy{aal: domain.AAL1})
 	got, err := sw.Switch(ctx, sess.ID, fx.memB)
 	if err != nil {
 		t.Fatalf("Switch: %v", err)
@@ -489,22 +488,28 @@ func TestTenantSwitchReissuesAndAudits(t *testing.T) {
 		t.Fatalf("claims novos errados: %+v (antes %+v)", after, before)
 	}
 
-	// Evento de auditoria: exatamente um, de A para B, com a geração nova.
-	if len(aud.events) != 1 {
-		t.Fatalf("quero 1 evento de troca auditado, veio %d", len(aud.events))
+	// Evento de auditoria no outbox transacional: exatamente um, de A para B,
+	// com a geração nova (escrito na MESMA transação da troca).
+	if n := outboxCount(t, pool, sess.ID); n != 1 {
+		t.Fatalf("quero 1 evento de troca no outbox, veio %d", n)
 	}
-	ev := aud.events[0]
-	if ev.SessionID != sess.ID || ev.FromOrganizationID != fx.orgA ||
-		ev.ToOrganizationID != fx.orgB || ev.TokenGeneration != 2 {
-		t.Fatalf("evento errado: %+v", ev)
+	var fromOrg, toOrg string
+	var gen int
+	if err := pool.QueryRow(ctx,
+		`SELECT from_organization_id::text, to_organization_id::text, token_generation
+		 FROM session_event_outbox WHERE session_id = $1`, sess.ID.String()).Scan(&fromOrg, &toOrg, &gen); err != nil {
+		t.Fatalf("leitura do outbox: %v", err)
+	}
+	if fromOrg != fx.orgA.String() || toOrg != fx.orgB.String() || gen != 2 {
+		t.Fatalf("evento errado no outbox: from=%s to=%s gen=%d", fromOrg, toOrg, gen)
 	}
 
 	// Mesmo destino de novo: não é troca — recusa sem novo evento.
 	if _, err := sw.Switch(ctx, sess.ID, fx.memB); !errors.Is(err, domain.ErrSameTenant) {
 		t.Fatalf("mesmo tenant: err = %v, quero ErrSameTenant", err)
 	}
-	if len(aud.events) != 1 {
-		t.Fatalf("recusa não pode gerar evento: %d", len(aud.events))
+	if n := outboxCount(t, pool, sess.ID); n != 1 {
+		t.Fatalf("recusa não pode gerar evento: %d", n)
 	}
 }
 
@@ -516,9 +521,8 @@ func TestTenantSwitchStepUpDenied(t *testing.T) {
 	fx := makeSessionFixture(t, pool, "stepup")
 	sess := activeSessionInA(t, pool, fx)
 
-	aud := &memSwitchAuditor{}
 	sw := NewTenantSwitcher(NewIdentityRepository(pool, fx.scopeIdn),
-		staticAALPolicy{aal: domain.AAL3}, aud)
+		staticAALPolicy{aal: domain.AAL3})
 	if _, err := sw.Switch(ctx, sess.ID, fx.memB); !errors.Is(err, domain.ErrStepUpRequired) {
 		t.Fatalf("Switch: err = %v, quero ErrStepUpRequired", err)
 	}
@@ -532,8 +536,9 @@ func TestTenantSwitchStepUpDenied(t *testing.T) {
 		t.Fatalf("troca negada não pode alterar a sessão: mem=%s gen=%d err=%v",
 			mem, persisted.TokenGeneration, err)
 	}
-	if len(aud.events) != 0 {
-		t.Fatalf("troca negada não pode ser auditada como troca: %d eventos", len(aud.events))
+	// I-5.4 estrutural: troca negada não escreve no outbox (mesma transação).
+	if n := outboxCount(t, pool, sess.ID); n != 0 {
+		t.Fatalf("troca negada não pode ser auditada como troca: %d eventos no outbox", n)
 	}
 }
 
@@ -545,7 +550,7 @@ func TestTenantSwitchPolicyErrorDenies(t *testing.T) {
 	sess := activeSessionInA(t, pool, fx)
 
 	sw := NewTenantSwitcher(NewIdentityRepository(pool, fx.scopeIdn),
-		staticAALPolicy{err: errors.New("pdp fora do ar")}, &memSwitchAuditor{})
+		staticAALPolicy{err: errors.New("pdp fora do ar")})
 	if _, err := sw.Switch(ctx, sess.ID, fx.memB); !errors.Is(err, domain.ErrDestinationPolicyUnavailable) {
 		t.Fatalf("Switch: err = %v, quero ErrDestinationPolicyUnavailable", err)
 	}
@@ -559,20 +564,73 @@ func TestTenantSwitchPolicyErrorDenies(t *testing.T) {
 	}
 }
 
-// I-5.4: se o evento de troca não pode ser registrado, a troca é desfeita —
-// o UPDATE roda na mesma transação e o rollback o descarta.
-func TestTenantSwitchAuditFailureRollsBack(t *testing.T) {
+// TOCTOU: o destino é validado em memória (snapshot do chamador), mas o
+// SaveSwitch re-confere no banco, na mesma transação, que a membership de
+// destino ainda está ativa. Se ela foi revogada no intervalo, a troca é negada
+// (ErrSwitchConflict) e a sessão não se vincula a uma membership morta.
+func TestTenantSwitchToRevokedMembershipDenied(t *testing.T) {
 	pool := setupTenantPool(t)
 	ctx := context.Background()
-	fx := makeSessionFixture(t, pool, "audfail")
+	fx := makeSessionFixture(t, pool, "swrevk")
 	sess := activeSessionInA(t, pool, fx)
 
-	sw := NewTenantSwitcher(NewIdentityRepository(pool, fx.scopeIdn),
-		staticAALPolicy{aal: domain.AAL1}, failSwitchAuditor{})
-	if _, err := sw.Switch(ctx, sess.ID, fx.memB); !errors.Is(err, domain.ErrSwitchAuditUnavailable) {
-		t.Fatalf("Switch: err = %v, quero ErrSwitchAuditUnavailable", err)
+	// memB é revogada no banco DEPOIS que o chamador tomou o snapshot ativo.
+	if _, err := pool.Exec(ctx,
+		"UPDATE membership SET status = 'revoked', revoked_at = now() WHERE id = $1", fx.memB.ID.String()); err != nil {
+		t.Fatalf("revoga memB: %v", err)
 	}
 
+	// fx.memB (snapshot) ainda está 'active' em memória — a checagem de domínio
+	// passa, mas o SaveSwitch re-checa o banco e recusa.
+	sw := NewTenantSwitcher(NewIdentityRepository(pool, fx.scopeIdn),
+		staticAALPolicy{aal: domain.AAL1})
+	if _, err := sw.Switch(ctx, sess.ID, fx.memB); !errors.Is(err, ErrSwitchConflict) {
+		t.Fatalf("troca para membership revogada: err = %v, quero ErrSwitchConflict", err)
+	}
+
+	// A sessão permanece em A, geração 1, e nada foi ao outbox.
+	persisted, err := getSession(pool, fx.scopeIdn, sess.ID)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if mem, _, _ := persisted.ActiveTenant(); mem != fx.memA.ID || persisted.TokenGeneration != 1 {
+		t.Fatalf("troca negada não pode alterar a sessão")
+	}
+	if n := outboxCount(t, pool, sess.ID); n != 0 {
+		t.Fatalf("troca negada não pode auditar: %d eventos", n)
+	}
+}
+
+// I-5.4 estrutural: o evento vai ao outbox na MESMA transação da troca, logo os
+// dois commitam ou dão rollback juntos. Se algo após o SaveSwitch falha, a troca
+// E o evento são desfeitos — nunca uma troca sem registro, nem um registro sem
+// troca. Provado forçando um erro dentro da transação após ambas as escritas.
+func TestTenantSwitchOutboxIsAtomic(t *testing.T) {
+	pool := setupTenantPool(t)
+	ctx := context.Background()
+	fx := makeSessionFixture(t, pool, "atomic")
+	sess := activeSessionInA(t, pool, fx)
+
+	moved := sess
+	ev, err := moved.SwitchTenant(fx.memB, domain.AAL1)
+	if err != nil {
+		t.Fatalf("SwitchTenant: %v", err)
+	}
+	boom := errors.New("falha após as escritas")
+	err = NewIdentityRepository(pool, fx.scopeIdn).WithIdentityTx(ctx, func(itx *IdentityTx) error {
+		if err := NewIdentitySessionStore(itx).SaveSwitch(ctx, moved, fx.memA.ID, 1); err != nil {
+			return err
+		}
+		if err := NewSessionOutbox(itx.Tx()).EnqueueTenantSwitch(ctx, ev); err != nil {
+			return err
+		}
+		return boom // força o rollback com ambas as escritas já emitidas
+	})
+	if !errors.Is(err, boom) {
+		t.Fatalf("esperava o erro forçado, veio %v", err)
+	}
+
+	// A sessão não moveu e o outbox está vazio — as duas escritas foram desfeitas.
 	persisted, err := getSession(pool, fx.scopeIdn, sess.ID)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
@@ -582,8 +640,11 @@ func TestTenantSwitchAuditFailureRollsBack(t *testing.T) {
 		t.Fatalf("ActiveTenant: %v", err)
 	}
 	if mem != fx.memA.ID || org != fx.orgA || persisted.TokenGeneration != 1 {
-		t.Fatalf("troca sem auditoria deveria ter sido desfeita: mem=%s org=%s gen=%d",
+		t.Fatalf("troca desfeita deveria manter a sessão em A: mem=%s org=%s gen=%d",
 			mem, org, persisted.TokenGeneration)
+	}
+	if n := outboxCount(t, pool, sess.ID); n != 0 {
+		t.Fatalf("rollback deveria descartar o evento do outbox, restaram %d", n)
 	}
 }
 
