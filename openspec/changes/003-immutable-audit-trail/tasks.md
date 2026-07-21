@@ -44,7 +44,18 @@
       (drift quebra o build); testes de encadeamento de 2 elos, gênese distinta por nonce,
       detecção de adulteração. Gate verde.)*
 - [ ] **T-004** Implementar serialização de escrita por tenant (sem lacunas, sem corrida).
-- [ ] **T-005** Criar tabela particionada por tempo e índices de consulta.
+- [x] **T-005** Criar tabela particionada por tempo e índices de consulta. *(Feita ANTES da
+      T-004 por dependência — o writer precisa do esquema. Migration 0017: `audit_event` NOVA
+      (pgx, distinta da `record` legada), **particionada por RANGE(occurred_at)** com partição
+      `DEFAULT` (partições de intervalo + arquivamento = T-018); colunas do RFC-0003 §2 + seq/
+      prev_hash/hash; PK `(organization_id, occurred_at, seq)` (inclui a chave de partição,
+      exigência do Postgres); índices por ator, ação, org+seq (scan do verificador), trace_id e
+      pcid. **Sem coluna canonical de propósito**: o verificador recomputa o canônico das colunas
+      (adulterar coluna consultável quebra a verificação). `audit_chain_head(organization_id PK,
+      last_seq, head_hash, genesis_nonce)` — o cabeçalho de cadeia por org que a T-004 trava com
+      FOR UPDATE. Classificação LGPD (COMMENT) em actor_subject/context_ip/context_user_agent
+      (decisão do arquiteto: IP/UA como coluna classificada). Verificado em PG15 real: parent
+      particionado, DEFAULT, índices e chain_head criados.)*
 - [ ] **T-006** Configurar papel de banco sem `UPDATE`/`DELETE` na auditoria.
 - [ ] **T-007** Criar triggers de bloqueio de mutação (defesa em profundidade).
 - [ ] **T-008** Implementar `AuditSink` síncrono durável (modo fail-closed).
