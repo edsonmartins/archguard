@@ -43,7 +43,19 @@
       verificador completo, T-013). Vetores fixos: gênese e primeiro hash da cadeia pinados
       (drift quebra o build); testes de encadeamento de 2 elos, gênese distinta por nonce,
       detecção de adulteração. Gate verde.)*
-- [ ] **T-004** Implementar serialização de escrita por tenant (sem lacunas, sem corrida).
+- [x] **T-004** Implementar serialização de escrita por tenant (sem lacunas, sem corrida).
+      *(`internal/adapters/postgres/audit_writer.go`: `AuditWriter.Append` numa transação
+      (RFC-0002 §5) — trava a linha de `audit_chain_head` da org (`SELECT ... FOR UPDATE`; cria
+      lazy na 1ª escrita da org com `genesis_nonce` aleatório e `head_hash=GenesisHash`,
+      race-safe via `INSERT ON CONFLICT DO NOTHING`), lê prev_hash/last_seq, chama
+      `domain.SealEvent` (seq=last_seq+1), insere o evento e avança o cabeçalho. `occurred_at`
+      carimbado de um `Clock` injetável (determinismo em teste; prod=time.Now). Ator delegado
+      como jsonb; amr como text[]. Verificado em PG15 real: append encadeia da gênese e o hash
+      RECOMPUTA a partir das colunas (não há blob canônico); cadeias por org independentes
+      (seq começa em 1, hashes distintos por nonce); **cenário "Gravações concorrentes": 25
+      escritas simultâneas na mesma org → seq 1..25 sem lacuna/duplicata e cadeia verificável**
+      (o FOR UPDATE serializa por tenant). Falha na escrita ⇒ nada persistido e cabeçalho
+      intacto (base do fail-closed T-008). Gate verde.)*
 - [x] **T-005** Criar tabela particionada por tempo e índices de consulta. *(Feita ANTES da
       T-004 por dependência — o writer precisa do esquema. Migration 0017: `audit_event` NOVA
       (pgx, distinta da `record` legada), **particionada por RANGE(occurred_at)** com partição
