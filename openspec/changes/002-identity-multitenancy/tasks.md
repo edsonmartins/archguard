@@ -252,7 +252,19 @@
       trava ENABLE+FORCE nas 3 tabelas (migration futura que desligue RLS quebra o build).
       Gated por `ARCHGUARD_TEST_DSN` (o CI deve prover PG para o gate valer — nota p/ pacote
       001/CI diferido). Gate verde.)*
-- [ ] **T-018** Teste automatizado que rejeita query sem predicado de tenant.
+- [x] **T-018** Teste automatizado que rejeita query sem predicado de tenant. *(Detector de
+      análise estática `test/invariants/inv5_query_test.go` — o cenário "Query sem predicado de
+      tenant" na suíte que quebra o build, SEM precisar de banco (roda sempre, mesmo sem DSN).
+      Varre os fontes Go de `internal/` (o mundo pgx = código novo; legadas entram quando o
+      acesso migrar do XORM), extrai literais de string via AST (`go/parser`) e, para query que
+      toque tabela guardada (`membership`, `role_assignment`, `auth_session` — manter em sincronia
+      com o TENANT_INVENTORY e com o trava-RLS do T-017): SELECT/UPDATE/DELETE exigem WHERE com
+      `organization_id` OU `identity_id` (eixo sancionado pelas policies 0013/0014); INSERT exige
+      a coluna de escopo. Limitação declarada: cobre literais (o padrão da casa de SQL explícito);
+      concatenação dinâmica não é aceita em revisão. Self-tests: fixture
+      `testdata/inv5/` com 3 violações injetadas (uma por tabela) acusadas exatamente, e bateria
+      anti-falso-positivo (mensagens de erro com nome de tabela, queries escopadas, pg_class).
+      Código atual de `internal/`: 0 violações. Gate verde.)*
 - [ ] **T-019** Ensaio de migração em cópia de produção e relatório de resultado.
 - [ ] **T-020** Atualizar `DIVERGENCE.md` com o escopo da divergência de modelo de dados.
 
