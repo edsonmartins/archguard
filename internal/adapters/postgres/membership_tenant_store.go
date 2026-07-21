@@ -146,6 +146,30 @@ func (s *TenantMembershipStore) Get(ctx context.Context, membershipID uuid.UUID)
 	return m, nil
 }
 
+// SaveRevocation persists a membership revocation (domain.Membership.Revoke
+// already ran — terminal, R4). Idempotent: re-revoking keeps the original
+// revoked_at. The row stays for the audit trail; the caller cascades to the
+// tenant's sessions (MembershipRevoker).
+func (s *TenantMembershipStore) SaveRevocation(ctx context.Context, m domain.Membership) error {
+	scope := s.ttx.scope.OrganizationID()
+	if m.OrganizationID != scope {
+		return fmt.Errorf("%w: alvo %s, escopo %s", ErrCrossTenantWrite, m.OrganizationID, scope)
+	}
+	const q = `
+		UPDATE membership
+		SET status = $3, revoked_at = COALESCE(revoked_at, now()), updated_at = now()
+		WHERE id = $1 AND organization_id = $2`
+	tag, err := s.ttx.tx.Exec(ctx, q,
+		m.ID.String(), scope.String(), string(domain.MembershipRevoked))
+	if err != nil {
+		return fmt.Errorf("postgres: gravação de revogação de membership falhou: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrMembershipNotFound
+	}
+	return nil
+}
+
 // SaveActivation persists the acceptance of an invitation
 // (domain.Membership.Activate already ran, so m.Status is active). The UPDATE
 // only matches a row still invited, stamping activated_at: a membership

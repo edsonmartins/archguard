@@ -174,6 +174,23 @@ func (s *IdentitySessionStore) Revoke(ctx context.Context, sessionID uuid.UUID) 
 	return nil
 }
 
+// RevokeAll terminates every non-revoked session of the store's identity —
+// the session leg of the identity-level cascade (RFC-0002 R4 and the
+// "Suspensão da identidade" scenario). Pending sessions are included: a
+// suspended identity does not keep a login half-open. Returns how many
+// sessions were ended. Idempotent.
+func (s *IdentitySessionStore) RevokeAll(ctx context.Context) (int, error) {
+	const q = `
+		UPDATE auth_session
+		SET status = 'revoked', revoked_at = COALESCE(revoked_at, now()), updated_at = now()
+		WHERE identity_id = $1 AND status <> 'revoked'`
+	tag, err := s.itx.tx.Exec(ctx, q, s.itx.scope.IdentityID().String())
+	if err != nil {
+		return 0, fmt.Errorf("postgres: revogação em cascata de sessões falhou: %w", err)
+	}
+	return int(tag.RowsAffected()), nil
+}
+
 // TenantSessionStore is the tenant-side view of auth_session: the active
 // sessions WITHIN one organization (tenant management, and the membership
 // revocation cascade of T-014). Built on a TenantTx, so it carries the explicit
@@ -216,6 +233,25 @@ func (s *TenantSessionStore) ListActive(ctx context.Context) ([]domain.AuthSessi
 		return nil, fmt.Errorf("postgres: iteração de auth_session falhou: %w", err)
 	}
 	return out, nil
+}
+
+// RevokeByMembership terminates the active sessions bound to one membership of
+// this organization — the session leg of the membership revocation cascade
+// (spec "Revogação de membership": only THIS tenant's sessions end; the
+// identity's sessions in other organizations stay untouched, which the
+// organization_id predicate guarantees even before RLS). Returns how many
+// sessions were ended. Idempotent.
+func (s *TenantSessionStore) RevokeByMembership(ctx context.Context, membershipID uuid.UUID) (int, error) {
+	const q = `
+		UPDATE auth_session
+		SET status = 'revoked', revoked_at = COALESCE(revoked_at, now()), updated_at = now()
+		WHERE membership_id = $1 AND organization_id = $2 AND status <> 'revoked'`
+	tag, err := s.ttx.tx.Exec(ctx, q,
+		membershipID.String(), s.ttx.scope.OrganizationID().String())
+	if err != nil {
+		return 0, fmt.Errorf("postgres: revogação de sessões do membership falhou: %w", err)
+	}
+	return int(tag.RowsAffected()), nil
 }
 
 // scanAuthSession reads one auth_session row (see the SELECT column order the

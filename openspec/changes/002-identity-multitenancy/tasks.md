@@ -190,7 +190,26 @@
       1 conjunto de credenciais); case-insensitive como o login; e-mail desconhecido sem efeito
       colateral; colisões R3 classificadas; aceite ativa/carimba e re-aceite recusa; guardas
       cross-tenant de leitura e escrita. Gate verde.)*
-- [ ] **T-014** Implementar revogação em cascata (identidade → memberships → sessões).
+- [x] **T-014** Implementar revogação em cascata (identidade → memberships → sessões). *(Decisões
+      do arquiteto: (1) suspensão da identidade SUSPENDE memberships (recuperável;
+      terminal é reservado ao deprovisionamento R4/R5) e revoga TODAS as sessões (sessão é
+      sempre terminal); (2) migration 0014 emenda a policy RLS de `membership` com o eixo de
+      identidade (`identity_id = app.current_identity`, leitura E escrita) — a cascata
+      cross-tenant roda em UMA transação (RFC-0002 §5, sem cascata parcial), mesmo modelo da
+      auth_session/0013. `MembershipRevoker.RevokeMembership` (WithTenantTx): membership →
+      revoked + revoked_at e `RevokeByMembership` encerra as sessões DAQUELE membership —
+      predicado org garante que sessões de outros tenants ficam intactas (o AND da spec);
+      idempotente ponta a ponta; membership de outro tenant inalcançável. `IdentityLifecycle`
+      (WithIdentityTx): `Suspend` (identidade suspended + `SuspendAllActive` + `RevokeAll`
+      incluindo sessão pendente) e `Deprovision` (terminal R5 + `RevokeAllNonRevoked` + sessões;
+      re-executar = 0 movimentos; Suspend pós-deprovisionamento recusado). `IdentityStore` ganhou
+      `Get`/`SaveStatus`; `IdentityMembershipStore` (eixo identidade, Barreira 1). Fora do
+      escopo, registrado no TENANT_INVENTORY: ponte com a `session` legada Beego — sem vínculo
+      identity↔user no esquema ainda (T-019/005/006). Auditoria da revogação → trilha do 003.
+      Verificado em PG15 real: cascata por membership só no tenant dele (B intacto), cascatas de
+      suspensão (2 memberships suspensos, 3 sessões revogadas) e deprovisionamento (terminal),
+      RLS da 0014 como papel não-superusuário (eixo identidade só alcança as próprias linhas,
+      UPDATE alheio atinge 0 linhas, eixo tenant preservado). Gate verde.)*
 - [ ] **T-015** Ferramenta de inventário e deduplicação com relatório de conflito.
 - [ ] **T-016** Rotina de fusão assistida (com aprovação humana obrigatória).
 - [ ] **T-017** Testes de travessia entre tenants (barreira 1 e barreira 2 isoladamente).

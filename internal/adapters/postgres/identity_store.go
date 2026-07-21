@@ -98,6 +98,36 @@ func (s *IdentityStore) FindByEmail(ctx context.Context, custodian domain.KeyCus
 	return s.FindByEmailHash(ctx, hash)
 }
 
+// Get returns the identity by id, or ErrIdentityNotFound.
+func (s *IdentityStore) Get(ctx context.Context, id uuid.UUID) (domain.Identity, error) {
+	const q = `
+		SELECT id::text, subject, type, status,
+		       primary_email_enc, email_hash, display_name_enc,
+		       created_at, updated_at
+		FROM identity
+		WHERE id = $1`
+	return scanIdentity(s.db.QueryRow(ctx, q, id.String()))
+}
+
+// SaveStatus persists a lifecycle transition already applied on the domain
+// object (Suspend / Reactivate / Deprovision — the domain owns the machine,
+// including the deprovisioned terminal, R5). Only the status column moves.
+func (s *IdentityStore) SaveStatus(ctx context.Context, idn domain.Identity) error {
+	if !idn.Status.Valid() {
+		return fmt.Errorf("postgres: status de identidade inválido %q", idn.Status)
+	}
+	const q = `
+		UPDATE identity SET status = $2, updated_at = now() WHERE id = $1`
+	tag, err := s.db.Exec(ctx, q, idn.ID.String(), string(idn.Status))
+	if err != nil {
+		return fmt.Errorf("postgres: gravação de status de identidade falhou: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrIdentityNotFound
+	}
+	return nil
+}
+
 // scanIdentity maps one row into a domain.Identity, translating no-rows into
 // ErrIdentityNotFound and parsing the text-encoded UUID.
 func scanIdentity(row pgx.Row) (domain.Identity, error) {
