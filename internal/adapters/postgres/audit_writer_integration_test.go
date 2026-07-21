@@ -31,6 +31,30 @@ func fixedClock() Clock {
 	return func() time.Time { return ts }
 }
 
+// cleanupAudit removes an organization's trail rows at test end. audit_event is
+// append-only (blocked by the T-007 triggers even for the superuser), so the
+// cleanup uses the documented superuser bypass (session_replication_role =
+// replica) on a single pinned connection — test hygiene only; the legitimate
+// removal path is archiving (T-018).
+func cleanupAudit(t *testing.T, pool *pgxpool.Pool, orgs ...uuid.UUID) {
+	t.Cleanup(func() {
+		bg := context.Background()
+		conn, err := pool.Acquire(bg)
+		if err != nil {
+			return
+		}
+		defer conn.Release()
+		if _, err := conn.Exec(bg, "SET session_replication_role = replica"); err != nil {
+			return
+		}
+		for _, o := range orgs {
+			_, _ = conn.Exec(bg, "DELETE FROM audit_event WHERE organization_id = $1", o.String())
+			_, _ = conn.Exec(bg, "DELETE FROM audit_chain_head WHERE organization_id = $1", o.String())
+		}
+		_, _ = conn.Exec(bg, "SET session_replication_role = origin")
+	})
+}
+
 // chainRow is the stored shape needed to check chaining structurally.
 type chainRow struct {
 	seq      int64
@@ -109,11 +133,7 @@ func TestAuditWriterAppendAndChain(t *testing.T) {
 	pool := setupTenantPool(t)
 	ctx := context.Background()
 	org := uuid.New()
-	t.Cleanup(func() {
-		bg := context.Background()
-		_, _ = pool.Exec(bg, "DELETE FROM audit_event WHERE organization_id = $1", org.String())
-		_, _ = pool.Exec(bg, "DELETE FROM audit_chain_head WHERE organization_id = $1", org.String())
-	})
+	cleanupAudit(t, pool, org)
 
 	w := NewAuditWriter(pool, fixedClock())
 	s1, err := w.Append(ctx, minimalInput(org))
@@ -183,13 +203,7 @@ func TestAuditWriterPerOrgChains(t *testing.T) {
 	pool := setupTenantPool(t)
 	ctx := context.Background()
 	orgA, orgB := uuid.New(), uuid.New()
-	t.Cleanup(func() {
-		bg := context.Background()
-		for _, o := range []uuid.UUID{orgA, orgB} {
-			_, _ = pool.Exec(bg, "DELETE FROM audit_event WHERE organization_id = $1", o.String())
-			_, _ = pool.Exec(bg, "DELETE FROM audit_chain_head WHERE organization_id = $1", o.String())
-		}
-	})
+	cleanupAudit(t, pool, orgA, orgB)
 	w := NewAuditWriter(pool, fixedClock())
 
 	a1, _ := w.Append(ctx, minimalInput(orgA))
@@ -211,11 +225,7 @@ func TestAuditWriterConcurrentSameOrg(t *testing.T) {
 	pool := setupTenantPool(t)
 	ctx := context.Background()
 	org := uuid.New()
-	t.Cleanup(func() {
-		bg := context.Background()
-		_, _ = pool.Exec(bg, "DELETE FROM audit_event WHERE organization_id = $1", org.String())
-		_, _ = pool.Exec(bg, "DELETE FROM audit_chain_head WHERE organization_id = $1", org.String())
-	})
+	cleanupAudit(t, pool, org)
 	w := NewAuditWriter(pool, fixedClock())
 
 	const n = 25
