@@ -1,6 +1,21 @@
 # Tasks — 003 · Trilha de auditoria imutável
 
-- [ ] **T-001** Definir esquema do evento com `schema_version` e catálogo de ações canônicas.
+- [x] **T-001** Definir esquema do evento com `schema_version` e catálogo de ações canônicas.
+      *(Domínio puro `internal/domain/audit_event.go` (INV-3). Decisões do arquiteto: catálogo
+      FECHADO e separação conteúdo/cadeia. `AuditSchemaVersion=1` (parte do conteúdo canônico).
+      `Action` = verbo canônico com catálogo fechado (`actionCatalog`): `NewAuditEvent` recusa
+      ação não registrada (`ErrUnknownAction`) — auditar verbo desconhecido é pior que recusar.
+      Cada ação carrega seu nível `AssuranceLevel` (L1/L2/L3, ADR-0010/INV-8): privileged/
+      breakglass/key.rotate/audit.* = L3. `AuditEvent` = SÓ o conteúdo canonicalizável (campos
+      normativos do RFC-0003 §2: schema_version, event_id UUIDv7, organization_id, action, actor,
+      target, outcome, reason, context) — SEM seq/prev_hash/hash. `SealedEvent{Event, Seq,
+      PrevHash, Hash}` carrega a cadeia, atribuída na escrita (T-003/T-004): impossível, por
+      construção, incluir o hash no próprio hash. `Outcome` reúsa o primitivo Allowed/Denied/
+      Failed; `SerializedOutcome` mapeia para success|denied|error (RFC §2), preservando a
+      distinção INV-6. `AuditActor.IdentitySubject` = pseudônimo opaco (nunca e-mail/nome);
+      LGPD dos campos de origem (IP/UA) fica no COMMENT da tabela (T-005). Sem relógio no domínio
+      (occurred_at carimbado na escrita). Testes cobrem catálogo fechado+níveis, sucesso/negado/
+      erro, rejeições do construtor, composição do SealedEvent. Gate verde.)*
 - [ ] **T-002** Implementar canonicalização determinística + testes de vetor fixo.
 - [ ] **T-003** Implementar encadeamento por hash com `seq` por organização.
 - [ ] **T-004** Implementar serialização de escrita por tenant (sem lacunas, sem corrida).
