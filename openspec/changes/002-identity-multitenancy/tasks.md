@@ -265,7 +265,25 @@
       `testdata/inv5/` com 3 violações injetadas (uma por tabela) acusadas exatamente, e bateria
       anti-falso-positivo (mensagens de erro com nome de tabela, queries escopadas, pg_class).
       Código atual de `internal/`: 0 violações. Gate verde.)*
-- [ ] **T-019** Ensaio de migração em cópia de produção e relatório de resultado.
+- [x] **T-019** Ensaio de migração em cópia de produção e relatório de resultado. *(Pacote
+      `internal/migrehearsal` — o pipeline COMPLETO do RFC-0002 §6 sobre uma cópia descartável:
+      extração do legado por SQL primitivo (user/role, sem XORM; recovery_codes/webauthn como
+      JSON; e-mail em claro só vive até o hash) → inventário T-015 → fusão T-016 SÓ com
+      aprovação humana (grupo sem aprovação vai para `PendingApproval`, NÃO migra) → conflitos
+      reportados e pulados → credenciais T-005 (seed TOTP ao cofre ANTES da tx, RFC-0004 §4;
+      senha em claro = reset forçado) → papéis T-006 com resolvedores REAIS (`orgResolver` pgx
+      por nome→uuid; memberships criados alimentam o `MembershipResolver`; não-resolvidos
+      reportados). Persistência: UMA transação por grupo via `WithIdentityTx` (o eixo de
+      identidade da 0014 permite os N memberships da identidade fundida numa tx);
+      role_assignments por org via `WithTenantTx`. **Relatório com a validação do gate**:
+      `checkFactorPreservation` acusa perda de TIPO de fator MFA (ex.: aprovação elegendo
+      primária sem TOTP quando outra conta o tem → `FactorLoss` e `Validate()` FALHA — provado
+      por teste dedicado) e contagem de identidades humanas duplicadas por email_hash (= 0);
+      `Render` pt-BR sem dado pessoal em claro (provado). E2E verificado em PG15 real: alice
+      fundida (1 identidade, 2 memberships, senha+TOTP+recovery da primária, WebAuthn da
+      secundária, descartes reportados), bob com reset forçado, conta de serviço sem e-mail,
+      carol em conflito R3 não migrada, dave pendente de aprovação não migrado, papel vinculado
+      ao membership com fantasma reportado, seed TOTP no cofre e NUNCA no banco. Gate verde.)*
 - [ ] **T-020** Atualizar `DIVERGENCE.md` com o escopo da divergência de modelo de dados.
 
 ## Gate de verificação
