@@ -87,7 +87,18 @@
       NULL** (R1). NOT NULL fica para o T-010, por tabela, só onde 100% mapeia. Verificado em PG15
       real: tenant→org.id, global→NULL, FK+índice; teste re-executa a 0010 real do FS embutido
       (idempotente, order-independent). Gate local verde.)*
-- [ ] **T-008** Implementar repositório com contexto de tenant obrigatório (barreira 1).
+- [x] **T-008** Implementar repositório com contexto de tenant obrigatório (barreira 1).
+      *(Decisões do arquiteto: SET LOCAL por transação; fundamento + role_assignment tenant-scoped.
+      Domínio `tenant.go`: `TenantScope` (recusa `uuid.Nil` = ErrNoTenant — não há repositório sem
+      tenant) + constante `RLSOrgSettingName` = `app.current_organization` (contrato com a RLS do
+      T-010, travado por teste). Adapter `tenant.go`: `TenantRepository` (construtor exige scope) +
+      `WithTenantTx` que abre uma transação (RFC §5) e faz `set_config(name, org, true)` — SET LOCAL,
+      escopo de tx, nunca vaza no pool; é o gancho que a RLS lê. `TenantTx` componível (vários stores,
+      uma transação). `RoleAssignmentStore` migrado para tenant-scoped: predicado explícito
+      `AND organization_id = $scope` nas leituras (Barreira 1, vale mesmo com RLS off) e recusa de
+      escrita cross-tenant (ErrCrossTenantWrite). Verificado em PG15 real: **travessia de leitura
+      isolada** (repo de A não vê dados de B por membership de B), escrita cross-tenant recusada,
+      parâmetro de sessão fixado no valor certo, UNIQUE R2. Gate local verde.)*
 - [ ] **T-009** Implementar `GlobalRepository` explícito, autorizado e auditado.
 - [ ] **T-010** Habilitar RLS por tabela e configurar papel da aplicação sem `BYPASSRLS`.
 - [ ] **T-011** Implementar contexto de tenant ativo na sessão.

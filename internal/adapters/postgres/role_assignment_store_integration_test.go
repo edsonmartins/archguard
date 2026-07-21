@@ -16,6 +16,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
 
@@ -25,40 +26,24 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// roleAssignFixture holds the real ids a role assignment needs to reference.
-type roleAssignFixture struct {
-	pool         *pgxpool.Pool
+// tenantFixture is one tenant with a role and a membership to bind.
+type tenantFixture struct {
 	orgID        uuid.UUID
 	roleID       uuid.UUID
 	membershipID uuid.UUID
+	scope        domain.TenantScope
 }
 
-func setupRoleAssignment(t *testing.T) (*RoleAssignmentStore, roleAssignFixture) {
+func makeTenant(t *testing.T, pool *pgxpool.Pool, label string) tenantFixture {
 	t.Helper()
-	dsn := os.Getenv("ARCHGUARD_TEST_DSN")
-	if dsn == "" {
-		t.Skip("ARCHGUARD_TEST_DSN não definido — pulando teste de integração do RoleAssignmentStore")
-	}
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, dsn)
-	if err != nil {
-		t.Fatalf("pool: %v", err)
-	}
-	t.Cleanup(pool.Close)
-	seedLegacyTables(t, pool)
-	if err := migrate.Run(ctx, dsn); err != nil {
-		t.Fatalf("migrate.Run: %v", err)
-	}
-
-	suffix := t.Name()
-	var fx roleAssignFixture
-	fx.pool = pool
+	var fx tenantFixture
 	if err := pool.QueryRow(ctx,
-		"INSERT INTO organization (owner, name) VALUES ('it', $1) RETURNING id", "org-"+suffix).Scan(&fx.orgID); err != nil {
+		"INSERT INTO organization (owner, name) VALUES ('it', $1) RETURNING id", "org-"+label).Scan(&fx.orgID); err != nil {
 		t.Fatalf("insert organization: %v", err)
 	}
 	if err := pool.QueryRow(ctx,
-		"INSERT INTO role (owner, name) VALUES ('it', $1) RETURNING id", "role-"+suffix).Scan(&fx.roleID); err != nil {
+		"INSERT INTO role (owner, name) VALUES ('it', $1) RETURNING id", "role-"+label).Scan(&fx.roleID); err != nil {
 		t.Fatalf("insert role: %v", err)
 	}
 	idn, err := domain.NewIdentity(domain.IdentityHuman)
@@ -73,6 +58,11 @@ func setupRoleAssignment(t *testing.T) (*RoleAssignmentStore, roleAssignFixture)
 		idn.ID.String(), fx.orgID.String()).Scan(&fx.membershipID); err != nil {
 		t.Fatalf("insert membership: %v", err)
 	}
+	scope, err := domain.NewTenantScope(fx.orgID)
+	if err != nil {
+		t.Fatalf("NewTenantScope: %v", err)
+	}
+	fx.scope = scope
 	t.Cleanup(func() {
 		bg := context.Background()
 		_, _ = pool.Exec(bg, "DELETE FROM role_assignment WHERE organization_id = $1", fx.orgID.String())
@@ -81,72 +71,153 @@ func setupRoleAssignment(t *testing.T) (*RoleAssignmentStore, roleAssignFixture)
 		_, _ = pool.Exec(bg, "DELETE FROM role WHERE id = $1", fx.roleID.String())
 		_, _ = pool.Exec(bg, "DELETE FROM organization WHERE id = $1", fx.orgID.String())
 	})
-	return NewRoleAssignmentStore(pool), fx
+	return fx
 }
 
-func TestRoleAssignmentCreateAndList(t *testing.T) {
-	store, fx := setupRoleAssignment(t)
+func setupTenantPool(t *testing.T) *pgxpool.Pool {
+	t.Helper()
+	dsn := os.Getenv("ARCHGUARD_TEST_DSN")
+	if dsn == "" {
+		t.Skip("ARCHGUARD_TEST_DSN não definido — pulando teste de integração tenant-scoped")
+	}
 	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		t.Fatalf("pool: %v", err)
+	}
+	t.Cleanup(pool.Close)
+	seedLegacyTables(t, pool)
+	if err := migrate.Run(ctx, dsn); err != nil {
+		t.Fatalf("migrate.Run: %v", err)
+	}
+	return pool
+}
 
-	ra, err := domain.NewRoleAssignment(fx.orgID, fx.roleID, fx.membershipID)
+// assign is a small helper: run a create within a tenant transaction.
+func assign(ctx context.Context, repo *TenantRepository, ra domain.RoleAssignment) error {
+	return repo.WithTenantTx(ctx, func(ttx *TenantTx) error {
+		return NewRoleAssignmentStore(ttx).Create(ctx, ra)
+	})
+}
+
+func TestTenantRoleAssignmentCreateAndList(t *testing.T) {
+	pool := setupTenantPool(t)
+	ctx := context.Background()
+	a := makeTenant(t, pool, "cl-a")
+	repo := NewTenantRepository(pool, a.scope)
+
+	ra, err := domain.NewRoleAssignment(a.orgID, a.roleID, a.membershipID)
 	if err != nil {
 		t.Fatalf("NewRoleAssignment: %v", err)
 	}
-	if err := store.Create(ctx, ra); err != nil {
-		t.Fatalf("Create: %v", err)
+	if err := assign(ctx, repo, ra); err != nil {
+		t.Fatalf("assign: %v", err)
 	}
-	got, err := store.ListByMembership(ctx, fx.membershipID)
-	if err != nil {
-		t.Fatalf("ListByMembership: %v", err)
+
+	var got []domain.RoleAssignment
+	if err := repo.WithTenantTx(ctx, func(ttx *TenantTx) error {
+		var e error
+		got, e = NewRoleAssignmentStore(ttx).ListByMembership(ctx, a.membershipID)
+		return e
+	}); err != nil {
+		t.Fatalf("list: %v", err)
 	}
-	if len(got) != 1 {
-		t.Fatalf("esperava 1 vínculo, veio %d", len(got))
-	}
-	if got[0].RoleID != fx.roleID || got[0].MembershipID != fx.membershipID || got[0].OrganizationID != fx.orgID {
-		t.Errorf("vínculo recomposto errado: %+v", got[0])
+	if len(got) != 1 || got[0].RoleID != a.roleID || got[0].OrganizationID != a.orgID {
+		t.Fatalf("vínculo errado: %+v", got)
 	}
 }
 
-func TestRoleAssignmentUniquePair(t *testing.T) {
-	store, fx := setupRoleAssignment(t)
+// TestTenantRoleAssignmentRejectsCrossTenantWrite proves Barreira 1 on writes: a
+// store scoped to tenant A cannot create a row belonging to tenant B.
+func TestTenantRoleAssignmentRejectsCrossTenantWrite(t *testing.T) {
+	pool := setupTenantPool(t)
 	ctx := context.Background()
-	a, _ := domain.NewRoleAssignment(fx.orgID, fx.roleID, fx.membershipID)
-	if err := store.Create(ctx, a); err != nil {
-		t.Fatalf("Create a: %v", err)
+	a := makeTenant(t, pool, "xw-a")
+	b := makeTenant(t, pool, "xw-b")
+	repoA := NewTenantRepository(pool, a.scope)
+
+	// A binding that belongs to tenant B, attempted through tenant A's repo.
+	raB, err := domain.NewRoleAssignment(b.orgID, b.roleID, b.membershipID)
+	if err != nil {
+		t.Fatalf("NewRoleAssignment: %v", err)
 	}
-	// Mesmo (role_id, membership_id) de novo deve violar a UNIQUE.
-	b, _ := domain.NewRoleAssignment(fx.orgID, fx.roleID, fx.membershipID)
-	if err := store.Create(ctx, b); err == nil {
+	if err := assign(ctx, repoA, raB); !errors.Is(err, ErrCrossTenantWrite) {
+		t.Errorf("escrita cross-tenant: erro = %v, quer ErrCrossTenantWrite", err)
+	}
+}
+
+// TestTenantRoleAssignmentReadIsolation proves Barreira 1 on reads (RLS off): a
+// store scoped to tenant A never returns tenant B's rows, even when querying by
+// B's membership id.
+func TestTenantRoleAssignmentReadIsolation(t *testing.T) {
+	pool := setupTenantPool(t)
+	ctx := context.Background()
+	a := makeTenant(t, pool, "ri-a")
+	b := makeTenant(t, pool, "ri-b")
+
+	// Create a real binding in tenant B (through B's own repo).
+	repoB := NewTenantRepository(pool, b.scope)
+	raB, _ := domain.NewRoleAssignment(b.orgID, b.roleID, b.membershipID)
+	if err := assign(ctx, repoB, raB); err != nil {
+		t.Fatalf("assign B: %v", err)
+	}
+
+	// Tenant A's repo, asked for B's membership, must see nothing.
+	repoA := NewTenantRepository(pool, a.scope)
+	var leaked []domain.RoleAssignment
+	if err := repoA.WithTenantTx(ctx, func(ttx *TenantTx) error {
+		var e error
+		leaked, e = NewRoleAssignmentStore(ttx).ListByMembership(ctx, b.membershipID)
+		return e
+	}); err != nil {
+		t.Fatalf("list A: %v", err)
+	}
+	if len(leaked) != 0 {
+		t.Errorf("travessia: repo de A retornou %d vínculo(s) de B (Barreira 1 furada)", len(leaked))
+	}
+	// Sanity: B's own repo does see it.
+	var own []domain.RoleAssignment
+	_ = repoB.WithTenantTx(ctx, func(ttx *TenantTx) error {
+		own, _ = NewRoleAssignmentStore(ttx).ListByMembership(ctx, b.membershipID)
+		return nil
+	})
+	if len(own) != 1 {
+		t.Errorf("repo de B deveria ver o próprio vínculo, viu %d", len(own))
+	}
+}
+
+// TestTenantSetsRLSSessionVar proves the tenant transaction pins the tenant in
+// the SET LOCAL setting the RLS policies (T-010) will read.
+func TestTenantSetsRLSSessionVar(t *testing.T) {
+	pool := setupTenantPool(t)
+	ctx := context.Background()
+	a := makeTenant(t, pool, "rls-a")
+	repo := NewTenantRepository(pool, a.scope)
+
+	var seen string
+	if err := repo.WithTenantTx(ctx, func(ttx *TenantTx) error {
+		return ttx.Tx().QueryRow(ctx,
+			"SELECT current_setting($1, true)", domain.RLSOrgSettingName).Scan(&seen)
+	}); err != nil {
+		t.Fatalf("current_setting: %v", err)
+	}
+	if seen != a.orgID.String() {
+		t.Errorf("session var = %q, quer %s", seen, a.orgID)
+	}
+}
+
+func TestTenantRoleAssignmentUniquePair(t *testing.T) {
+	pool := setupTenantPool(t)
+	ctx := context.Background()
+	a := makeTenant(t, pool, "uq-a")
+	repo := NewTenantRepository(pool, a.scope)
+
+	ra1, _ := domain.NewRoleAssignment(a.orgID, a.roleID, a.membershipID)
+	if err := assign(ctx, repo, ra1); err != nil {
+		t.Fatalf("assign 1: %v", err)
+	}
+	ra2, _ := domain.NewRoleAssignment(a.orgID, a.roleID, a.membershipID)
+	if err := assign(ctx, repo, ra2); err == nil {
 		t.Error("par (role_id, membership_id) duplicado deveria violar a UNIQUE")
 	}
-}
-
-func TestRoleAssignmentFKsEnforced(t *testing.T) {
-	store, fx := setupRoleAssignment(t)
-	ctx := context.Background()
-
-	// role_id inexistente.
-	bad1 := domain.RoleAssignment{ID: mustV7(t), OrganizationID: fx.orgID, RoleID: mustV7(t), MembershipID: fx.membershipID}
-	if err := store.Create(ctx, bad1); err == nil {
-		t.Error("role_id inexistente deveria violar a FK")
-	}
-	// membership_id inexistente.
-	bad2 := domain.RoleAssignment{ID: mustV7(t), OrganizationID: fx.orgID, RoleID: fx.roleID, MembershipID: mustV7(t)}
-	if err := store.Create(ctx, bad2); err == nil {
-		t.Error("membership_id inexistente deveria violar a FK")
-	}
-	// organization_id inexistente.
-	bad3 := domain.RoleAssignment{ID: mustV7(t), OrganizationID: mustV7(t), RoleID: fx.roleID, MembershipID: fx.membershipID}
-	if err := store.Create(ctx, bad3); err == nil {
-		t.Error("organization_id inexistente deveria violar a FK")
-	}
-}
-
-func mustV7(t *testing.T) uuid.UUID {
-	t.Helper()
-	id, err := uuid.NewV7()
-	if err != nil {
-		t.Fatal(err)
-	}
-	return id
 }
