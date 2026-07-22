@@ -114,7 +114,20 @@
       o frescor e a operação passa. Middleware injeta `now` (time.Now, sobreponível em teste) e emite
       o mesmo desafio RFC 9470. Testes de domínio (Fresh por nível + fail-closed, recusa Stale,
       step-up restaura) e HTTP (sessão antiga → 401 com acr_values). Gate verde.)*
-- [ ] **T-009** Implementar fluxo de step-up e retomada da operação original.
+- [x] **T-009** Implementar fluxo de step-up e retomada da operação original. *(A transição de
+      sessão que torna a retomada possível. `AuthSession.StepUp(at, aal, methods)`: eleva (ou
+      mantém) o AAL comprovado e renova o contexto de autenticação (auth_time, métodos), restaurando
+      o frescor. Recusa em sessão revogada; recusa REDUZIR a garantia (`ErrStepUpLowersAssurance` —
+      um L3 obsoleto reautentica e SEGUE L3, só renova o frescor); não infla acr além dos fatores
+      (checagem de honestidade do SetAuthContext, com rollback do nível se os métodos não sustentam).
+      Após o step-up, `ACR()` reflete o nível obtido e `Fresh()` é verdadeiro. **Retomada sem perda
+      de contexto**: a MESMA operação (mesmo id, tenant e parâmetros) que fora recusada agora passa
+      no guard — só a garantia da sessão subiu. Persistência: `IdentitySessionStore.SaveStepUp`
+      atualiza proven_aal/auth_time/auth_methods só na sessão ATIVA (tenant e token_generation
+      intactos). Testes de domínio (fluxo recusa→step-up→retomada com acr/amr renovados, refresh de
+      frescor, guardas de redução/inflação/revogada) e integração PG (step-up TOTP→WebAuthn persiste
+      e a releitura reflete aal3/auth_time/métodos). A cerimônia WebAuthn/HTTP em si reusa o
+      adaptador do T-002 + o middleware do T-007. Gate verde.)*
 - [ ] **T-010** Implementar política de MFA por organização.
 - [ ] **T-011** Implementar precedência "mais restritiva vence" na troca de tenant.
 - [ ] **T-012** Implementar estado `enrollment_required` bloqueante.

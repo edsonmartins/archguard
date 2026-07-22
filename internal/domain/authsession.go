@@ -264,6 +264,44 @@ func (s *AuthSession) SetAuthContext(at time.Time, methods []FactorType) error {
 	return nil
 }
 
+// ErrStepUpLowersAssurance is returned when a step-up would REDUCE the session's
+// proven level — a step-up may only raise or refresh it, never weaken it.
+var ErrStepUpLowersAssurance = errors.New("session: step-up não pode reduzir a garantia comprovada")
+
+// StepUp applies a reauthentication to the session: it raises (or holds) the
+// proven assurance to aal and refreshes the authentication context (auth_time,
+// methods) so freshness is restored — the state change that lets a previously
+// denied operation resume WITHOUT the client losing context (the operation, its
+// tenant and parameters are unchanged; only the session's assurance rose). It is
+// the "Step-up concluído" transition:
+//
+//   - refused on a revoked session (terminal);
+//   - refused if it would LOWER the level (ErrStepUpLowersAssurance) — a stale
+//     L3 reauthenticating stays L3 and merely refreshes freshness;
+//   - the new level must be attestable by the methods used (SetAuthContext's
+//     honesty check), so a step-up cannot inflate acr beyond the factors.
+//
+// After it succeeds, ACR() reflects the level obtained and Fresh() is true at the
+// step-up instant.
+func (s *AuthSession) StepUp(at time.Time, aal AAL, methods []FactorType) error {
+	if s.Status == SessionRevoked {
+		return ErrSessionRevoked
+	}
+	if !aal.Valid() {
+		return fmt.Errorf("%w: AAL %q indefinido", ErrInvalidSession, aal)
+	}
+	if s.ProvenAAL.Valid() && !aal.AtLeast(s.ProvenAAL) {
+		return fmt.Errorf("%w: de %s para %s", ErrStepUpLowersAssurance, s.ProvenAAL, aal)
+	}
+	prev := s.ProvenAAL
+	s.ProvenAAL = aal
+	if err := s.SetAuthContext(at, methods); err != nil {
+		s.ProvenAAL = prev // roll back the level if the methods cannot attest it
+		return err
+	}
+	return nil
+}
+
 // strongestCeiling is the highest assurance any of the methods can attest — the
 // max of each type's MaxAAL. Undefined when methods is empty.
 func strongestCeiling(methods []FactorType) AAL {

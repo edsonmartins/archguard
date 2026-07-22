@@ -859,3 +859,49 @@ func TestAuthSessionRejectsUnknownMethod(t *testing.T) {
 		t.Fatalf("erro deveria citar o CHECK auth_methods_known, veio: %v", err)
 	}
 }
+
+// T-009: um step-up (TOTP AAL2 → WebAuthn AAL3) persiste na sessão ativa; ao
+// reler, a garantia, o auth_time e os métodos refletem a reautenticação — a base
+// para a operação original ser retomada.
+func TestAuthSessionStepUpPersists(t *testing.T) {
+	pool := setupTenantPool(t)
+	ctx := context.Background()
+	fx := makeSessionFixture(t, pool, "stepup")
+
+	sess, err := domain.NewAuthSession(fx.other.ID, domain.AAL2, []domain.Membership{fx.otherMemA})
+	if err != nil {
+		t.Fatalf("NewAuthSession: %v", err)
+	}
+	loginAt := time.Date(2026, 7, 22, 9, 0, 0, 0, time.UTC)
+	if err := sess.SetAuthContext(loginAt, []domain.FactorType{domain.FactorTOTP}); err != nil {
+		t.Fatalf("SetAuthContext: %v", err)
+	}
+	if err := createSession(pool, fx.scopeOther, sess); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	// Step-up WebAuthn e persistência.
+	stepAt := loginAt.Add(time.Hour)
+	if err := sess.StepUp(stepAt, domain.AAL3, []domain.FactorType{domain.FactorWebAuthn}); err != nil {
+		t.Fatalf("StepUp: %v", err)
+	}
+	if err := inIdentityTx(pool, fx.scopeOther, func(s *IdentitySessionStore) error {
+		return s.SaveStepUp(ctx, sess)
+	}); err != nil {
+		t.Fatalf("SaveStepUp: %v", err)
+	}
+
+	got, err := getSession(pool, fx.scopeOther, sess.ID)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got.ProvenAAL != domain.AAL3 || got.ACR() != "aal3" {
+		t.Fatalf("acr pós-step-up = %q, quero aal3", got.ACR())
+	}
+	if !got.AuthTime.UTC().Equal(stepAt) {
+		t.Fatalf("auth_time = %v, quero %v (renovado no step-up)", got.AuthTime.UTC(), stepAt)
+	}
+	if len(got.AuthMethods) != 1 || got.AuthMethods[0] != domain.FactorWebAuthn {
+		t.Fatalf("auth_methods = %v, quero [webauthn]", got.AuthMethods)
+	}
+}

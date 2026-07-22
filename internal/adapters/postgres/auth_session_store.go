@@ -181,6 +181,35 @@ func (s *IdentitySessionStore) SaveSwitch(ctx context.Context, as domain.AuthSes
 	return nil
 }
 
+// SaveStepUp persists a completed step-up (domain.AuthSession.StepUp already ran,
+// so as carries the raised ProvenAAL, the refreshed AuthTime and the new
+// AuthMethods). It UPDATEs only an active session of this identity — a step-up
+// resumes a tenant-scoped operation, so a pending or revoked session has nothing
+// to resume and yields ErrSessionNotFound. The tenant and token generation are
+// untouched (the assurance rose within the same tenant context).
+func (s *IdentitySessionStore) SaveStepUp(ctx context.Context, as domain.AuthSession) error {
+	if as.IdentityID != s.itx.scope.IdentityID() {
+		return fmt.Errorf("%w: alvo %s, escopo %s", ErrCrossIdentityWrite, as.IdentityID, s.itx.scope.IdentityID())
+	}
+	if as.AuthTime.IsZero() || len(as.AuthMethods) == 0 || !as.ProvenAAL.Valid() {
+		return fmt.Errorf("postgres: step-up exige garantia, auth_time e métodos definidos")
+	}
+	const q = `
+		UPDATE auth_session
+		SET proven_aal = $3, auth_time = $4, auth_methods = $5, updated_at = now()
+		WHERE id = $1 AND identity_id = $2 AND status = 'active'`
+	tag, err := s.itx.tx.Exec(ctx, q,
+		as.ID.String(), as.IdentityID.String(),
+		string(as.ProvenAAL), as.AuthTime, factorTypesToText(as.AuthMethods))
+	if err != nil {
+		return fmt.Errorf("postgres: gravação de step-up falhou: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrSessionNotFound
+	}
+	return nil
+}
+
 // Revoke terminates one session of the store's identity. Idempotent: revoking a
 // revoked session keeps the original revoked_at. A session of another identity
 // yields ErrSessionNotFound.
