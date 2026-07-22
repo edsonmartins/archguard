@@ -63,6 +63,9 @@ var divergentPrefixes = []string{
 	// sessão do ArchGuard convive com estas superfícies legadas — commit do
 	// upstream que mude a semântica delas exige revisão manual (DIVERGENCE.md).
 	"object/role.go", "object/session.go", "object/invitation",
+	// Pacote 003 (immutable-audit-trail): a auditoria legada `record` foi
+	// superada pela trilha imutável — commit que a toque é avaliado contra ela.
+	"object/record.go",
 }
 
 // outOfScopePrefixes are paths for removed features (ADR-0015/ADR-0019). A commit
