@@ -74,7 +74,7 @@ func makeTenant(t *testing.T, pool *pgxpool.Pool, label string) tenantFixture {
 	return fx
 }
 
-func setupTenantPool(t *testing.T) *pgxpool.Pool {
+func setupTenantPool(t testing.TB) *pgxpool.Pool {
 	t.Helper()
 	dsn := os.Getenv("ARCHGUARD_TEST_DSN")
 	if dsn == "" {

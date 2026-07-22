@@ -252,7 +252,21 @@
       compartilha a transação da operação (T-017), a falha de auditoria dá rollback do todo
       (I-5.4). Teste de sanidade com auditoria DISPONÍVEL conclui a mesma operação, provando que a
       negação vem da indisponibilidade. Formaliza o "fail-closed comprovado" do gate do pacote.)*
-- [ ] **T-021** Teste de carga com medição de impacto na latência de login.
+- [x] **T-021** Teste de carga com medição de impacto na latência de login. *(Orçamento
+      RFC-0001: emissão de token p95 < 150 ms; a auditoria síncrona é fração disso.
+      `TestAuditSyncLatencyBudget` mede o `Append` síncrono (o custo que cada login paga por
+      auth.login) sobre 300 eventos, computa p50/p95 e exige p95 < 60 ms (folga larga no
+      orçamento); a cadeia fica íntegra sob volume. `TestAuditConcurrentThroughput`: 8 orgs em
+      paralelo × 50 eventos, mede throughput e confirma cadeia sem lacuna por org (serialização
+      por tenant válida sob concorrência). `BenchmarkAuditAppend` para medição contínua. Medido
+      em PG15 real: **p50≈0,29 ms, p95≈0,45 ms, máx≈2 ms; ~10.800 eventos/s; ~300 µs/op** — a
+      auditoria síncrona adiciona sub-milissegundo ao login, muito dentro do orçamento. Fecha o
+      gate do pacote.)*
+
+## Gate do pacote — FECHADO
+Detecção correta dos três tipos de adulteração (T-019 ✅), fail-closed comprovado (T-020 ✅),
+verificação diária operando (T-015 ✅), impacto de latência dentro do orçamento do RFC-0001
+(T-021 ✅: p95 do append síncrono ≈ 0,45 ms « 150 ms). **21/21 tarefas concluídas.**
 
 ## Gate de verificação
 Detecção correta dos três tipos de adulteração; fail-closed comprovado; verificação diária

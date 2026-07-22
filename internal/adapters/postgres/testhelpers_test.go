@@ -26,7 +26,7 @@ import (
 // 0003/0008 extend them with stable UUID ids, which the membership and
 // role_assignment FKs target — so the store integration tests must stand them up
 // first, mirroring the real boot order (RUNBOOK: migrations run after Sync2).
-func seedLegacyTables(t *testing.T, pool *pgxpool.Pool) {
+func seedLegacyTables(t testing.TB, pool *pgxpool.Pool) {
 	t.Helper()
 	ctx := context.Background()
 	for _, ddl := range []string{
