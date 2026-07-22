@@ -26,7 +26,23 @@
       próprio** (crypto/ecdsa + fxamacker/cbor, ambos já deps; sem dep de teste nova): ciclo
       COMPLETO registro→login real, hardware→AAL3 (forma INV-7), passkey sincronizada→AAL2,
       challenge errado recusado. Gate verde.)*
-- [ ] **T-003** Implementar TOTP como fallback com restrição de nível.
+- [x] **T-003** Implementar TOTP como fallback com restrição de nível. *(Dependência:
+      `pquerna/otp` v1.4.0 já estava na árvore (Casdoor usa em `object/mfa_totp.go`) — NÃO é
+      nova. Adapter `internal/adapters/totp`: `Service(issuer, vault domain.SecretStore)`.
+      Perfil SHA-1/6-dígitos/30s (interopera com todo app autenticador), skew=1 (uma janela de
+      drift, limita replay). Cerimônia em DOIS passos: `BeginEnrollment` gera a semente e a
+      mantém EFÊMERA em memória (nunca persistida/logada; só o provisioning URI é mostrado uma
+      vez ao dono via TLS); `FinishEnrollment` só custodia no cofre APÓS o usuário provar posse
+      com um código válido — semente não confirmada é descartada, cofre é chamado FORA de tx
+      (RFC-0004 §4), e se a construção da credencial falhar compensa com Delete (sem semente
+      órfã). Credencial resultante = TOTP AAL2, forma INV-7 (só SecretRef). `Verify` resolve a
+      semente do cofre só durante a checagem; falha do cofre é ERRO (fail-closed, INV-6),
+      distinta de código errado (negação ok=false). **Restrição de nível**: TOTP é AAL2 por
+      construção (teto do T-001), não é phishing-resistant e `SetAssurance(AAL3)` é recusado —
+      logo nunca satisfaz L3 (cenário "TOTP em operação L3"). SMS é estruturalmente impossível
+      (não há FactorType nem construtor — cenário "SMS como fator → rejeitado"). Testes: ciclo
+      registro→verificação, código errado não custodia, TOTP não sobe a AAL3, falha de cofre é
+      erro, SMS não é fator. Gate verde.)*
 - [ ] **T-004** Implementar códigos de recuperação de uso único com invalidação em massa.
 - [ ] **T-005** Implementar cálculo de `acr`/`amr`/`auth_time` na sessão.
 - [ ] **T-006** Implementar metadado de classificação de nível por operação da API.
