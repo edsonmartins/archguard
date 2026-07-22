@@ -18,6 +18,17 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"time"
+)
+
+// Freshness windows per level (ADR-0010): L1 imposes no age limit (a valid
+// session suffices); L2 accepts a strong factor proven within a generous window;
+// L3 demands a RECENT phishing-resistant reauthentication — a short window,
+// regardless of how old the session is. These are the platform defaults; the
+// per-organization policy (T-010) may only TIGHTEN them, never loosen.
+const (
+	freshnessL2Window = 12 * time.Hour
+	freshnessL3Window = 5 * time.Minute
 )
 
 // This file adds the assurance-level POLICY (what each level demands of a
@@ -60,10 +71,49 @@ func (l AssuranceLevel) RequiresPhishingResistant() bool {
 	return l != L1 && l != L2
 }
 
+// RequiresFreshness reports whether the level constrains how recently the
+// session authenticated. L1 does not (a valid session is enough); L2 and L3 do —
+// and, fail-closed, an unrecognized level does too.
+func (l AssuranceLevel) RequiresFreshness() bool {
+	return l != L1
+}
+
+// FreshnessWindow is the maximum age of the session's authentication the level
+// tolerates. L1 has no window (RequiresFreshness is false); L2 a generous one;
+// L3 a short one. An unrecognized level gets the SHORTEST window — fail-closed.
+func (l AssuranceLevel) FreshnessWindow() time.Duration {
+	switch l {
+	case L1:
+		return 0 // unused: L1 imposes no freshness constraint
+	case L2:
+		return freshnessL2Window
+	default: // L3 and any unrecognized value
+		return freshnessL3Window
+	}
+}
+
+// Fresh reports whether a session that authenticated at authTime is recent enough
+// for this level at instant now. It is fail-closed: a level that requires
+// freshness with a zero or future authTime is NOT fresh, and the age must be
+// within (not merely at) the window. L1 is always fresh.
+func (l AssuranceLevel) Fresh(authTime, now time.Time) bool {
+	if !l.RequiresFreshness() {
+		return true
+	}
+	if authTime.IsZero() {
+		return false
+	}
+	age := now.Sub(authTime)
+	if age < 0 {
+		return false // authTime in the future — a clock/forgery anomaly, deny.
+	}
+	return age <= l.FreshnessWindow()
+}
+
 // Satisfies reports whether a proven assurance (the session's AAL and whether it
 // was obtained with a phishing-resistant factor) meets this operation level. It
-// checks assurance level AND phishing resistance; FRESHNESS is layered on by the
-// step-up middleware (T-008), which composes this with a freshness check.
+// checks assurance level AND phishing resistance; FRESHNESS is a separate axis
+// (Fresh), which the guard composes with this.
 func (l AssuranceLevel) Satisfies(provenAAL AAL, phishingResistant bool) bool {
 	if !provenAAL.AtLeast(l.RequiredAAL()) {
 		return false
@@ -179,9 +229,17 @@ type InsufficientAssuranceError struct {
 	// ProvenACR is the acr the session currently holds ("" if none) — for the
 	// error message and audit, never to weaken the decision.
 	ProvenACR string
+	// Stale is true when the session met the level's AAL/phishing requirement but
+	// its authentication is too OLD for the level's freshness window — the client
+	// must REAUTHENTICATE (step-up) even though it already holds the right factor.
+	Stale bool
 }
 
 func (e *InsufficientAssuranceError) Error() string {
+	if e.Stale {
+		return fmt.Sprintf("assurance: reautenticação exigida para %q: %s (acr %s) requer autenticação recente",
+			e.Operation, e.Required, e.RequiredACR)
+	}
 	return fmt.Sprintf("assurance: garantia insuficiente para %q: exige %s (acr %s), sessão tem acr %q",
 		e.Operation, e.Required, e.RequiredACR, e.ProvenACR)
 }
@@ -208,27 +266,35 @@ func NewAssuranceGuard(catalog *OperationCatalog) *AssuranceGuard {
 //   - a session below the required level (AAL or phishing resistance) is refused
 //     with the same specific error.
 //
-// It returns nil only when the session meets the operation's level. FRESHNESS is
-// added by T-008, which composes an age check onto this decision.
-func (g *AssuranceGuard) Authorize(operationID string, s *AuthSession) error {
+// It returns nil only when the session meets the operation's level AND its
+// authentication is fresh enough for that level (evaluated at now, supplied by
+// the caller so the domain stays clock-free). A session at the right level but
+// too OLD is refused with Stale set — the "L3 with an old session" denial.
+func (g *AssuranceGuard) Authorize(operationID string, s *AuthSession, now time.Time) error {
 	level, err := g.catalog.Level(operationID)
 	if err != nil {
 		return err // ErrOperationNotClassified — deny, never allow.
 	}
-	insufficient := func(provenACR string) error {
+	insufficient := func(provenACR string, stale bool) error {
 		return &InsufficientAssuranceError{
 			Operation:              operationID,
 			Required:               level,
 			RequiredACR:            string(level.RequiredAAL()),
 			NeedsPhishingResistant: level.RequiresPhishingResistant(),
 			ProvenACR:              provenACR,
+			Stale:                  stale,
 		}
 	}
 	if s == nil || s.Status != SessionActive {
-		return insufficient("")
+		return insufficient("", false)
 	}
 	if !level.Satisfies(s.ProvenAAL, s.PhishingResistant()) {
-		return insufficient(s.ACR())
+		return insufficient(s.ACR(), false)
+	}
+	// The factor is strong enough; now it must also be RECENT enough. A stale
+	// authentication demands step-up even at the correct level.
+	if !level.Fresh(s.AuthTime, now) {
+		return insufficient(s.ACR(), true)
 	}
 	return nil
 }

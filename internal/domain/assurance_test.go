@@ -20,6 +20,14 @@ import (
 	"time"
 )
 
+// testAuthTime is when the sessions in these tests authenticated; testNow is a
+// few minutes later — within every level's freshness window, so freshness does
+// not interfere with the non-freshness assertions.
+var (
+	testAuthTime = time.Date(2026, 7, 22, 10, 0, 0, 0, time.UTC)
+	testNow      = testAuthTime.Add(2 * time.Minute)
+)
+
 // Cada nível mapeia para o AAL e a resistência a phishing do ADR-0010.
 func TestAssuranceLevelRequirements(t *testing.T) {
 	cases := []struct {
@@ -51,11 +59,14 @@ func TestUnknownLevelIsFailClosed(t *testing.T) {
 	if zero.RequiredAAL() != AAL3 || !zero.RequiresPhishingResistant() {
 		t.Fatalf("nível desconhecido deveria exigir o mais forte (AAL3 + phishing-resistant)")
 	}
+	// Frescor também é fail-closed no nível desconhecido: janela curta (a de L3).
+	if !zero.RequiresFreshness() || zero.FreshnessWindow() != freshnessL3Window {
+		t.Fatalf("nível desconhecido deveria exigir frescor curto")
+	}
 }
 
 // Satisfies checa AAL e resistência a phishing.
 func TestAssuranceLevelSatisfies(t *testing.T) {
-	// L3 exige AAL3 E phishing-resistant.
 	if L3.Satisfies(AAL3, false) {
 		t.Fatalf("L3 não deveria ser satisfeito sem fator phishing-resistant")
 	}
@@ -66,13 +77,43 @@ func TestAssuranceLevelSatisfies(t *testing.T) {
 	if L3.Satisfies(AAL2, false) {
 		t.Fatalf("AAL2 (TOTP) não deveria satisfazer L3")
 	}
-	// L2 aceita AAL2 sem exigir phishing resistance.
 	if !L2.Satisfies(AAL2, false) {
 		t.Fatalf("L2 deveria ser satisfeito por AAL2")
 	}
-	// L1 aceita qualquer sessão válida.
 	if !L1.Satisfies(AAL1, false) {
 		t.Fatalf("L1 deveria ser satisfeito por AAL1")
+	}
+}
+
+// Frescor por nível: L1 sempre fresco; L2 janela generosa; L3 janela curta;
+// auth_time zero ou no futuro nunca é fresco (fail-closed).
+func TestAssuranceLevelFresh(t *testing.T) {
+	base := time.Date(2026, 7, 22, 10, 0, 0, 0, time.UTC)
+
+	// L1 dispensa frescor mesmo com autenticação antiga.
+	if !L1.Fresh(base.Add(-100*time.Hour), base) {
+		t.Fatalf("L1 não deveria exigir frescor")
+	}
+	// L3 fresco dentro de 5min, obsoleto além.
+	if !L3.Fresh(base.Add(-4*time.Minute), base) {
+		t.Fatalf("L3 dentro de 5min deveria ser fresco")
+	}
+	if L3.Fresh(base.Add(-6*time.Minute), base) {
+		t.Fatalf("L3 além de 5min deveria estar obsoleto")
+	}
+	// L2 fresco dentro de 12h, obsoleto além.
+	if !L2.Fresh(base.Add(-11*time.Hour), base) {
+		t.Fatalf("L2 dentro de 12h deveria ser fresco")
+	}
+	if L2.Fresh(base.Add(-13*time.Hour), base) {
+		t.Fatalf("L2 além de 12h deveria estar obsoleto")
+	}
+	// Fail-closed: auth_time zero e auth_time no futuro nunca são frescos.
+	if L2.Fresh(time.Time{}, base) {
+		t.Fatalf("auth_time zero não deveria ser fresco")
+	}
+	if L3.Fresh(base.Add(time.Minute), base) {
+		t.Fatalf("auth_time no futuro não deveria ser fresco")
 	}
 }
 
@@ -90,12 +131,10 @@ func TestOperationCatalogRegisterAndLookup(t *testing.T) {
 		t.Fatalf("Level(audit.export) = %s, %v; quero L3", lvl, err)
 	}
 
-	// Operação não classificada: DENIAL, não miss silencioso.
 	if _, err := cat.Level("session.open"); !errors.Is(err, ErrOperationNotClassified) {
 		t.Fatalf("op não classificada: err = %v, quero ErrOperationNotClassified", err)
 	}
 
-	// Ids ordenados — o conjunto que o invariante de completude (T-017) compara.
 	ids := cat.IDs()
 	if len(ids) != 2 || ids[0] != "audit.export" || ids[1] != "profile.read" {
 		t.Fatalf("IDs() = %v, quero [audit.export profile.read]", ids)
@@ -110,7 +149,6 @@ func TestOperationCatalogRejectsMalformedAndDuplicate(t *testing.T) {
 	if err := cat.Register(Operation{ID: "x", Level: AssuranceLevel("L9")}); !errors.Is(err, ErrOperationInvalid) {
 		t.Fatalf("nível inválido: err = %v, quero ErrOperationInvalid", err)
 	}
-	// Zero-value de nível também é inválido — nada de default implícito.
 	if err := cat.Register(Operation{ID: "y"}); !errors.Is(err, ErrOperationInvalid) {
 		t.Fatalf("nível vazio: err = %v, quero ErrOperationInvalid", err)
 	}
@@ -122,12 +160,12 @@ func TestOperationCatalogRejectsMalformedAndDuplicate(t *testing.T) {
 	}
 }
 
-// activeSessionWithContext: sessão ativa com contexto de autenticação registrado.
+// activeSessionWithContext: sessão ativa com contexto de autenticação em
+// testAuthTime.
 func activeSessionWithContext(t *testing.T, aal AAL, methods ...FactorType) AuthSession {
 	t.Helper()
 	s := activeSession(t, aal)
-	at := time.Date(2026, 7, 22, 10, 0, 0, 0, time.UTC)
-	if err := s.SetAuthContext(at, methods); err != nil {
+	if err := s.SetAuthContext(testAuthTime, methods); err != nil {
 		t.Fatalf("SetAuthContext: %v", err)
 	}
 	return s
@@ -148,21 +186,21 @@ func newGuard(t *testing.T) *AssuranceGuard {
 	return NewAssuranceGuard(cat)
 }
 
-// Uma sessão WebAuthn AAL3 satisfaz uma operação L3.
+// Uma sessão WebAuthn AAL3 recente satisfaz uma operação L3.
 func TestGuardAllowsSufficient(t *testing.T) {
 	g := newGuard(t)
 	s := activeSessionWithContext(t, AAL3, FactorWebAuthn)
-	if err := g.Authorize("audit.export", &s); err != nil {
-		t.Fatalf("sessão AAL3 WebAuthn deveria satisfazer L3: %v", err)
+	if err := g.Authorize("audit.export", &s, testNow); err != nil {
+		t.Fatalf("sessão AAL3 WebAuthn recente deveria satisfazer L3: %v", err)
 	}
 }
 
-// TOTP AAL2 numa operação L3: recusa ESPECÍFICA que informa o acr exigido e que
-// precisa de fator resistente a phishing (cenário "TOTP em operação L3").
+// TOTP AAL2 numa operação L3: recusa ESPECÍFICA (não por frescor) que informa o
+// acr exigido e a necessidade de fator resistente a phishing.
 func TestGuardDeniesWithSpecificError(t *testing.T) {
 	g := newGuard(t)
 	s := activeSessionWithContext(t, AAL2, FactorTOTP)
-	err := g.Authorize("audit.export", &s)
+	err := g.Authorize("audit.export", &s, testNow)
 	var iae *InsufficientAssuranceError
 	if !errors.As(err, &iae) {
 		t.Fatalf("erro = %v, quero InsufficientAssuranceError", err)
@@ -170,17 +208,54 @@ func TestGuardDeniesWithSpecificError(t *testing.T) {
 	if iae.Required != L3 || iae.RequiredACR != "aal3" || !iae.NeedsPhishingResistant {
 		t.Fatalf("erro deveria exigir L3/aal3/phishing-resistant: %+v", iae)
 	}
-	if iae.ProvenACR != "aal2" {
-		t.Fatalf("erro deveria informar o acr atual aal2: %+v", iae)
+	if iae.ProvenACR != "aal2" || iae.Stale {
+		t.Fatalf("recusa deveria ser por nível (não frescor), com acr atual aal2: %+v", iae)
 	}
 }
 
-// Operação não classificada: recusada com ErrOperationNotClassified (nunca
-// liberada).
+// Cenário "Operação L3 com sessão antiga": a sessão TEM o fator certo (WebAuthn
+// AAL3) mas autenticou há muito — recusa por frescor, marcada Stale, exigindo
+// reautenticação.
+func TestGuardDeniesStaleSession(t *testing.T) {
+	g := newGuard(t)
+	s := activeSessionWithContext(t, AAL3, FactorWebAuthn)
+	old := testAuthTime.Add(10 * time.Minute) // 10min > janela L3 de 5min
+	err := g.Authorize("audit.export", &s, old)
+	var iae *InsufficientAssuranceError
+	if !errors.As(err, &iae) {
+		t.Fatalf("erro = %v, quero InsufficientAssuranceError", err)
+	}
+	if !iae.Stale {
+		t.Fatalf("recusa de sessão antiga deveria ser marcada Stale: %+v", iae)
+	}
+	if iae.RequiredACR != "aal3" {
+		t.Fatalf("mesmo obsoleta, o acr exigido para reautenticar é aal3: %+v", iae)
+	}
+}
+
+// Após reautenticação (auth_time renovado), a mesma operação passa — o step-up
+// resolveu o frescor.
+func TestGuardStepUpRestoresFreshness(t *testing.T) {
+	g := newGuard(t)
+	s := activeSessionWithContext(t, AAL3, FactorWebAuthn)
+	stale := testAuthTime.Add(10 * time.Minute)
+	if err := g.Authorize("audit.export", &s, stale); err == nil {
+		t.Fatalf("pré-condição: a operação deveria estar recusada por frescor")
+	}
+	// Step-up: renova o contexto de autenticação para o instante da reautenticação.
+	if err := s.SetAuthContext(stale, []FactorType{FactorWebAuthn}); err != nil {
+		t.Fatalf("SetAuthContext (step-up): %v", err)
+	}
+	if err := g.Authorize("audit.export", &s, stale.Add(time.Minute)); err != nil {
+		t.Fatalf("após step-up a operação deveria passar: %v", err)
+	}
+}
+
+// Operação não classificada: recusada com ErrOperationNotClassified.
 func TestGuardDeniesUnclassified(t *testing.T) {
 	g := newGuard(t)
 	s := activeSessionWithContext(t, AAL3, FactorWebAuthn)
-	if err := g.Authorize("session.open", &s); !errors.Is(err, ErrOperationNotClassified) {
+	if err := g.Authorize("session.open", &s, testNow); !errors.Is(err, ErrOperationNotClassified) {
 		t.Fatalf("op não classificada: err = %v, quero ErrOperationNotClassified", err)
 	}
 }
@@ -188,13 +263,13 @@ func TestGuardDeniesUnclassified(t *testing.T) {
 // Sessão nil ou não-ativa não carrega garantia — recusada.
 func TestGuardDeniesNilOrInactiveSession(t *testing.T) {
 	g := newGuard(t)
-	if err := g.Authorize("profile.read", nil); err == nil {
+	if err := g.Authorize("profile.read", nil, testNow); err == nil {
 		t.Fatalf("sessão nil deveria ser recusada")
 	}
 	revoked := activeSessionWithContext(t, AAL3, FactorWebAuthn)
 	revoked.Revoke()
 	var iae *InsufficientAssuranceError
-	if err := g.Authorize("profile.read", &revoked); !errors.As(err, &iae) {
+	if err := g.Authorize("profile.read", &revoked, testNow); !errors.As(err, &iae) {
 		t.Fatalf("sessão revogada: err = %v, quero InsufficientAssuranceError", err)
 	}
 }

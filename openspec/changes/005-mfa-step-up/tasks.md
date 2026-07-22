@@ -102,7 +102,18 @@
       revogada) e HTTP (allow roda handler; TOTP em L3 → 401 com acr_values=aal3 e handler não
       roda; sem sessão; não-classificada → 500). Frescor (sessão antiga) é o T-008, que compõe
       sobre este guard. Gate verde.)*
-- [ ] **T-008** Implementar avaliação de frescor no momento da operação.
+- [x] **T-008** Implementar avaliação de frescor no momento da operação. *(Frescor como eixo
+      separado que o guard compõe. `AssuranceLevel.Fresh(authTime, now)`: L1 sempre fresco (sessão
+      válida basta); L2 janela de 12h; L3 janela CURTA de 5min (reautenticação recente) — defaults
+      da plataforma, que a política por organização (T-010) só pode APERTAR. Fail-closed: auth_time
+      zero ou no futuro nunca é fresco; nível desconhecido usa a janela curta. `Authorize` ganha o
+      parâmetro `now` (injetado pelo chamador — domínio segue sem relógio): após checar AAL/phishing,
+      recusa a sessão obsoleta com `InsufficientAssuranceError{Stale: true}` — o cenário "Operação
+      L3 com sessão antiga": a sessão TEM o fator certo mas autenticou há muito, então exige step-up
+      mesmo assim (RequiredACR continua aal3). O step-up (SetAuthContext renovando auth_time) restaura
+      o frescor e a operação passa. Middleware injeta `now` (time.Now, sobreponível em teste) e emite
+      o mesmo desafio RFC 9470. Testes de domínio (Fresh por nível + fail-closed, recusa Stale,
+      step-up restaura) e HTTP (sessão antiga → 401 com acr_values). Gate verde.)*
 - [ ] **T-009** Implementar fluxo de step-up e retomada da operação original.
 - [ ] **T-010** Implementar política de MFA por organização.
 - [ ] **T-011** Implementar precedência "mais restritiva vence" na troca de tenant.

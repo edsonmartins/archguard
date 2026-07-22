@@ -26,6 +26,11 @@ import (
 	"github.com/google/uuid"
 )
 
+var (
+	fixtureAuthTime = time.Date(2026, 7, 22, 10, 0, 0, 0, time.UTC)
+	fixtureNow      = fixtureAuthTime.Add(2 * time.Minute) // dentro da janela L3
+)
+
 // staticResolver returns a fixed session (or none), standing in for the
 // authentication layer.
 type staticResolver struct {
@@ -49,7 +54,7 @@ func buildSession(t *testing.T, aal domain.AAL, methods ...domain.FactorType) *d
 	if err != nil {
 		t.Fatalf("NewAuthSession: %v", err)
 	}
-	if err := s.SetAuthContext(time.Date(2026, 7, 22, 10, 0, 0, 0, time.UTC), methods); err != nil {
+	if err := s.SetAuthContext(fixtureAuthTime, methods); err != nil {
 		t.Fatalf("SetAuthContext: %v", err)
 	}
 	return &s
@@ -64,6 +69,14 @@ func testGuard(t *testing.T) *domain.AssuranceGuard {
 	return domain.NewAssuranceGuard(cat)
 }
 
+// middlewareAt builds a middleware whose clock is pinned to now.
+func middlewareAt(t *testing.T, resolve SessionResolver, now time.Time) *AssuranceMiddleware {
+	t.Helper()
+	mw := NewAssuranceMiddleware(testGuard(t), resolve)
+	mw.now = func() time.Time { return now }
+	return mw
+}
+
 func nextOK() (http.Handler, *bool) {
 	called := false
 	h := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -73,9 +86,9 @@ func nextOK() (http.Handler, *bool) {
 	return h, &called
 }
 
-// Sessão AAL3 WebAuthn passa: o handler protegido roda.
+// Sessão AAL3 WebAuthn recente passa: o handler protegido roda.
 func TestAssuranceMiddlewareAllows(t *testing.T) {
-	mw := NewAssuranceMiddleware(testGuard(t), staticResolver{buildSession(t, domain.AAL3, domain.FactorWebAuthn), true})
+	mw := middlewareAt(t, staticResolver{buildSession(t, domain.AAL3, domain.FactorWebAuthn), true}, fixtureNow)
 	next, called := nextOK()
 	rec := httptest.NewRecorder()
 	mw.Require("audit.export", next).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/audit/verify", nil))
@@ -87,7 +100,7 @@ func TestAssuranceMiddlewareAllows(t *testing.T) {
 // TOTP AAL2 numa operação L3: 401 com desafio de step-up (RFC 9470) informando
 // acr_values=aal3, e o handler NÃO roda.
 func TestAssuranceMiddlewareChallengesInsufficient(t *testing.T) {
-	mw := NewAssuranceMiddleware(testGuard(t), staticResolver{buildSession(t, domain.AAL2, domain.FactorTOTP), true})
+	mw := middlewareAt(t, staticResolver{buildSession(t, domain.AAL2, domain.FactorTOTP), true}, fixtureNow)
 	next, called := nextOK()
 	rec := httptest.NewRecorder()
 	mw.Require("audit.export", next).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/audit/verify", nil))
@@ -111,9 +124,25 @@ func TestAssuranceMiddlewareChallengesInsufficient(t *testing.T) {
 	}
 }
 
+// Sessão AAL3 WebAuthn, mas antiga (além da janela L3): também é desafiada a
+// reautenticar — o handler NÃO roda (cenário "Operação L3 com sessão antiga").
+func TestAssuranceMiddlewareChallengesStale(t *testing.T) {
+	staleNow := fixtureAuthTime.Add(10 * time.Minute)
+	mw := middlewareAt(t, staticResolver{buildSession(t, domain.AAL3, domain.FactorWebAuthn), true}, staleNow)
+	next, called := nextOK()
+	rec := httptest.NewRecorder()
+	mw.Require("audit.export", next).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/audit/verify", nil))
+	if *called || rec.Code != http.StatusUnauthorized {
+		t.Fatalf("sessão antiga deveria ser desafiada: code=%d called=%v", rec.Code, *called)
+	}
+	if !strings.Contains(rec.Header().Get("WWW-Authenticate"), `acr_values="aal3"`) {
+		t.Fatalf("desafio de sessão antiga deveria trazer acr_values=aal3")
+	}
+}
+
 // Sem sessão: também é desafiado (nunca liberado).
 func TestAssuranceMiddlewareNoSession(t *testing.T) {
-	mw := NewAssuranceMiddleware(testGuard(t), staticResolver{nil, false})
+	mw := middlewareAt(t, staticResolver{nil, false}, fixtureNow)
 	next, called := nextOK()
 	rec := httptest.NewRecorder()
 	mw.Require("audit.export", next).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/audit/verify", nil))
@@ -122,10 +151,9 @@ func TestAssuranceMiddlewareNoSession(t *testing.T) {
 	}
 }
 
-// Operação não classificada: defeito de fiação — 500, e o handler NÃO roda
-// (fail-closed).
+// Operação não classificada: defeito de fiação — 500, e o handler NÃO roda.
 func TestAssuranceMiddlewareUnclassified(t *testing.T) {
-	mw := NewAssuranceMiddleware(testGuard(t), staticResolver{buildSession(t, domain.AAL3, domain.FactorWebAuthn), true})
+	mw := middlewareAt(t, staticResolver{buildSession(t, domain.AAL3, domain.FactorWebAuthn), true}, fixtureNow)
 	next, called := nextOK()
 	rec := httptest.NewRecorder()
 	mw.Require("session.open", next).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/x", nil))

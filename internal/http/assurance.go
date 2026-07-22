@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/casdoor/casdoor/internal/domain"
 )
@@ -37,12 +38,15 @@ type SessionResolver interface {
 type AssuranceMiddleware struct {
 	guard   *domain.AssuranceGuard
 	resolve SessionResolver
+	// now supplies the current instant for the freshness check; overridable in
+	// tests. Defaults to time.Now.
+	now func() time.Time
 }
 
 // NewAssuranceMiddleware builds the middleware over the guard and a session
 // resolver.
 func NewAssuranceMiddleware(guard *domain.AssuranceGuard, resolve SessionResolver) *AssuranceMiddleware {
-	return &AssuranceMiddleware{guard: guard, resolve: resolve}
+	return &AssuranceMiddleware{guard: guard, resolve: resolve, now: time.Now}
 }
 
 // Require wraps next so it runs ONLY if the request's session satisfies
@@ -54,7 +58,7 @@ func NewAssuranceMiddleware(guard *domain.AssuranceGuard, resolve SessionResolve
 func (m *AssuranceMiddleware) Require(operationID string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		session, _ := m.resolve.Session(r)
-		err := m.guard.Authorize(operationID, session)
+		err := m.guard.Authorize(operationID, session, m.now())
 		if err == nil {
 			next.ServeHTTP(w, r)
 			return
