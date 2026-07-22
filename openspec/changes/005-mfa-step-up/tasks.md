@@ -12,7 +12,20 @@
       recusado em L3". Sem esquema novo (cabe em credential.aal/Params). Testes: teto por tipo,
       phishing-resistant/strong por tipo, SetAssurance e WellFormed rejeitam AAL acima do teto.
       Gate verde.)*
-- [ ] **T-002** Implementar registro e autenticação WebAuthn (múltiplos autenticadores).
+- [x] **T-002** Implementar registro e autenticação WebAuthn (múltiplos autenticadores).
+      *(Dependência: `go-webauthn/webauthn` v0.10.2 já estava na árvore (Casdoor a usa) — NÃO é
+      dependência nova; license-gate inalterado. Adapter `internal/adapters/webauthn`: `Service`
+      (RP configurável: RPID/RPDisplayName/origins), `User` (handle = subject OPACO, credenciais
+      de múltiplos autenticadores; exclude-list impede re-registro). `BeginRegistration`/
+      `FinishRegistration` → `domain.Credential` WebAuthn (só material público, INV-7) com AAL
+      atribuído: user-verified E NÃO-backup-eligible (hardware) = AAL3; passkey sincronizada ou
+      sem UV = AAL2 (distinção do ADR-0010). `BeginLogin`/`FinishLogin` verificam a asserção e
+      devolvem a credencial usada + sign_count novo + `CloneWarning` (contador retrocedeu = possível
+      clone, o chamador decide o risco, nunca ignora). Recebe `io.Reader` (parse+CreateCredential/
+      ValidateLogin) — testável sem http.Request. **Testado com autenticador virtual ES256
+      próprio** (crypto/ecdsa + fxamacker/cbor, ambos já deps; sem dep de teste nova): ciclo
+      COMPLETO registro→login real, hardware→AAL3 (forma INV-7), passkey sincronizada→AAL2,
+      challenge errado recusado. Gate verde.)*
 - [ ] **T-003** Implementar TOTP como fallback com restrição de nível.
 - [ ] **T-004** Implementar códigos de recuperação de uso único com invalidação em massa.
 - [ ] **T-005** Implementar cálculo de `acr`/`amr`/`auth_time` na sessão.
