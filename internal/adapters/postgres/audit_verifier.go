@@ -85,8 +85,14 @@ func (v *AuditVerifier) VerifyOrganization(ctx context.Context, orgID uuid.UUID)
 
 // genesis returns the org's genesis hash and whether a chain head exists.
 func (v *AuditVerifier) genesis(ctx context.Context, orgID uuid.UUID) ([]byte, bool, error) {
+	return readGenesisHash(ctx, v.db, orgID)
+}
+
+// readGenesisHash returns the org's genesis hash and whether a chain head
+// exists — shared by the verifier (T-013) and the exporter (T-016).
+func readGenesisHash(ctx context.Context, db Beginner, orgID uuid.UUID) ([]byte, bool, error) {
 	var nonce []byte
-	err := WithTx(ctx, v.db, func(tx pgx.Tx) error {
+	err := WithTx(ctx, db, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT genesis_nonce FROM audit_chain_head WHERE organization_id = $1`, orgID.String()).Scan(&nonce)
 	})
@@ -105,8 +111,14 @@ func (v *AuditVerifier) genesis(ctx context.Context, orgID uuid.UUID) ([]byte, b
 
 // readEvents reconstructs the org's events (ordered by seq) into SealedEvents.
 func (v *AuditVerifier) readEvents(ctx context.Context, orgID uuid.UUID) ([]domain.SealedEvent, error) {
+	return readSealedEvents(ctx, v.db, orgID)
+}
+
+// readSealedEvents reconstructs an organization's events (ordered by seq) from
+// their columns — shared by the verifier (T-013) and the exporter (T-016).
+func readSealedEvents(ctx context.Context, db Beginner, orgID uuid.UUID) ([]domain.SealedEvent, error) {
 	var out []domain.SealedEvent
-	err := WithTx(ctx, v.db, func(tx pgx.Tx) error {
+	err := WithTx(ctx, db, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT seq, occurred_at, event_id::text, schema_version, action, outcome,
 			       actor_subject, actor_membership_id::text, actor_session_id::text, actor_act,

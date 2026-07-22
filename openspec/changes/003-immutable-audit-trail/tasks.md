@@ -196,7 +196,18 @@
       alerta; org adulterada gera alerta crítico mencionando a org + seq/tipo e retorna erro;
       genesis corrompido (falha de verificação) também alerta crítico. Gate verde; sem
       dependência nova.)*
-- [ ] **T-016** Implementar exportação assinada por tenant (NDJSON + selos + chaves).
+- [x] **T-016** Implementar exportação assinada por tenant (NDJSON + selos + chaves). *(RFC-0003
+      §9. `TrailExporter.Export` (pgx) produz um stream **NDJSON auto-verificável** por org:
+      registro `meta` (com a gênese), `public_key` por key_id usado pelos selos (resolvido via
+      `PublicKeyResolver` — cofre em prod, assinante provisório em dev), `event` por evento em
+      ordem de seq (carregando o `AuditEvent` canônico completo + prev_hash/hash em hex), `seal`
+      por selo, e `procedure` (a receita de verificação offline em pt-BR). Declara
+      `TrailExportAssuranceLevel = L3` (INV-8); a auditoria da exportação (evento audit.export) é
+      instrumentada no T-017. Leitura de eventos/gênese extraída para funções compartilhadas com
+      o verificador. Verificado em PG15: exporta e, **só com os bytes do NDJSON (offline)**,
+      recompõe a cadeia a partir da gênese exportada (`VerifyChain` OK) e confere a assinatura
+      Ed25519 do selo com a chave pública exportada + head_hash contra o evento. Gate verde; sem
+      dependência nova.)*
 - [ ] **T-017** Instrumentar eventos de autenticação, autorização e mutação administrativa.
 - [ ] **T-018** Implementar arquivamento de partição selada e restauração auditada.
 - [ ] **T-019** Teste de adulteração: alterar, remover e reordenar eventos; verificar detecção.
