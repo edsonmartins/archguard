@@ -85,10 +85,28 @@ func (a AAL) AtLeast(min AAL) bool {
 // DefaultAAL is the conservative assurance level of a freshly-migrated factor.
 // WebAuthn is capped at AAL2 here: claiming AAL3 requires user-verification /
 // hardware-attestation evidence that a bulk migration does not have — it is
-// raised per credential when that evidence is established (later packages).
+// raised per credential (SetAssurance) when that evidence is established at
+// registration (T-002).
 func DefaultAAL(t FactorType) AAL {
 	switch t {
 	case FactorTOTP, FactorWebAuthn, FactorRecoveryCode:
+		return AAL2
+	default: // password
+		return AAL1
+	}
+}
+
+// MaxAAL is the CEILING assurance a factor type can ever provide (ADR-0010):
+// WebAuthn up to AAL3 (phishing-resistant hardware / user-verified), TOTP and
+// recovery codes at most AAL2, a password at most AAL1. A credential whose AAL
+// exceeds its type's ceiling is not well-formed — which is what makes "TOTP
+// cannot satisfy L3" true by construction, not by a runtime check that could be
+// forgotten.
+func MaxAAL(t FactorType) AAL {
+	switch t {
+	case FactorWebAuthn:
+		return AAL3
+	case FactorTOTP, FactorRecoveryCode:
 		return AAL2
 	default: // password
 		return AAL1
@@ -99,6 +117,9 @@ func DefaultAAL(t FactorType) AAL {
 var (
 	ErrInvalidCredential = errors.New("credential: dados obrigatórios ausentes")
 	ErrInvalidFactorType = errors.New("credential: tipo de fator inválido")
+	// ErrAssuranceExceedsCeiling is returned when a factor is assigned an
+	// assurance level above what its type can provide (e.g. TOTP claiming AAL3).
+	ErrAssuranceExceedsCeiling = errors.New("credential: nível de garantia acima do teto do tipo de fator")
 )
 
 // Credential is one authentication factor of an identity (RFC-0002 §2.4). The
@@ -203,9 +224,40 @@ func newCredential(identityID uuid.UUID, t FactorType) (Credential, error) {
 	return Credential{ID: id, IdentityID: identityID, Type: t, AAL: DefaultAAL(t)}, nil
 }
 
+// PhishingResistant reports whether the factor resists real-time phishing —
+// only WebAuthn does (ADR-0010). It is the gate for L3 operations: a step-up to
+// L3 MUST be satisfied by a phishing-resistant factor, so TOTP can never
+// satisfy L3 (spec "Fator resistente a phishing para operações críticas").
+func (c Credential) PhishingResistant() bool {
+	return c.Type == FactorWebAuthn
+}
+
+// Strong reports whether the factor counts as a STRONG factor for the
+// mandatory-MFA rule (spec "MFA obrigatório"): WebAuthn or TOTP. A password is
+// not strong; a recovery code is a break-glass fallback, not a standing factor.
+func (c Credential) Strong() bool {
+	return c.Type == FactorWebAuthn || c.Type == FactorTOTP
+}
+
+// SetAssurance raises (or sets) the credential's assurance level, refusing a
+// level above the type's ceiling (ErrAssuranceExceedsCeiling). Registration
+// (T-002) calls this to promote a WebAuthn factor to AAL3 once user-verification
+// / attestation evidence is established.
+func (c *Credential) SetAssurance(a AAL) error {
+	if !a.Valid() {
+		return fmt.Errorf("%w: %q", ErrAssuranceExceedsCeiling, a)
+	}
+	if !MaxAAL(c.Type).AtLeast(a) {
+		return fmt.Errorf("%w: %s não pode prover %s (teto %s)", ErrAssuranceExceedsCeiling, c.Type, a, MaxAAL(c.Type))
+	}
+	c.AAL = a
+	return nil
+}
+
 // WellFormed reports whether the credential carries EXACTLY the material its
-// type allows — which is precisely the INV-7 shape. A store MUST refuse to
-// persist a credential that is not WellFormed, and tests assert it:
+// type allows — which is precisely the INV-7 shape — AND an assurance level
+// within its type's ceiling. A store MUST refuse to persist a credential that
+// is not WellFormed, and tests assert it:
 //
 //   - password / recovery_code: a one-way Verifier only (no SecretRef, no public).
 //   - totp: a vault SecretRef only (no Verifier, no public material) — the seed
@@ -216,6 +268,11 @@ func newCredential(identityID uuid.UUID, t FactorType) (Credential, error) {
 // credential structurally cannot hold a reversible secret in the clear.
 func (c Credential) WellFormed() bool {
 	if !c.Type.Valid() || !c.AAL.Valid() || c.IdentityID == uuid.Nil {
+		return false
+	}
+	// The assurance level must not exceed the type's ceiling — a TOTP claiming
+	// AAL3 (which would let it satisfy an L3 step-up) is not well-formed.
+	if !MaxAAL(c.Type).AtLeast(c.AAL) {
 		return false
 	}
 	switch c.Type {

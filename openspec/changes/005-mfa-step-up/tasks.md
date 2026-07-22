@@ -1,6 +1,17 @@
 # Tasks — 005 · MFA obrigatório e step-up
 
-- [ ] **T-001** Modelar fatores por identidade com metadados de tipo e AAL.
+- [x] **T-001** Modelar fatores por identidade com metadados de tipo e AAL. *(Refinação do
+      modelo de fator do 002 T-005 — `internal/domain/credential.go` já tinha FactorType/AAL/forma
+      INV-7/Params. Adicionado o que o step-up (ADR-0010) exige. Decisão do arquiteto: AAL por
+      credencial com TETO por tipo. `MaxAAL(FactorType)`: WebAuthn≤AAL3, TOTP/recovery≤AAL2,
+      senha≤AAL1. `Credential.PhishingResistant()` = só WebAuthn (gate L3). `Credential.Strong()`
+      = WebAuthn OU TOTP (para "MFA obrigatório"; senha/recovery não contam). `SetAssurance(aal)`
+      recusa nível acima do teto (`ErrAssuranceExceedsCeiling`) — a registração (T-002) promove
+      WebAuthn a AAL3 com evidência de user-verification/atestação. `WellFormed` passa a rejeitar
+      AAL acima do teto: um TOTP forjado com AAL3 NÃO é WellFormed — a base estrutural de "TOTP
+      recusado em L3". Sem esquema novo (cabe em credential.aal/Params). Testes: teto por tipo,
+      phishing-resistant/strong por tipo, SetAssurance e WellFormed rejeitam AAL acima do teto.
+      Gate verde.)*
 - [ ] **T-002** Implementar registro e autenticação WebAuthn (múltiplos autenticadores).
 - [ ] **T-003** Implementar TOTP como fallback com restrição de nível.
 - [ ] **T-004** Implementar códigos de recuperação de uso único com invalidação em massa.
