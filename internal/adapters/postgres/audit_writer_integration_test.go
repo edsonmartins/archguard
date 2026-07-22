@@ -17,12 +17,14 @@ package postgres
 import (
 	"bytes"
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/casdoor/casdoor/internal/domain"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -248,4 +250,52 @@ func TestAuditWriterConcurrentSameOrg(t *testing.T) {
 
 	// seq 1..n sem lacuna nem duplicata, e cadeia encadeada corretamente.
 	verifyChain(t, pool, org, n)
+}
+
+// Fail-closed atômico (T-008): AppendTx grava o evento NA transação do chamador.
+// Se a transação da operação de negócio dá rollback, o evento some junto — nunca
+// um evento de uma operação que não aconteceu, nem operação sem evento.
+func TestAuditWriterAppendTxAtomic(t *testing.T) {
+	pool := setupTenantPool(t)
+	ctx := context.Background()
+	org := uuid.New()
+	cleanupAudit(t, pool, org)
+	w := NewAuditWriter(pool, fixedClock())
+
+	// Rollback: AppendTx dentro de uma tx que falha depois → nada persistido.
+	boom := errors.New("operação de negócio falhou após a auditoria")
+	err := WithTx(ctx, pool, func(tx pgx.Tx) error {
+		if _, err := w.AppendTx(ctx, tx, minimalInput(org)); err != nil {
+			return err
+		}
+		return boom
+	})
+	if !errors.Is(err, boom) {
+		t.Fatalf("esperava o erro forçado, veio %v", err)
+	}
+	// Nada persistido: nem evento nem cabeçalho de cadeia (a criação lazy do
+	// head na 1ª escrita também foi desfeita pelo rollback).
+	if got := len(readChain(t, pool, org)); got != 0 {
+		t.Fatalf("rollback deveria descartar o evento, restaram %d", got)
+	}
+	var heads int
+	if err := pool.QueryRow(ctx,
+		"SELECT count(*) FROM audit_chain_head WHERE organization_id = $1", org.String()).Scan(&heads); err != nil {
+		t.Fatalf("consulta cabeçalho: %v", err)
+	}
+	if heads != 0 {
+		t.Fatalf("cabeçalho não deveria existir após rollback, veio %d", heads)
+	}
+
+	// Commit: AppendTx numa tx que conclui → evento durável.
+	if err := WithTx(ctx, pool, func(tx pgx.Tx) error {
+		_, e := w.AppendTx(ctx, tx, minimalInput(org))
+		return e
+	}); err != nil {
+		t.Fatalf("AppendTx commit: %v", err)
+	}
+	verifyChain(t, pool, org, 1)
+
+	// E o writer satisfaz o porto domain.AuditSink.
+	var _ domain.AuditSink = w
 }

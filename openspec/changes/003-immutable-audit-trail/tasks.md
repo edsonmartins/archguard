@@ -86,7 +86,18 @@
       "Tentativa de UPDATE" e "Tentativa de DELETE" + TRUNCATE): as três mutações são rejeitadas
       mesmo como superusuário e o evento permanece íntegro. Cleanup dos testes de auditoria
       passou a usar o bypass documentado. Gate verde.)*
-- [ ] **T-008** Implementar `AuditSink` síncrono durável (modo fail-closed).
+- [x] **T-008** Implementar `AuditSink` síncrono durável (modo fail-closed). *(Decisão do
+      arquiteto: composição ATÔMICA na mesma transação. Porto `internal/domain/audit_sink.go`:
+      `AuditSink.Record` (o trilho real que substitui os selos provisórios `AccessAuditor`/
+      `SessionAuditor` do 002 — rewiring dos chamadores é T-017); `ErrAuditUnavailable` +
+      `RecordOrDeny` escrevem a regra I-5.4 uma vez (falha ao persistir ⇒ negação, INV-6);
+      `Action.RequirePrivileged` = L3 (privilegiado exige o síncrono; não-L3 pode ir para a fila
+      da T-009). `AuditWriter` ganhou `AppendTx(ctx, tx, input)` (grava NA transação do chamador,
+      `Append`=WithTx(AppendTx)) e satisfaz `AuditSink` via `Record`. Verificado: unit de
+      RecordOrDeny (fail-closed) e RequirePrivileged; integração em PG15 — AppendTx atômico com a
+      tx do chamador (rollback descarta evento E a criação lazy do cabeçalho; commit torna
+      durável). O dreno do session_event_outbox (002) fica para a T-009 (o outbox é a fila
+      durável de eventos não privilegiados). Gate verde.)*
 - [ ] **T-009** Implementar modo assíncrono com fila durável para eventos não privilegiados.
 - [ ] **T-010** Integrar assinatura Ed25519 via cofre para selagem.
 - [ ] **T-011** Implementar selagem por intervalo e por volume, com `key_id`.

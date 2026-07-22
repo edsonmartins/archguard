@@ -56,31 +56,54 @@ func NewAuditWriter(db Beginner, clock Clock) *AuditWriter {
 // is written and the chain head is unchanged — which is exactly what the
 // fail-closed sink (T-008) needs to deny the operation.
 func (w *AuditWriter) Append(ctx context.Context, in domain.AuditEventInput) (domain.SealedEvent, error) {
+	var sealed domain.SealedEvent
+	err := WithTx(ctx, w.db, func(tx pgx.Tx) error {
+		var err error
+		sealed, err = w.AppendTx(ctx, tx, in)
+		return err
+	})
+	if err != nil {
+		return domain.SealedEvent{}, err
+	}
+	return sealed, nil
+}
+
+// AppendTx appends an event WITHIN a caller-supplied transaction — the
+// composition the fail-closed sink needs (T-008): the audit write shares the
+// transaction of the privileged business operation, so the two commit or roll
+// back ATOMICALLY. If the audit write fails, the caller's transaction rolls
+// back and the operation does not happen (I-5.4); if the operation fails, the
+// event is discarded with it. The FOR UPDATE on the chain head still serializes
+// per organization inside the shared transaction.
+func (w *AuditWriter) AppendTx(ctx context.Context, tx pgx.Tx, in domain.AuditEventInput) (domain.SealedEvent, error) {
 	event, err := domain.NewAuditEvent(in)
 	if err != nil {
 		return domain.SealedEvent{}, err
 	}
 	event.OccurredAt = w.clock().UTC()
 
-	var sealed domain.SealedEvent
-	err = WithTx(ctx, w.db, func(tx pgx.Tx) error {
-		prevHash, lastSeq, err := lockChainHead(ctx, tx, event.OrganizationID)
-		if err != nil {
-			return err
-		}
-		sealed, err = domain.SealEvent(event, prevHash, lastSeq+1)
-		if err != nil {
-			return err
-		}
-		if err := insertAuditEvent(ctx, tx, sealed); err != nil {
-			return err
-		}
-		return advanceChainHead(ctx, tx, event.OrganizationID, sealed.Seq, sealed.Hash)
-	})
+	prevHash, lastSeq, err := lockChainHead(ctx, tx, event.OrganizationID)
 	if err != nil {
 		return domain.SealedEvent{}, err
 	}
+	sealed, err := domain.SealEvent(event, prevHash, lastSeq+1)
+	if err != nil {
+		return domain.SealedEvent{}, err
+	}
+	if err := insertAuditEvent(ctx, tx, sealed); err != nil {
+		return domain.SealedEvent{}, err
+	}
+	if err := advanceChainHead(ctx, tx, event.OrganizationID, sealed.Seq, sealed.Hash); err != nil {
+		return domain.SealedEvent{}, err
+	}
 	return sealed, nil
+}
+
+// Record satisfies domain.AuditSink: a standalone synchronous durable write in
+// its own transaction. Use AppendTx to compose the write into a business
+// transaction instead.
+func (w *AuditWriter) Record(ctx context.Context, in domain.AuditEventInput) (domain.SealedEvent, error) {
+	return w.Append(ctx, in)
 }
 
 // lockChainHead returns the organization's current head hash and last seq,
