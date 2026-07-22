@@ -98,7 +98,22 @@
       tx do chamador (rollback descarta evento E a criação lazy do cabeçalho; commit torna
       durável). O dreno do session_event_outbox (002) fica para a T-009 (o outbox é a fila
       durável de eventos não privilegiados). Gate verde.)*
-- [ ] **T-009** Implementar modo assíncrono com fila durável para eventos não privilegiados.
+- [x] **T-009** Implementar modo assíncrono com fila durável para eventos não privilegiados.
+      *(Decisão do arquiteto: fila genérica + outbox como 1º produtor. Migration 0019:
+      `audit_event_queue` (id UUIDv7, organization_id, payload jsonb, enqueued_at) — INSERT
+      rápido no caminho da requisição, sem trava de cadeia. `AuditQueue` (`internal/adapters/
+      postgres/audit_queue.go`): `Enqueue` valida via `NewAuditEvent`, RECUSA ação privilegiada
+      (L3 vai pelo AuditSink síncrono), captura event_id+occurred_at no enfileiramento e grava o
+      evento como payload; `Drain` sela cada item na cadeia via `sealEventInTx` e apaga a linha da
+      fila na MESMA transação (at-least-once, nunca perdido nem duplo-encadeado), ordem por
+      (org, id). Writer refatorado: `sealEventInTx(tx, event)` (núcleo compartilhado que usa o
+      occurred_at já carimbado — sync usa o relógio, drain preserva o tempo do enfileiramento).
+      **Alça do 002 fechada**: `SwitchOutboxDrainer` drena o `session_event_outbox` (troca de
+      tenant = L2) para a cadeia — mapeia a linha para um evento `tenant.switch`, resolve o
+      subject opaco do ator pelo identity_id e marca `published_at` na mesma transação.
+      Verificado em PG15: enfileira sem tocar a cadeia → drena em ordem, verificável, fila
+      esvazia; privilegiado recusado; troca de tenant real → evento tenant.switch selado com o
+      subject certo, outbox publicado, re-drain no-op. Gate verde.)*
 - [ ] **T-010** Integrar assinatura Ed25519 via cofre para selagem.
 - [ ] **T-011** Implementar selagem por intervalo e por volume, com `key_id`.
 - [ ] **T-012** Implementar exportação opcional de selos para destino WORM.

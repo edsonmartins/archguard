@@ -81,7 +81,15 @@ func (w *AuditWriter) AppendTx(ctx context.Context, tx pgx.Tx, in domain.AuditEv
 		return domain.SealedEvent{}, err
 	}
 	event.OccurredAt = w.clock().UTC()
+	return sealEventInTx(ctx, tx, event)
+}
 
+// sealEventInTx locks the chain head, seals the (already time-stamped) event,
+// inserts it and advances the head — the shared core of the synchronous append
+// and the asynchronous drain (T-009). The event's OccurredAt is used as-is: the
+// synchronous path stamps it from the trusted clock, the drain preserves the
+// time captured when the event was enqueued.
+func sealEventInTx(ctx context.Context, tx pgx.Tx, event domain.AuditEvent) (domain.SealedEvent, error) {
 	prevHash, lastSeq, err := lockChainHead(ctx, tx, event.OrganizationID)
 	if err != nil {
 		return domain.SealedEvent{}, err
