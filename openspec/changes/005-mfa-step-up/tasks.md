@@ -43,7 +43,19 @@
       (não há FactorType nem construtor — cenário "SMS como fator → rejeitado"). Testes: ciclo
       registro→verificação, código errado não custodia, TOTP não sobe a AAL3, falha de cofre é
       erro, SMS não é fator. Gate verde.)*
-- [ ] **T-004** Implementar códigos de recuperação de uso único com invalidação em massa.
+- [x] **T-004** Implementar códigos de recuperação de uso único com invalidação em massa.
+      *(`internal/domain/recovery.go` — cripto pura de stdlib, sem dep nova, no domínio como
+      `audit_chain.go`. `GenerateRecoveryCodes(id, n)` gera N códigos de 80 bits (base32
+      minúsculo agrupado, alfabeto sem 0/1/8/9), devolve o texto plano (mostrado UMA vez, nunca
+      persistido/logado) + credenciais que carregam só o verifier SHA-256 (INV-7, AAL2). Entropia
+      alta ⇒ SHA-256 sem KDF lento é seguro. `MatchRecoveryCode(creds, input)` normaliza a entrada
+      (maiúsc/hífen/espaço), compara em TEMPO CONSTANTE (subtle) sem early-exit (timing não
+      revela posição), devolve o id da credencial casada; no-match é `ErrNoRecoveryCode` (negação,
+      não erro). **Uso único**: o chamador consome exatamente a credencial casada (remove-a);
+      reapresentar o mesmo código não casa mais. **Invalidação em massa**: emitir um conjunto novo
+      substitui TODAS as credenciais de recuperação da identidade numa transação — todo código
+      antigo para de funcionar de uma vez. Testes: forma INV-7, casamento robusto a formatação,
+      no-match é negação, uso único, invalidação em massa, faixa de quantidade. Gate verde.)*
 - [ ] **T-005** Implementar cálculo de `acr`/`amr`/`auth_time` na sessão.
 - [ ] **T-006** Implementar metadado de classificação de nível por operação da API.
 - [ ] **T-007** Implementar middleware de verificação de garantia com erro específico.
