@@ -288,6 +288,20 @@ func (s *AuthSession) ACR() string {
 	return string(s.ProvenAAL)
 }
 
+// PhishingResistant reports whether the session was authenticated with a
+// phishing-resistant factor (WebAuthn) — the condition an L3 operation demands
+// (OperationLevel.RequiresPhishingResistant). It reads the recorded AuthMethods,
+// so a session that only ever proved a password/TOTP is not phishing-resistant
+// even if some credential of the identity is.
+func (s *AuthSession) PhishingResistant() bool {
+	for _, ft := range s.AuthMethods {
+		if ft == FactorWebAuthn {
+			return true
+		}
+	}
+	return false
+}
+
 // amrToken maps a factor type to its RFC 8176 Authentication Method Reference.
 // Recovery codes have no standard token — a break-glass fallback is not
 // advertised as a standing method — so they contribute nothing to amr.

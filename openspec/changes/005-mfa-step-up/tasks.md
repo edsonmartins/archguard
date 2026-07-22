@@ -71,7 +71,21 @@
       (acr/amr por combinação, honestidade, fail-closed sem contexto) e de integração PG
       (round-trip auth_time+métodos, CHECK recusa 'sms'). Gate verde. Consumo nos claims OIDC =
       pacote 006.)*
-- [ ] **T-006** Implementar metadado de classificação de nível por operação da API.
+- [x] **T-006** Implementar metadado de classificação de nível por operação da API. *(O
+      MECANISMO; a varredura de todas as ops e o invariante que quebra o build são o T-017.
+      `internal/domain/assurance.go` REUSA o tipo `AssuranceLevel` (L1/L2/L3) já definido em
+      `audit_event.go` — há UMA noção de nível no domínio, partilhada pelo catálogo de ações de
+      auditoria e pelo middleware de step-up. Acrescenta a POLÍTICA: `Valid()` (zero-value NÃO é
+      válido — nada de default implícito), `RequiredAAL()` L1→AAL1, L2→AAL2, L3→AAL3,
+      `RequiresPhishingResistant()` só L3; **fail-closed**: nível não reconhecido exige o mais forte (AAL3 + phishing-resistant),
+      nunca o mais fraco. `Satisfies(provenAAL, phishingResistant)` checa AAL + resistência a
+      phishing (frescor é composto pelo middleware no T-008). `OperationCatalog` é a fonte única
+      de verdade: `Register` recusa id vazio/nível inválido/duplicata; `Level(id)` de operação
+      não registrada é `ErrOperationNotClassified` (DENIAL, não miss — o catálogo nunca é o motivo
+      de um caminho privilegiado rodar sem proteção); `IDs()` ordenado = o conjunto que o T-017
+      compara com o roteador. `AuthSession.PhishingResistant()` deriva dos métodos provados.
+      Testes: mapa nível→exigência, fail-closed do nível desconhecido, Satisfies (inclui "TOTP em
+      L3" recusado), catálogo register/lookup/duplicata/não-classificada. Gate verde.)*
 - [ ] **T-007** Implementar middleware de verificação de garantia com erro específico.
 - [ ] **T-008** Implementar avaliação de frescor no momento da operação.
 - [ ] **T-009** Implementar fluxo de step-up e retomada da operação original.
