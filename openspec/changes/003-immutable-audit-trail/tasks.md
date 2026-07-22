@@ -114,7 +114,20 @@
       Verificado em PG15: enfileira sem tocar a cadeia → drena em ordem, verificável, fila
       esvazia; privilegiado recusado; troca de tenant real → evento tenant.switch selado com o
       subject certo, outbox publicado, re-drain no-op. Gate verde.)*
-- [ ] **T-010** Integrar assinatura Ed25519 via cofre para selagem.
+- [x] **T-010** Integrar assinatura Ed25519 via cofre para selagem. *(Decisão do arquiteto: selo
+      provisório Ed25519 local, marcado não-produção. Domínio `internal/domain/audit_seal.go`:
+      `Seal{org, seq_range, head_hash, sealed_at, key_id, signature}`; `SealContent` = os bytes
+      DETERMINÍSTICOS assinados (org+intervalo+head_hash+sealed_at canonicalizados; key_id e
+      signature EXCLUÍDOS — key_id não é assinado pois o verificador só confia em key_ids do seu
+      keyring, então não pode ser trocado). Portos `Sealer.Sign(content)→(sig, key_id)` e
+      `SealVerifier.Verify(content, sig, key_id)` — em produção o transit engine do OpenBao
+      assina e a chave privada nunca chega à app (ADR-0012); fail-closed em key_id desconhecido
+      (`ErrSealKeyUnknown`). Impl provisória `internal/adapters/auditseal` (Ed25519 stdlib, sem
+      dependência nova): keyring in-process NON-PRODUCTION com `Rotate` — viabiliza a verificação
+      histórica após rotação (cenário do RFC §4). Testes: assina/verifica, adulteração falha,
+      key_id desconhecido nega, rotação (selo antigo verifica pelo key_id antigo, novo usa a
+      corrente). Persistência do selo (tabela) + selagem por intervalo/volume = T-011. Gate
+      verde; sem dependência nova.)*
 - [ ] **T-011** Implementar selagem por intervalo e por volume, com `key_id`.
 - [ ] **T-012** Implementar exportação opcional de selos para destino WORM.
 - [ ] **T-013** Implementar verificador (recomputação + assinaturas + lacunas).
