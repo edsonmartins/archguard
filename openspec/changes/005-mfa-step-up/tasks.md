@@ -128,7 +128,22 @@
       frescor, guardas de redução/inflação/revogada) e integração PG (step-up TOTP→WebAuthn persiste
       e a releitura reflete aal3/auth_time/métodos). A cerimônia WebAuthn/HTTP em si reusa o
       adaptador do T-002 + o middleware do T-007. Gate verde.)*
-- [ ] **T-010** Implementar política de MFA por organização.
+- [x] **T-010** Implementar política de MFA por organização. *(Substitui o adapter provisório
+      `tenantswitch.ProfilePolicy` pela política real, sobre o port `TenantAuthPolicy` já existente.
+      `domain.OrgMFAPolicy{OrganizationID, MinimumAAL}`: o PISO de garantia do tenant — AAL2 = "MFA
+      obrigatório", AAL3 = "WebAuthn obrigatório" (`RequiresPhishingResistant`). `SatisfiedBy`
+      fail-closed. `DefaultOrgMinimumAAL = AAL1` é o baseline da plataforma quando a org não
+      declarou política (ausência de linha = decisão de baseline, NÃO fail-open — os níveis por
+      operação continuam valendo por cima; o piso só SOBE). Migração 0023: `organization_mfa_policy`
+      (PK org, minimum_aal com CHECK, RLS FORCE por `app.current_organization`). Store tenant-scoped
+      `OrgMFAPolicyStore` (Get devolve default se não há linha, ERRO se a query falha — nunca trata
+      política ilegível como default; Set faz upsert; ambos com guarda Barreira 1 `ErrCrossTenantPolicy`).
+      `OrgPolicyAuthority` implementa `TenantAuthPolicy.RequiredAAL` abrindo leitura no contexto de
+      tenant da org consultada (RLS admite exatamente aquela linha), default AAL1, fail-closed em
+      falha de store. `ALTER DEFAULT PRIVILEGES` do roles.sql já cobre a tabela nova (não é
+      auditoria). Testes: domínio (construção/default/SatisfiedBy) e integração PG (default→declara
+      AAL3→autoridade reflete; outra org no baseline; upsert; guarda cross-tenant). Precedência
+      "mais restritiva vence" na troca é o T-011. Gate verde.)*
 - [ ] **T-011** Implementar precedência "mais restritiva vence" na troca de tenant.
 - [ ] **T-012** Implementar estado `enrollment_required` bloqueante.
 - [ ] **T-013** Implementar processo de recuperação com aprovação de pares.
