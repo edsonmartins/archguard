@@ -17,7 +17,9 @@ package postgres
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/casdoor/casdoor/internal/domain"
 	"github.com/google/uuid"
@@ -800,5 +802,60 @@ func TestAuthSessionRLSIsolation(t *testing.T) {
 		"INSERT INTO auth_session (id, identity_id, status, proven_aal) VALUES ($1, $2, 'pending_selection', 'aal1')",
 		uuid.New().String(), fx.other.ID.String()); err == nil {
 		t.Fatalf("WITH CHECK deveria barrar escrita de sessão de outra identidade")
+	}
+}
+
+// T-005: o contexto de autenticação (auth_time + métodos) persiste e volta
+// intacto; acr/amr são derivados corretamente na releitura.
+func TestAuthSessionAuthContextRoundTrip(t *testing.T) {
+	pool := setupTenantPool(t)
+	fx := makeSessionFixture(t, pool, "acr")
+
+	sess, err := domain.NewAuthSession(fx.other.ID, domain.AAL2, []domain.Membership{fx.otherMemA})
+	if err != nil {
+		t.Fatalf("NewAuthSession: %v", err)
+	}
+	at := time.Date(2026, 7, 22, 9, 30, 0, 0, time.UTC)
+	if err := sess.SetAuthContext(at, []domain.FactorType{domain.FactorPassword, domain.FactorTOTP}); err != nil {
+		t.Fatalf("SetAuthContext: %v", err)
+	}
+	if err := createSession(pool, fx.scopeOther, sess); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := getSession(pool, fx.scopeOther, sess.ID)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if !got.AuthTime.UTC().Equal(at) {
+		t.Fatalf("auth_time = %v, quero %v", got.AuthTime.UTC(), at)
+	}
+	if len(got.AuthMethods) != 2 || got.AuthMethods[0] != domain.FactorPassword || got.AuthMethods[1] != domain.FactorTOTP {
+		t.Fatalf("auth_methods = %v, quero [password totp]", got.AuthMethods)
+	}
+	if got.ACR() != "aal2" {
+		t.Fatalf("acr = %q, quero aal2", got.ACR())
+	}
+	amr := got.AMR()
+	if len(amr) != 3 || amr[0] != "pwd" || amr[1] != "otp" || amr[2] != "mfa" {
+		t.Fatalf("amr = %v, quero [pwd otp mfa]", amr)
+	}
+}
+
+// T-005: o CHECK do banco recusa um método desconhecido — em especial "sms",
+// que não é um fator suportado (spec "SMS como fator → rejeitado").
+func TestAuthSessionRejectsUnknownMethod(t *testing.T) {
+	pool := setupTenantPool(t)
+	fx := makeSessionFixture(t, pool, "sms")
+
+	_, err := pool.Exec(context.Background(),
+		`INSERT INTO auth_session (id, identity_id, status, proven_aal, auth_methods)
+		 VALUES ($1, $2, 'pending_selection', 'aal1', ARRAY['sms']::text[])`,
+		uuid.New().String(), fx.other.ID.String())
+	if err == nil {
+		t.Fatalf("CHECK deveria barrar auth_methods com 'sms'")
+	}
+	if !strings.Contains(err.Error(), "auth_session_auth_methods_known") {
+		t.Fatalf("erro deveria citar o CHECK auth_methods_known, veio: %v", err)
 	}
 }

@@ -56,7 +56,21 @@
       substitui TODAS as credenciais de recuperação da identidade numa transação — todo código
       antigo para de funcionar de uma vez. Testes: forma INV-7, casamento robusto a formatação,
       no-match é negação, uso único, invalidação em massa, faixa de quantidade. Gate verde.)*
-- [ ] **T-005** Implementar cálculo de `acr`/`amr`/`auth_time` na sessão.
+- [x] **T-005** Implementar cálculo de `acr`/`amr`/`auth_time` na sessão. *(A sessão passa a
+      carregar o contexto de autenticação: `AuthTime` (OIDC `auth_time`, distinto de `created_at`
+      — sobrevive a reautenticações do step-up) e `AuthMethods` (os TIPOS de fator provados, na
+      ordem — a FONTE de verdade). `SetAuthContext(at, methods)` é o portão de HONESTIDADE do
+      acr: recusa registrar métodos que não sustentam o `ProvenAAL` (ex.: AAL2 só com senha,
+      teto aal1) — o acr afirmado nunca excede os fatores usados. Derivados puros no domínio:
+      `ACR()` = o token `aal*`; `AMR()` = tokens RFC 8176 (pwd/otp/hwk, dedup na ordem provada)
+      + `mfa` quando ≥2 tipos distintos; recovery não tem token amr (fallback break-glass não é
+      método anunciado). Persistência (migração 0022): `auth_time timestamptz` (backfill =
+      created_at; DEFAULT now() no login via COALESCE) e `auth_methods text[]` com CHECK que só
+      admite tipos de fator conhecidos — barra "sms" no banco (cenário "SMS como fator →
+      rejeitado"). Store: Create/Get/ListActive/scan threadam os dois campos. Testes de domínio
+      (acr/amr por combinação, honestidade, fail-closed sem contexto) e de integração PG
+      (round-trip auth_time+métodos, CHECK recusa 'sms'). Gate verde. Consumo nos claims OIDC =
+      pacote 006.)*
 - [ ] **T-006** Implementar metadado de classificação de nível por operação da API.
 - [ ] **T-007** Implementar middleware de verificação de garantia com erro específico.
 - [ ] **T-008** Implementar avaliação de frescor no momento da operação.

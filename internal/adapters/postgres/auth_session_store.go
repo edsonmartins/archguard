@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/casdoor/casdoor/internal/domain"
 	"github.com/google/uuid"
@@ -70,13 +71,16 @@ func (s *IdentitySessionStore) Create(ctx context.Context, as domain.AuthSession
 	if as.IdentityID != s.itx.scope.IdentityID() {
 		return fmt.Errorf("%w: alvo %s, escopo %s", ErrCrossIdentityWrite, as.IdentityID, s.itx.scope.IdentityID())
 	}
+	// auth_time defaults to the row's creation time (at login, authentication ==
+	// creation); a caller that ran SetAuthContext supplies the explicit instant.
 	const q = `
-		INSERT INTO auth_session (id, identity_id, membership_id, organization_id, status, proven_aal, token_generation)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`
+		INSERT INTO auth_session (id, identity_id, membership_id, organization_id, status, proven_aal, token_generation, auth_time, auth_methods)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, now()), $9)`
 	_, err := s.itx.tx.Exec(ctx, q,
 		as.ID.String(), as.IdentityID.String(),
 		uuidTextOrNil(as.MembershipID), uuidTextOrNil(as.OrganizationID),
-		string(as.Status), string(as.ProvenAAL), as.TokenGeneration)
+		string(as.Status), string(as.ProvenAAL), as.TokenGeneration,
+		nilIfZeroTime(as.AuthTime), factorTypesToText(as.AuthMethods))
 	if err != nil {
 		return fmt.Errorf("postgres: criação de auth_session falhou: %w", err)
 	}
@@ -88,7 +92,7 @@ func (s *IdentitySessionStore) Create(ctx context.Context, as domain.AuthSession
 func (s *IdentitySessionStore) Get(ctx context.Context, sessionID uuid.UUID) (domain.AuthSession, error) {
 	const q = `
 		SELECT id::text, identity_id::text, membership_id::text, organization_id::text,
-		       status, proven_aal, token_generation, revoked_at, created_at, updated_at
+		       status, proven_aal, token_generation, auth_time, auth_methods, revoked_at, created_at, updated_at
 		FROM auth_session
 		WHERE id = $1 AND identity_id = $2`
 	row := s.itx.tx.QueryRow(ctx, q, sessionID.String(), s.itx.scope.IdentityID().String())
@@ -232,7 +236,7 @@ func NewTenantSessionStore(ttx *TenantTx) *TenantSessionStore {
 func (s *TenantSessionStore) ListActive(ctx context.Context) ([]domain.AuthSession, error) {
 	const q = `
 		SELECT id::text, identity_id::text, membership_id::text, organization_id::text,
-		       status, proven_aal, token_generation, revoked_at, created_at, updated_at
+		       status, proven_aal, token_generation, auth_time, auth_methods, revoked_at, created_at, updated_at
 		FROM auth_session
 		WHERE organization_id = $1 AND status = 'active'
 		ORDER BY created_at`
@@ -281,13 +285,16 @@ func scanAuthSession(row pgx.Row) (domain.AuthSession, error) {
 	var as domain.AuthSession
 	var idText, idnText, status, aal string
 	var memText, orgText *string
+	var methods []string
 	if err := row.Scan(&idText, &idnText, &memText, &orgText,
-		&status, &aal, &as.TokenGeneration, &as.RevokedAt, &as.CreatedAt, &as.UpdatedAt); err != nil {
+		&status, &aal, &as.TokenGeneration, &as.AuthTime, &methods,
+		&as.RevokedAt, &as.CreatedAt, &as.UpdatedAt); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.AuthSession{}, err
 		}
 		return domain.AuthSession{}, fmt.Errorf("postgres: leitura de auth_session falhou: %w", err)
 	}
+	as.AuthMethods = textToFactorTypes(methods)
 	var err error
 	if as.ID, err = uuid.Parse(idText); err != nil {
 		return domain.AuthSession{}, fmt.Errorf("postgres: id de auth_session inválido %q: %w", idText, err)
@@ -304,6 +311,37 @@ func scanAuthSession(row pgx.Row) (domain.AuthSession, error) {
 	as.Status = domain.SessionStatus(status)
 	as.ProvenAAL = domain.AAL(aal)
 	return as, nil
+}
+
+// nilIfZeroTime renders a zero time.Time as a nil parameter, so the INSERT's
+// COALESCE falls back to the database now() (auth_time == creation at login).
+func nilIfZeroTime(t time.Time) *time.Time {
+	if t.IsZero() {
+		return nil
+	}
+	return &t
+}
+
+// factorTypesToText renders the authentication methods as a text[] parameter (the
+// factor-type tokens the column stores). A nil slice becomes an empty array.
+func factorTypesToText(fts []domain.FactorType) []string {
+	out := make([]string, 0, len(fts))
+	for _, ft := range fts {
+		out = append(out, string(ft))
+	}
+	return out
+}
+
+// textToFactorTypes rebuilds the authentication methods from the text[] column.
+func textToFactorTypes(vals []string) []domain.FactorType {
+	if len(vals) == 0 {
+		return nil
+	}
+	out := make([]domain.FactorType, 0, len(vals))
+	for _, v := range vals {
+		out = append(out, domain.FactorType(v))
+	}
+	return out
 }
 
 // uuidTextOrNil renders an optional UUID as a nullable text parameter.

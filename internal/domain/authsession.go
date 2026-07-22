@@ -110,9 +110,20 @@ type AuthSession struct {
 	// construction — "the previous token is never reused" (spec: "Troca de
 	// tenant"). Starts at 1.
 	TokenGeneration int
-	RevokedAt       *time.Time
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	// AuthTime is when the identity last AUTHENTICATED — set at login and bumped
+	// on a step-up reauthentication (T-008/T-009). It is the OIDC `auth_time`
+	// claim and the reference point for freshness policy. Distinct from CreatedAt:
+	// the session may outlive several reauthentications. Stamped by the login flow
+	// (the domain stays clock-free), so it is passed in, never read from now().
+	AuthTime time.Time
+	// AuthMethods are the factor TYPES demonstrated in the current authentication,
+	// in the order proven. They are the source of the OIDC `amr` claim (AMR) and
+	// the evidence that ProvenAAL is honest (SetAuthContext refuses an AAL above
+	// what these methods can attest).
+	AuthMethods []FactorType
+	RevokedAt   *time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 // NewAuthSession resolves the tenant context of a fresh login from the
@@ -222,6 +233,96 @@ func (s *AuthSession) setTenant(m Membership) {
 	s.MembershipID = &mem
 	s.OrganizationID = &org
 	s.Status = SessionActive
+}
+
+// SetAuthContext records the authentication facts of the current login — WHEN it
+// happened (at, the OIDC auth_time) and WHICH factor types proved it (methods,
+// the basis of amr). It is the honesty gate for acr: it REFUSES to record methods
+// that cannot attest the session's ProvenAAL (e.g. a password-only login claiming
+// AAL2), so the acr the session reports can never exceed the factors actually
+// used. The login flow calls it right after NewAuthSession; step-up (T-009)
+// re-records with the stronger method and a fresh auth_time.
+func (s *AuthSession) SetAuthContext(at time.Time, methods []FactorType) error {
+	if at.IsZero() {
+		return fmt.Errorf("%w: auth_time ausente", ErrInvalidSession)
+	}
+	if len(methods) == 0 {
+		return fmt.Errorf("%w: nenhum método de autenticação", ErrInvalidSession)
+	}
+	for _, m := range methods {
+		if !m.Valid() {
+			return fmt.Errorf("%w: método de autenticação %q inválido", ErrInvalidSession, m)
+		}
+	}
+	// The proven AAL must be within reach of the strongest method used — a session
+	// cannot claim more assurance than its factors can attest.
+	if !strongestCeiling(methods).AtLeast(s.ProvenAAL) {
+		return fmt.Errorf("%w: AAL comprovado %s excede o teto dos métodos usados", ErrInvalidSession, s.ProvenAAL)
+	}
+	s.AuthTime = at
+	s.AuthMethods = append([]FactorType(nil), methods...)
+	return nil
+}
+
+// strongestCeiling is the highest assurance any of the methods can attest — the
+// max of each type's MaxAAL. Undefined when methods is empty.
+func strongestCeiling(methods []FactorType) AAL {
+	best := AAL("")
+	bestRank := 0
+	for _, m := range methods {
+		if r := aalRank[MaxAAL(m)]; r > bestRank {
+			bestRank, best = r, MaxAAL(m)
+		}
+	}
+	return best
+}
+
+// ACR is the OIDC Authentication Context Class Reference of the session: the
+// assurance level actually obtained, as its aal token ("aal1"/"aal2"/"aal3").
+// Empty when the session carries no valid proven level (fail-closed — no acr is
+// asserted rather than a false one).
+func (s *AuthSession) ACR() string {
+	if !s.ProvenAAL.Valid() {
+		return ""
+	}
+	return string(s.ProvenAAL)
+}
+
+// amrToken maps a factor type to its RFC 8176 Authentication Method Reference.
+// Recovery codes have no standard token — a break-glass fallback is not
+// advertised as a standing method — so they contribute nothing to amr.
+func amrToken(t FactorType) (string, bool) {
+	switch t {
+	case FactorPassword:
+		return "pwd", true
+	case FactorTOTP:
+		return "otp", true
+	case FactorWebAuthn:
+		return "hwk", true
+	default: // recovery_code
+		return "", false
+	}
+}
+
+// AMR is the OIDC Authentication Methods References of the session (RFC 8176):
+// the deduplicated method tokens for the factors used, in the order proven, plus
+// "mfa" when two or more DISTINCT factor types authenticated the session. The
+// output is deterministic for a given AuthMethods slice.
+func (s *AuthSession) AMR() []string {
+	out := make([]string, 0, len(s.AuthMethods)+1)
+	seen := map[string]bool{}
+	distinct := map[FactorType]bool{}
+	for _, ft := range s.AuthMethods {
+		distinct[ft] = true
+		if tok, ok := amrToken(ft); ok && !seen[tok] {
+			seen[tok] = true
+			out = append(out, tok)
+		}
+	}
+	if len(distinct) >= 2 {
+		out = append(out, "mfa")
+	}
+	return out
 }
 
 // ErrNoIdentity is returned when an identity-scoped store is asked to operate
