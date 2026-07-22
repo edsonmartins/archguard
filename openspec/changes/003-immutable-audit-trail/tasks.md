@@ -184,7 +184,18 @@
       gate L3 = integração de auth (posterior). Persistir chaves públicas de dev = follow-up.
       Verificado: handler (200/409/400/500/405 + L3) e CLI (exit 0 íntegra, 1 adulterada) em PG15.
       Gate verde.)*
-- [ ] **T-015** Agendar verificação diária com alerta de severidade máxima.
+- [x] **T-015** Agendar verificação diária com alerta de severidade máxima. *(Porto de domínio
+      `internal/domain/alert.go`: `Severity` (info/warning/**critical**) + `Alerter` (sem dado
+      pessoal — só referências pseudônimas; real = pipeline de observabilidade, ADR-0013/pacote
+      010). Adapters provisórios `internal/adapters/alerting`: `LogAlerter` e `MemoryAlerter`
+      (dev/CI, NON-PRODUCTION). `AuditVerificationJob` em pgx: `RunOnce` percorre TODAS as orgs
+      da cadeia, verifica cada uma, e emite alerta **crítico** em QUALQUER divergência OU falha
+      em verificar (fail-closed — não conseguir verificar é incidente); não aborta na primeira
+      falha (uma org ruim não esconde as outras) e retorna erro agregado. `Run(interval)` = laço
+      com ticker (a cadência diária = wiring de deploy). Verificado em PG15: trilha íntegra não
+      alerta; org adulterada gera alerta crítico mencionando a org + seq/tipo e retorna erro;
+      genesis corrompido (falha de verificação) também alerta crítico. Gate verde; sem
+      dependência nova.)*
 - [ ] **T-016** Implementar exportação assinada por tenant (NDJSON + selos + chaves).
 - [ ] **T-017** Instrumentar eventos de autenticação, autorização e mutação administrativa.
 - [ ] **T-018** Implementar arquivamento de partição selada e restauração auditada.
