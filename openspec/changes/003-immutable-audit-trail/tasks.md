@@ -142,7 +142,21 @@
       real: selagem produz selo assinado verificável pela chave via key_id; adulteração do
       conteúdo falha; re-selar sem novos eventos é no-op; segundo selo contíguo [4,5]; SealDue
       dispara por volume E por intervalo, poupando a org recente. Gate verde.)*
-- [ ] **T-012** Implementar exportação opcional de selos para destino WORM.
+- [x] **T-012** Implementar exportação opcional de selos para destino WORM. *(Decisão do
+      arquiteto: WORM in-memory write-once, não-produção. Porto `internal/domain/audit_anchor.go`:
+      `SealAnchor.Anchor(seal)→ref` / `Fetch(ref)→Seal`; `SealExport` = forma portável do selo
+      (head_hash/signature em hex, JSON), com Marshal/Unmarshal para verificação offline.
+      Migration 0021: `audit_seal_anchor` (bookkeeping local: seal_id/destination/ref,
+      UNIQUE(seal_id,destination)) — a propriedade anti-adulteração vem do DESTINO WORM
+      (write-once, fora do alcance da instância), não desta tabela, então ela não precisa ser
+      append-only. `SealExporter.ExportPending(destination)` (pgx): acha selos não ancorados
+      (LEFT JOIN), ancora fora de transação (RFC-0004 §4) e registra; idempotente. Impl
+      provisória `internal/adapters/wormanchor` (in-memory, ref content-addressed = SHA-256 do
+      objeto, RECUSA sobrescrita com bytes diferentes = Object Lock emulado), marcada
+      NON-PRODUCTION; em prod o adapter S3 Object Lock/on-prem substitui pelo mesmo porto.
+      Verificado em PG15: exporta selos pendentes e registra âncora; objeto ancorado bate com o
+      selo persistido e a assinatura verifica por key_id; re-exportar é no-op; novo selo é
+      exportado na próxima passada; WORM recusa sobrescrita. Gate verde; sem dependência nova.)*
 - [ ] **T-013** Implementar verificador (recomputação + assinaturas + lacunas).
 - [ ] **T-014** Expor verificação como comando CLI e endpoint (operação L3).
 - [ ] **T-015** Agendar verificação diária com alerta de severidade máxima.
