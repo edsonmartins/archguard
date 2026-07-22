@@ -224,9 +224,23 @@
       cadeia íntegra; sem principal a operação dá ROLLBACK atômico (membership não criado);
       cascata grava um evento por org; exportação auditada. Gate verde; sem dependência nova.)*
 - [ ] **T-018** Implementar arquivamento de partição selada e restauração auditada.
-- [ ] **T-019** Teste de adulteração: alterar, remover e reordenar eventos; verificar detecção.
-- [ ] **T-020** Teste de fail-closed: indisponibilizar a auditoria e confirmar negação de
-      operação privilegiada.
+- [x] **T-019** Teste de adulteração: alterar, remover e reordenar eventos; verificar detecção.
+      *(Suíte de gate `TestTamperGate` (table-driven, integração PG15) com o verificador ancorado
+      no assinante REAL — assinaturas de selo conferidas. Semeia cadeia selada, valida baseline
+      íntegra, e aplica cada classe de adulteração DIRETO no banco (bypass de superusuário):
+      alteração de conteúdo (→ altered no seq), remoção (→ removed/lacuna), reordenação (troca de
+      conteúdo entre eventos → altered no primeiro afetado), quebra de cadeia (prev_hash →
+      broken_chain) e selo inválido (head_hash adulterado → seal_invalid pela assinatura). Todos
+      detectados no seq correto. Formaliza o requisito "Detecção de adulteração" do gate do
+      pacote.)*
+- [x] **T-020** Teste de fail-closed: indisponibilizar a auditoria e confirmar negação de
+      operação privilegiada. *(Suíte de gate `TestFailClosedGate` (integração PG15): injeta um
+      emissor de auditoria que sempre falha (`downEmitter` = subsistema indisponível) e confirma
+      que a operação administrativa é NEGADA e revertida — convite negado com rollback (membership
+      não criado) e revogação negada (membership continua active). Como a escrita de auditoria
+      compartilha a transação da operação (T-017), a falha de auditoria dá rollback do todo
+      (I-5.4). Teste de sanidade com auditoria DISPONÍVEL conclui a mesma operação, provando que a
+      negação vem da indisponibilidade. Formaliza o "fail-closed comprovado" do gate do pacote.)*
 - [ ] **T-021** Teste de carga com medição de impacto na latência de login.
 
 ## Gate de verificação
