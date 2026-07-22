@@ -86,7 +86,22 @@
       compara com o roteador. `AuthSession.PhishingResistant()` deriva dos métodos provados.
       Testes: mapa nível→exigência, fail-closed do nível desconhecido, Satisfies (inclui "TOTP em
       L3" recusado), catálogo register/lookup/duplicata/não-classificada. Gate verde.)*
-- [ ] **T-007** Implementar middleware de verificação de garantia com erro específico.
+- [x] **T-007** Implementar middleware de verificação de garantia com erro específico. *(Núcleo
+      de decisão no domínio + adaptador HTTP fino. `domain.AssuranceGuard.Authorize(opID, session)`
+      é fail-closed em todo eixo: op não classificada → `ErrOperationNotClassified` (denial);
+      sessão nil/não-ativa ou abaixo do nível (AAL ou resistência a phishing) →
+      `*InsufficientAssuranceError`, o ERRO ESPECÍFICO que carrega a operação, o nível exigido, o
+      `RequiredACR` (o acr a alcançar), `NeedsPhishingResistant` e o acr atual — tudo que o cliente
+      precisa para o step-up. `internal/http/assurance.go`: `AssuranceMiddleware.Require(opID, next)`
+      resolve a sessão (via `SessionResolver`, posto pela camada de auth), chama o guard e, na
+      recusa por garantia, responde **401 com desafio RFC 9470** (header
+      `WWW-Authenticate: Bearer error="insufficient_user_authentication", acr_values="aal3"` +
+      corpo JSON com required_level/acr_values/needs_phishing_resistant) — o handler protegido NÃO
+      roda. Op não classificada = defeito de fiação → 500 (fail-closed, o T-017 é o gate que
+      impede isso em produção). Testes de domínio (allow, recusa específica, não-classificada, nil/
+      revogada) e HTTP (allow roda handler; TOTP em L3 → 401 com acr_values=aal3 e handler não
+      roda; sem sessão; não-classificada → 500). Frescor (sessão antiga) é o T-008, que compõe
+      sobre este guard. Gate verde.)*
 - [ ] **T-008** Implementar avaliação de frescor no momento da operação.
 - [ ] **T-009** Implementar fluxo de step-up e retomada da operação original.
 - [ ] **T-010** Implementar política de MFA por organização.

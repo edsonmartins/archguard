@@ -17,6 +17,7 @@ package domain
 import (
 	"errors"
 	"testing"
+	"time"
 )
 
 // Cada nível mapeia para o AAL e a resistência a phishing do ADR-0010.
@@ -118,5 +119,82 @@ func TestOperationCatalogRejectsMalformedAndDuplicate(t *testing.T) {
 	}
 	if err := cat.Register(Operation{ID: "z", Level: L3}); !errors.Is(err, ErrOperationDuplicate) {
 		t.Fatalf("duplicata: err = %v, quero ErrOperationDuplicate", err)
+	}
+}
+
+// activeSessionWithContext: sessão ativa com contexto de autenticação registrado.
+func activeSessionWithContext(t *testing.T, aal AAL, methods ...FactorType) AuthSession {
+	t.Helper()
+	s := activeSession(t, aal)
+	at := time.Date(2026, 7, 22, 10, 0, 0, 0, time.UTC)
+	if err := s.SetAuthContext(at, methods); err != nil {
+		t.Fatalf("SetAuthContext: %v", err)
+	}
+	return s
+}
+
+func newGuard(t *testing.T) *AssuranceGuard {
+	t.Helper()
+	cat := NewOperationCatalog()
+	for _, op := range []Operation{
+		{ID: "profile.read", Level: L1},
+		{ID: "tenant.admin", Level: L2},
+		{ID: "audit.export", Level: L3},
+	} {
+		if err := cat.Register(op); err != nil {
+			t.Fatalf("Register %s: %v", op.ID, err)
+		}
+	}
+	return NewAssuranceGuard(cat)
+}
+
+// Uma sessão WebAuthn AAL3 satisfaz uma operação L3.
+func TestGuardAllowsSufficient(t *testing.T) {
+	g := newGuard(t)
+	s := activeSessionWithContext(t, AAL3, FactorWebAuthn)
+	if err := g.Authorize("audit.export", &s); err != nil {
+		t.Fatalf("sessão AAL3 WebAuthn deveria satisfazer L3: %v", err)
+	}
+}
+
+// TOTP AAL2 numa operação L3: recusa ESPECÍFICA que informa o acr exigido e que
+// precisa de fator resistente a phishing (cenário "TOTP em operação L3").
+func TestGuardDeniesWithSpecificError(t *testing.T) {
+	g := newGuard(t)
+	s := activeSessionWithContext(t, AAL2, FactorTOTP)
+	err := g.Authorize("audit.export", &s)
+	var iae *InsufficientAssuranceError
+	if !errors.As(err, &iae) {
+		t.Fatalf("erro = %v, quero InsufficientAssuranceError", err)
+	}
+	if iae.Required != L3 || iae.RequiredACR != "aal3" || !iae.NeedsPhishingResistant {
+		t.Fatalf("erro deveria exigir L3/aal3/phishing-resistant: %+v", iae)
+	}
+	if iae.ProvenACR != "aal2" {
+		t.Fatalf("erro deveria informar o acr atual aal2: %+v", iae)
+	}
+}
+
+// Operação não classificada: recusada com ErrOperationNotClassified (nunca
+// liberada).
+func TestGuardDeniesUnclassified(t *testing.T) {
+	g := newGuard(t)
+	s := activeSessionWithContext(t, AAL3, FactorWebAuthn)
+	if err := g.Authorize("session.open", &s); !errors.Is(err, ErrOperationNotClassified) {
+		t.Fatalf("op não classificada: err = %v, quero ErrOperationNotClassified", err)
+	}
+}
+
+// Sessão nil ou não-ativa não carrega garantia — recusada.
+func TestGuardDeniesNilOrInactiveSession(t *testing.T) {
+	g := newGuard(t)
+	if err := g.Authorize("profile.read", nil); err == nil {
+		t.Fatalf("sessão nil deveria ser recusada")
+	}
+	revoked := activeSessionWithContext(t, AAL3, FactorWebAuthn)
+	revoked.Revoke()
+	var iae *InsufficientAssuranceError
+	if err := g.Authorize("profile.read", &revoked); !errors.As(err, &iae) {
+		t.Fatalf("sessão revogada: err = %v, quero InsufficientAssuranceError", err)
 	}
 }

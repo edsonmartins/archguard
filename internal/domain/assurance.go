@@ -157,3 +157,78 @@ func (c *OperationCatalog) IDs() []string {
 	sort.Strings(ids)
 	return ids
 }
+
+// InsufficientAssuranceError is the SPECIFIC denial the assurance middleware
+// returns when a session does not meet an operation's level. It names what the
+// client must do to proceed — the required level and the acr to reach — so the
+// HTTP layer can emit a step-up CHALLENGE (RFC 9470: acr_values) instead of a
+// bare 403. It is a denial (a decision), never a system error: the middleware
+// distinguishes it from an infrastructure failure so the audit trail records the
+// right outcome.
+type InsufficientAssuranceError struct {
+	// Operation is the classified operation id that was refused.
+	Operation string
+	// Required is the level the operation demands.
+	Required AssuranceLevel
+	// RequiredACR is the acr value the client must reach (the required level's
+	// AAL, e.g. "aal3") — the acr_values of the step-up challenge.
+	RequiredACR string
+	// NeedsPhishingResistant is true when the operation (L3) also demands a
+	// phishing-resistant factor, so the client knows a TOTP step-up will not do.
+	NeedsPhishingResistant bool
+	// ProvenACR is the acr the session currently holds ("" if none) — for the
+	// error message and audit, never to weaken the decision.
+	ProvenACR string
+}
+
+func (e *InsufficientAssuranceError) Error() string {
+	return fmt.Sprintf("assurance: garantia insuficiente para %q: exige %s (acr %s), sessão tem acr %q",
+		e.Operation, e.Required, e.RequiredACR, e.ProvenACR)
+}
+
+// AssuranceGuard enforces operation classification against a session's proven
+// assurance. It is the decision core the HTTP middleware (T-007) wraps; freshness
+// (T-008) composes onto it. It holds the catalog read-only.
+type AssuranceGuard struct {
+	catalog *OperationCatalog
+}
+
+// NewAssuranceGuard builds the guard over a populated catalog.
+func NewAssuranceGuard(catalog *OperationCatalog) *AssuranceGuard {
+	return &AssuranceGuard{catalog: catalog}
+}
+
+// Authorize decides whether the session may perform the operation. It is
+// fail-closed on every axis:
+//
+//   - an UNCLASSIFIED operation is refused with ErrOperationNotClassified (a
+//     missing level is a hole, never an implicit allow — INV-8);
+//   - a nil or non-active session cannot carry proven assurance, so it is
+//     refused with an InsufficientAssuranceError naming the required acr;
+//   - a session below the required level (AAL or phishing resistance) is refused
+//     with the same specific error.
+//
+// It returns nil only when the session meets the operation's level. FRESHNESS is
+// added by T-008, which composes an age check onto this decision.
+func (g *AssuranceGuard) Authorize(operationID string, s *AuthSession) error {
+	level, err := g.catalog.Level(operationID)
+	if err != nil {
+		return err // ErrOperationNotClassified — deny, never allow.
+	}
+	insufficient := func(provenACR string) error {
+		return &InsufficientAssuranceError{
+			Operation:              operationID,
+			Required:               level,
+			RequiredACR:            string(level.RequiredAAL()),
+			NeedsPhishingResistant: level.RequiresPhishingResistant(),
+			ProvenACR:              provenACR,
+		}
+	}
+	if s == nil || s.Status != SessionActive {
+		return insufficient("")
+	}
+	if !level.Satisfies(s.ProvenAAL, s.PhishingResistant()) {
+		return insufficient(s.ACR())
+	}
+	return nil
+}
