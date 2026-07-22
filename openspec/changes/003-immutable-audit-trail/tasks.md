@@ -128,7 +128,20 @@
       key_id desconhecido nega, rotação (selo antigo verifica pelo key_id antigo, novo usa a
       corrente). Persistência do selo (tabela) + selagem por intervalo/volume = T-011. Gate
       verde; sem dependência nova.)*
-- [ ] **T-011** Implementar selagem por intervalo e por volume, com `key_id`.
+- [x] **T-011** Implementar selagem por intervalo e por volume, com `key_id`. *(Decisão do
+      arquiteto: selo append-only agora. Migration 0020: `audit_seal` (id, organization_id,
+      seq_start/seq_end, head_hash, sealed_at, key_id, signature; UNIQUE(org, seq_end)) —
+      APPEND-ONLY como os eventos: triggers BEFORE UPDATE/DELETE/TRUNCATE (reutilizam a função
+      da 0018) e `audit_seal` adicionada ao REVOKE do roles.sql (um selo mutável/apagável deixaria
+      esconder adulteração). `AuditSealer` (`audit_sealer.go`): `SealOrganization` sela o intervalo
+      pendente [último seq_end+1 .. last_seq], monta `SealContent`, ASSINA fora de transação
+      (RFC-0004 §4, cofre em prod), persiste com `key_id`; no-op se nada novo; ON CONFLICT trata
+      corrida. `SealDue(cfg)` seleciona orgs vencidas por VOLUME (eventos desde o último selo ≥
+      threshold) OU INTERVALO (baseline = último selo, ou evento não selado mais antigo, mais
+      velho que o corte); defaults do RFC (1h/10.000) em `DefaultSealConfig`. Verificado em PG15
+      real: selagem produz selo assinado verificável pela chave via key_id; adulteração do
+      conteúdo falha; re-selar sem novos eventos é no-op; segundo selo contíguo [4,5]; SealDue
+      dispara por volume E por intervalo, poupando a org recente. Gate verde.)*
 - [ ] **T-012** Implementar exportação opcional de selos para destino WORM.
 - [ ] **T-013** Implementar verificador (recomputação + assinaturas + lacunas).
 - [ ] **T-014** Expor verificação como comando CLI e endpoint (operação L3).

@@ -51,6 +51,8 @@ func cleanupAudit(t *testing.T, pool *pgxpool.Pool, orgs ...uuid.UUID) {
 		}
 		for _, o := range orgs {
 			_, _ = conn.Exec(bg, "DELETE FROM audit_event WHERE organization_id = $1", o.String())
+			_, _ = conn.Exec(bg, "DELETE FROM audit_seal WHERE organization_id = $1", o.String())
+			_, _ = conn.Exec(bg, "DELETE FROM audit_event_queue WHERE organization_id = $1", o.String())
 			_, _ = conn.Exec(bg, "DELETE FROM audit_chain_head WHERE organization_id = $1", o.String())
 		}
 		_, _ = conn.Exec(bg, "SET session_replication_role = origin")
