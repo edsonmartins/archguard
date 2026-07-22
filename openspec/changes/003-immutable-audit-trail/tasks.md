@@ -157,7 +157,18 @@
       Verificado em PG15: exporta selos pendentes e registra âncora; objeto ancorado bate com o
       selo persistido e a assinatura verifica por key_id; re-exportar é no-op; novo selo é
       exportado na próxima passada; WORM recusa sobrescrita. Gate verde; sem dependência nova.)*
-- [ ] **T-013** Implementar verificador (recomputação + assinaturas + lacunas).
+- [x] **T-013** Implementar verificador (recomputação + assinaturas + lacunas). *(Núcleo de
+      domínio `internal/domain/audit_verify.go`: `VerifyChain(genesis, events)` recompõe a cadeia
+      e reporta a PRIMEIRA divergência com tipo (`removed`=lacuna de seq, `broken_chain`=prev_hash
+      não encadeia, `altered`=conteúdo não recomputa o hash), mais `ParseOutcome` (inverso do
+      serializado). `AuditVerifier` em pgx (`audit_verifier.go`): reconstrói cada evento das
+      COLUNAS (não de blob canônico — adulterar coluna consultável quebra a verificação), roda
+      `VerifyChain`, e valida os selos — contiguidade dos intervalos, `head_hash` = hash do evento
+      em seq_end, e assinatura Ed25519 via `SealVerifier` por key_id (`seal_invalid`). Verificado
+      em PG15 real com adulteração DIRETA no banco (via bypass de superusuário): cadeia íntegra+
+      selada verifica; **evento alterado, evento removido, cadeia quebrada e selo adulterado são
+      detectados no seq correto** — os três tipos de adulteração da spec + selo inválido. Destrava
+      o teste de adulteração T-019. Gate verde.)*
 - [ ] **T-014** Expor verificação como comando CLI e endpoint (operação L3).
 - [ ] **T-015** Agendar verificação diária com alerta de severidade máxima.
 - [ ] **T-016** Implementar exportação assinada por tenant (NDJSON + selos + chaves).

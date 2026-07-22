@@ -210,6 +210,22 @@ func (e AuditEvent) SerializedOutcome() string {
 	}
 }
 
+// ParseOutcome maps the serialized wire form back to the domain outcome — the
+// inverse of SerializedOutcome, used by the verifier when it reconstructs an
+// event from its stored columns.
+func ParseOutcome(s string) (Outcome, error) {
+	switch s {
+	case "success":
+		return Allowed, nil
+	case "denied":
+		return Denied, nil
+	case "error":
+		return Failed, nil
+	default:
+		return Allowed, fmt.Errorf("%w: outcome serializado %q", ErrInvalidAuditEvent, s)
+	}
+}
+
 // AuditEventInput carries the caller-supplied content of an event. NewAuditEvent
 // validates it and mints the event id and schema version.
 type AuditEventInput struct {
