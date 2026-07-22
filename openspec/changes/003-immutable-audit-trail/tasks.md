@@ -223,7 +223,18 @@
       fluxos existirem (006/007). Verificado em PG15: eventos gravados com o ator do contexto,
       cadeia íntegra; sem principal a operação dá ROLLBACK atômico (membership não criado);
       cascata grava um evento por org; exportação auditada. Gate verde; sem dependência nova.)*
-- [ ] **T-018** Implementar arquivamento de partição selada e restauração auditada.
+- [x] **T-018** Implementar arquivamento de partição selada e restauração auditada. *(RFC-0003
+      §5.4: retenção por arquivamento de partições SELADAS, nunca deleção seletiva. `PartitionArchiver`
+      (pgx): `Archive(name, from, to)` recusa se qualquer evento da janela não estiver coberto por
+      selo (`ErrPartitionUnsealed`), audita a operação por org afetada (admin.mutation, atômico) e
+      DETACHa a partição — as linhas ficam PRESERVADAS na tabela standalone (nada deletado), prontas
+      para armazenamento frio; `Restore` re-ATTACHa e audita (restauração auditada). `EnsureTimePartition`
+      cria a partição de intervalo de tempo (nome validado por regex, bounds como literais
+      controlados). Verificado em PG15: período não selado recusado; após selar, o arquivamento
+      destaca os eventos (0 na tabela viva, N preservados na destacada) e é auditado; após restaurar,
+      a cadeia verifica íntegra. Nota: a verificação da cadeia VIVA através de fronteiras de arquivo
+      (verificar a partir do head do último arquivo) é a evolução natural do verificador — a partição
+      arquivada permanece auto-verificável pelos selos preservados (T-016). Gate verde.)*
 - [x] **T-019** Teste de adulteração: alterar, remover e reordenar eventos; verificar detecção.
       *(Suíte de gate `TestTamperGate` (table-driven, integração PG15) com o verificador ancorado
       no assinante REAL — assinaturas de selo conferidas. Semeia cadeia selada, valida baseline
