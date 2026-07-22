@@ -35,11 +35,16 @@ import (
 // this stream. Exporting the trail is an L3 audited operation (the audit-of-
 // export event is instrumented in T-017).
 type TrailExporter struct {
-	db Beginner
+	db    Beginner
+	audit AuditEmitter
 }
 
-// NewTrailExporter builds the exporter.
-func NewTrailExporter(db Beginner) *TrailExporter { return &TrailExporter{db: db} }
+// NewTrailExporter builds the exporter with an optional audit emitter (nil ⇒ not
+// instrumented). When set, a successful export records an audit.export event
+// (L3) — the export is itself an audited operation (RFC-0003 §9, T-017).
+func NewTrailExporter(db Beginner, audit AuditEmitter) *TrailExporter {
+	return &TrailExporter{db: db, audit: audit}
+}
 
 // PublicKeyResolver returns the public key (raw bytes) for a seal's key_id, so
 // the export can carry it for offline signature verification. In production it
@@ -115,6 +120,19 @@ func (x *TrailExporter) Export(ctx context.Context, orgID uuid.UUID, resolve Pub
 
 	if err := enc.Encode(exportProcedure{Type: "procedure", Text: verificationProcedure}); err != nil {
 		return fmt.Errorf("audit: escrita do procedimento falhou: %w", err)
+	}
+
+	// The export is itself an audited L3 operation (RFC-0003 §9): record it in
+	// the exported organization's own trail, in its own transaction (the stream
+	// is already written; this event comes after the snapshot).
+	if x.audit != nil {
+		if err := WithTx(ctx, x.db, func(tx pgx.Tx) error {
+			return emitAudit(ctx, tx, x.audit, orgID, domain.ActionAuditExport,
+				domain.AuditTarget{Type: "organization", ID: orgID.String(), Label: "exportação da trilha"},
+				"exportação assinada da trilha do tenant")
+		}); err != nil {
+			return fmt.Errorf("audit: registro da exportação falhou: %w", err)
+		}
 	}
 	return nil
 }

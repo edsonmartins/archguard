@@ -54,7 +54,7 @@ func TestTrailExportSelfVerifiable(t *testing.T) {
 		return pub, pub != nil
 	}
 	var buf bytes.Buffer
-	if err := NewTrailExporter(pool).Export(ctx, org, resolve, fixedClock(), &buf); err != nil {
+	if err := NewTrailExporter(pool, nil).Export(ctx, org, resolve, fixedClock(), &buf); err != nil {
 		t.Fatalf("Export: %v", err)
 	}
 

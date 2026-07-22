@@ -114,6 +114,39 @@ func (w *AuditWriter) Record(ctx context.Context, in domain.AuditEventInput) (do
 	return w.Append(ctx, in)
 }
 
+// AuditEmitter appends an audit event WITHIN a caller-supplied transaction — the
+// seam business operations use to instrument themselves atomically (T-017): the
+// audit event commits with the operation, so an operation whose audit fails is
+// rolled back (I-5.4). *AuditWriter satisfies it. Orchestrators take it as an
+// optional dependency (nil ⇒ not instrumented).
+type AuditEmitter interface {
+	AppendTx(ctx context.Context, tx pgx.Tx, in domain.AuditEventInput) (domain.SealedEvent, error)
+}
+
+// emitAudit records one audit event in tx on behalf of the acting principal
+// (read from the context). If emitter is nil the operation is simply not
+// instrumented. If it is set but no principal is in the context, it fails
+// closed (ErrNoPrincipal) — an administrative mutation is never audited as
+// anonymous. The action's outcome is success (the operation reached this point).
+func emitAudit(ctx context.Context, tx pgx.Tx, emitter AuditEmitter, orgID uuid.UUID, action domain.Action, target domain.AuditTarget, reason string) error {
+	if emitter == nil {
+		return nil
+	}
+	actor, ok := domain.PrincipalFromContext(ctx)
+	if !ok {
+		return domain.ErrNoPrincipal
+	}
+	_, err := emitter.AppendTx(ctx, tx, domain.AuditEventInput{
+		OrganizationID: orgID,
+		Action:         action,
+		Actor:          actor,
+		Outcome:        domain.Allowed,
+		Target:         target,
+		Reason:         reason,
+	})
+	return err
+}
+
 // lockChainHead returns the organization's current head hash and last seq,
 // holding a row lock for the rest of the transaction. On the organization's
 // first ever event the head row does not exist yet: it is created with a fresh

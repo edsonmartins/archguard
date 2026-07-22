@@ -50,12 +50,15 @@ var (
 type Inviter struct {
 	repo      *TenantRepository
 	custodian domain.KeyCustodian
+	audit     AuditEmitter
 }
 
 // NewInviter wires the tenant-scoped repository with the key custodian that
-// hashes invited e-mails.
-func NewInviter(repo *TenantRepository, custodian domain.KeyCustodian) *Inviter {
-	return &Inviter{repo: repo, custodian: custodian}
+// hashes invited e-mails and an optional audit emitter (nil ⇒ not
+// instrumented). When set, invite and accept record membership.invite /
+// membership.accept events atomically in their transaction (T-017).
+func NewInviter(repo *TenantRepository, custodian domain.KeyCustodian, audit AuditEmitter) *Inviter {
+	return &Inviter{repo: repo, custodian: custodian, audit: audit}
 }
 
 // InviteByEmail links the existing identity holding email to the repository's
@@ -84,6 +87,11 @@ func (i *Inviter) InviteByEmail(ctx context.Context, email string, invitedBy uui
 			return err
 		}
 		if err := NewTenantMembershipStore(ttx).Create(ctx, m); err != nil {
+			return err
+		}
+		if err := emitAudit(ctx, ttx.Tx(), i.audit, m.OrganizationID, domain.ActionMembershipInvite,
+			domain.AuditTarget{Type: "identity", ID: idn.Subject, Label: "convite"},
+			"convite de identidade existente para o tenant"); err != nil {
 			return err
 		}
 		out = m
@@ -126,6 +134,11 @@ func (i *Inviter) Accept(ctx context.Context, membershipID, identityID uuid.UUID
 			return err
 		}
 		if err := store.SaveActivation(ctx, m); err != nil {
+			return err
+		}
+		if err := emitAudit(ctx, ttx.Tx(), i.audit, m.OrganizationID, domain.ActionMembershipAccept,
+			domain.AuditTarget{Type: "identity", ID: idn.Subject, Label: "aceite de convite"},
+			"aceite de convite: membership ativado"); err != nil {
 			return err
 		}
 		out = m

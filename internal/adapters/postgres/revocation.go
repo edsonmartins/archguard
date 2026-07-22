@@ -20,6 +20,7 @@ import (
 
 	"github.com/casdoor/casdoor/internal/domain"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 // IdentityMembershipStore is the identity-axis view of membership: the rows of
@@ -79,12 +80,15 @@ func (s *IdentityMembershipStore) RevokeAllNonRevoked(ctx context.Context) (int,
 // this transaction's reach by construction — which is exactly the spec's AND
 // clause.
 type MembershipRevoker struct {
-	repo *TenantRepository
+	repo  *TenantRepository
+	audit AuditEmitter
 }
 
-// NewMembershipRevoker builds the revoker on a tenant-scoped repository.
-func NewMembershipRevoker(repo *TenantRepository) *MembershipRevoker {
-	return &MembershipRevoker{repo: repo}
+// NewMembershipRevoker builds the revoker on a tenant-scoped repository, with an
+// optional audit emitter (nil ⇒ not instrumented). When set, a revocation
+// records a membership.revoke event atomically in its transaction (T-017).
+func NewMembershipRevoker(repo *TenantRepository, audit AuditEmitter) *MembershipRevoker {
+	return &MembershipRevoker{repo: repo, audit: audit}
 }
 
 // RevokeMembership revokes one membership of the repository's tenant and ends
@@ -106,6 +110,11 @@ func (r *MembershipRevoker) RevokeMembership(ctx context.Context, membershipID u
 			return err
 		}
 		if sessions, err = NewTenantSessionStore(ttx).RevokeByMembership(ctx, m.ID); err != nil {
+			return err
+		}
+		if err := emitAudit(ctx, ttx.Tx(), r.audit, m.OrganizationID, domain.ActionMembershipRevoke,
+			domain.AuditTarget{Type: "membership", ID: m.ID.String(), Label: "revogação de membership"},
+			"revogação de membership e encerramento das sessões do tenant"); err != nil {
 			return err
 		}
 		out = m
@@ -134,19 +143,24 @@ type CascadeReport struct {
 //   - Deprovision: identity → deprovisioned (terminal, R5); every non-revoked
 //     membership → revoked; ALL sessions → revoked. RFC-0002 R4 in full.
 type IdentityLifecycle struct {
-	repo *IdentityRepository
+	repo  *IdentityRepository
+	audit AuditEmitter
 }
 
 // NewIdentityLifecycle builds the lifecycle orchestrator on an identity-scoped
-// repository.
-func NewIdentityLifecycle(repo *IdentityRepository) *IdentityLifecycle {
-	return &IdentityLifecycle{repo: repo}
+// repository, with an optional audit emitter (nil ⇒ not instrumented). When set,
+// a suspension/deprovisioning records ONE event per affected organization —
+// each tenant's own trail sees that a member here was suspended/deprovisioned
+// (T-017) — atomically in the cascade transaction.
+func NewIdentityLifecycle(repo *IdentityRepository, audit AuditEmitter) *IdentityLifecycle {
+	return &IdentityLifecycle{repo: repo, audit: audit}
 }
 
 // Suspend blocks the identity and cascades: memberships suspended
 // (recoverable), sessions revoked. A deprovisioned identity refuses (terminal).
 func (l *IdentityLifecycle) Suspend(ctx context.Context) (CascadeReport, error) {
-	return l.cascade(ctx, func(idn *domain.Identity) error { return idn.Suspend() },
+	return l.cascade(ctx, domain.ActionIdentitySuspend,
+		func(idn *domain.Identity) error { return idn.Suspend() },
 		func(ctx context.Context, ms *IdentityMembershipStore) (int, error) {
 			return ms.SuspendAllActive(ctx)
 		})
@@ -155,16 +169,17 @@ func (l *IdentityLifecycle) Suspend(ctx context.Context) (CascadeReport, error) 
 // Deprovision retires the identity permanently (R5) and cascades terminally:
 // memberships revoked, sessions revoked (R4).
 func (l *IdentityLifecycle) Deprovision(ctx context.Context) (CascadeReport, error) {
-	return l.cascade(ctx, func(idn *domain.Identity) error { idn.Deprovision(); return nil },
+	return l.cascade(ctx, domain.ActionIdentityDeprovision,
+		func(idn *domain.Identity) error { idn.Deprovision(); return nil },
 		func(ctx context.Context, ms *IdentityMembershipStore) (int, error) {
 			return ms.RevokeAllNonRevoked(ctx)
 		})
 }
 
 // cascade runs one identity-level transition end to end: load → domain
-// transition → persist status → memberships leg → sessions leg, one
-// transaction.
-func (l *IdentityLifecycle) cascade(ctx context.Context,
+// transition → persist status → memberships leg → sessions leg → audit event
+// per affected organization, one transaction.
+func (l *IdentityLifecycle) cascade(ctx context.Context, action domain.Action,
 	transition func(*domain.Identity) error,
 	memberships func(context.Context, *IdentityMembershipStore) (int, error),
 ) (CascadeReport, error) {
@@ -187,6 +202,21 @@ func (l *IdentityLifecycle) cascade(ctx context.Context,
 		if report.SessionsRevoked, err = NewIdentitySessionStore(itx).RevokeAll(ctx); err != nil {
 			return err
 		}
+		// One audit event per organization where the identity has a membership:
+		// each tenant's trail records the identity-level action that affected it.
+		if l.audit != nil {
+			orgs, err := identityMembershipOrgs(ctx, itx.Tx(), idn.ID)
+			if err != nil {
+				return err
+			}
+			for _, org := range orgs {
+				if err := emitAudit(ctx, itx.Tx(), l.audit, org, action,
+					domain.AuditTarget{Type: "identity", ID: idn.Subject, Label: string(action)},
+					"ação de ciclo de vida da identidade sobre este tenant"); err != nil {
+					return err
+				}
+			}
+		}
 		report.Identity = idn
 		return nil
 	})
@@ -194,4 +224,29 @@ func (l *IdentityLifecycle) cascade(ctx context.Context,
 		return CascadeReport{}, err
 	}
 	return report, nil
+}
+
+// identityMembershipOrgs returns the organizations where the identity has a
+// membership (any status) — the tenants an identity-level action touches.
+func identityMembershipOrgs(ctx context.Context, tx pgx.Tx, identityID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT organization_id::text FROM membership WHERE identity_id = $1 ORDER BY organization_id`,
+		identityID.String())
+	if err != nil {
+		return nil, fmt.Errorf("postgres: leitura das organizações da identidade falhou: %w", err)
+	}
+	defer rows.Close()
+	var out []uuid.UUID
+	for rows.Next() {
+		var s string
+		if err := rows.Scan(&s); err != nil {
+			return nil, err
+		}
+		id, err := uuid.Parse(s)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
 }

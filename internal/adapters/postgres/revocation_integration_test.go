@@ -74,7 +74,7 @@ func TestRevokeMembershipCascadesOnlyItsTenant(t *testing.T) {
 	fx := makeSessionFixture(t, pool, "rvkmem")
 	inA, inB := seedTwoTenantSessions(t, pool, fx)
 
-	revoker := NewMembershipRevoker(NewTenantRepository(pool, fx.tenantScopeA))
+	revoker := NewMembershipRevoker(NewTenantRepository(pool, fx.tenantScopeA), nil)
 	m, sessions, err := revoker.RevokeMembership(ctx, fx.memA.ID)
 	if err != nil {
 		t.Fatalf("RevokeMembership: %v", err)
@@ -128,7 +128,7 @@ func TestSuspendIdentityCascades(t *testing.T) {
 		t.Fatalf("Create pendente: %v", err)
 	}
 
-	report, err := NewIdentityLifecycle(NewIdentityRepository(pool, fx.scopeIdn)).Suspend(ctx)
+	report, err := NewIdentityLifecycle(NewIdentityRepository(pool, fx.scopeIdn), nil).Suspend(ctx)
 	if err != nil {
 		t.Fatalf("Suspend: %v", err)
 	}
@@ -163,7 +163,7 @@ func TestDeprovisionIdentityCascades(t *testing.T) {
 	fx := makeSessionFixture(t, pool, "deprov")
 	inA, inB := seedTwoTenantSessions(t, pool, fx)
 
-	lifecycle := NewIdentityLifecycle(NewIdentityRepository(pool, fx.scopeIdn))
+	lifecycle := NewIdentityLifecycle(NewIdentityRepository(pool, fx.scopeIdn), nil)
 	report, err := lifecycle.Deprovision(ctx)
 	if err != nil {
 		t.Fatalf("Deprovision: %v", err)

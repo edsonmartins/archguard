@@ -124,7 +124,7 @@ func TestInviteLinksExistingIdentityWithoutCreatingOne(t *testing.T) {
 	pool := setupTenantPool(t)
 	ctx := context.Background()
 	fx := makeInviteFixture(t, pool, "link")
-	inv := NewInviter(NewTenantRepository(pool, fx.scopeB), fx.custodian)
+	inv := NewInviter(NewTenantRepository(pool, fx.scopeB), fx.custodian, nil)
 
 	before := countIdentities(t, pool)
 	m, err := inv.InviteByEmail(ctx, fx.email, fx.inviter)
@@ -160,7 +160,7 @@ func TestInviteLinksExistingIdentityWithoutCreatingOne(t *testing.T) {
 
 	// O convite é case-insensitive como o login (hash sobre e-mail normalizado).
 	fx2 := makeInviteFixture(t, pool, "case")
-	inv2 := NewInviter(NewTenantRepository(pool, fx2.scopeB), fx2.custodian)
+	inv2 := NewInviter(NewTenantRepository(pool, fx2.scopeB), fx2.custodian, nil)
 	if _, err := inv2.InviteByEmail(ctx, "  INVITE-case@EXAMPLE.com ", fx2.inviter); err != nil {
 		t.Fatalf("convite com e-mail em caixa alta deveria achar a identidade: %v", err)
 	}
@@ -172,7 +172,7 @@ func TestInviteUnknownEmailRefusedWithoutSideEffects(t *testing.T) {
 	pool := setupTenantPool(t)
 	ctx := context.Background()
 	fx := makeInviteFixture(t, pool, "unknown")
-	inv := NewInviter(NewTenantRepository(pool, fx.scopeB), fx.custodian)
+	inv := NewInviter(NewTenantRepository(pool, fx.scopeB), fx.custodian, nil)
 
 	before := countIdentities(t, pool)
 	_, err := inv.InviteByEmail(ctx, "ninguem-"+uuid.NewString()+"@example.com", fx.inviter)
@@ -191,7 +191,7 @@ func TestInviteR3Collisions(t *testing.T) {
 	pool := setupTenantPool(t)
 	ctx := context.Background()
 	fx := makeInviteFixture(t, pool, "r3")
-	inv := NewInviter(NewTenantRepository(pool, fx.scopeB), fx.custodian)
+	inv := NewInviter(NewTenantRepository(pool, fx.scopeB), fx.custodian, nil)
 
 	if _, err := inv.InviteByEmail(ctx, fx.email, fx.inviter); err != nil {
 		t.Fatalf("primeiro convite: %v", err)
@@ -217,7 +217,7 @@ func TestInviteNonActiveIdentityRefused(t *testing.T) {
 	pool := setupTenantPool(t)
 	ctx := context.Background()
 	fx := makeInviteFixture(t, pool, "inactive")
-	inv := NewInviter(NewTenantRepository(pool, fx.scopeB), fx.custodian)
+	inv := NewInviter(NewTenantRepository(pool, fx.scopeB), fx.custodian, nil)
 
 	for _, status := range []string{"suspended", "deprovisioned"} {
 		if _, err := pool.Exec(ctx,
@@ -237,7 +237,7 @@ func TestAcceptInvitation(t *testing.T) {
 	pool := setupTenantPool(t)
 	ctx := context.Background()
 	fx := makeInviteFixture(t, pool, "accept")
-	inv := NewInviter(NewTenantRepository(pool, fx.scopeB), fx.custodian)
+	inv := NewInviter(NewTenantRepository(pool, fx.scopeB), fx.custodian, nil)
 
 	m, err := inv.InviteByEmail(ctx, fx.email, fx.inviter)
 	if err != nil {
@@ -278,7 +278,7 @@ func TestAcceptRejectsSuspendedIdentity(t *testing.T) {
 	pool := setupTenantPool(t)
 	ctx := context.Background()
 	fx := makeInviteFixture(t, pool, "accsusp")
-	inv := NewInviter(NewTenantRepository(pool, fx.scopeB), fx.custodian)
+	inv := NewInviter(NewTenantRepository(pool, fx.scopeB), fx.custodian, nil)
 
 	m, err := inv.InviteByEmail(ctx, fx.email, fx.inviter)
 	if err != nil {

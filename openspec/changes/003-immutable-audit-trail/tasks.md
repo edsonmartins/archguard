@@ -208,7 +208,21 @@
       recompõe a cadeia a partir da gênese exportada (`VerifyChain` OK) e confere a assinatura
       Ed25519 do selo com a chave pública exportada + head_hash contra o evento. Gate verde; sem
       dependência nova.)*
-- [ ] **T-017** Instrumentar eventos de autenticação, autorização e mutação administrativa.
+- [x] **T-017** Instrumentar eventos de autenticação, autorização e mutação administrativa.
+      *(Decisões do arquiteto: um evento por org afetada; emissão síncrona ATÔMICA. O ator (o
+      principal autenticado) viaja no CONTEXTO — `domain.WithPrincipal`/`PrincipalFromContext`
+      (definido no boundary de request, não threaded em cada assinatura). `AuditEmitter`
+      (interface sobre `AppendTx`) + helper `emitAudit` que grava o evento na transação da
+      operação e é **fail-closed**: com emissor mas SEM principal ⇒ `ErrNoPrincipal` (mutação
+      administrativa nunca é auditada como anônima). Instrumentadas as MUTAÇÕES ADMINISTRATIVAS
+      do pacote 002 (emissor opcional no construtor; nil ⇒ não instrumentado): `Inviter`
+      (membership.invite/accept), `MembershipRevoker` (membership.revoke), `IdentityLifecycle`
+      (identity.suspend/deprovision — UM evento por org onde a identidade tem membership, cada um
+      na cadeia do seu tenant), `TrailExporter` (audit.export, L3). A troca de tenant já era
+      instrumentada (outbox, T-009). auth.login/negado e decisões de authz ficam para quando seus
+      fluxos existirem (006/007). Verificado em PG15: eventos gravados com o ator do contexto,
+      cadeia íntegra; sem principal a operação dá ROLLBACK atômico (membership não criado);
+      cascata grava um evento por org; exportação auditada. Gate verde; sem dependência nova.)*
 - [ ] **T-018** Implementar arquivamento de partição selada e restauração auditada.
 - [ ] **T-019** Teste de adulteração: alterar, remover e reordenar eventos; verificar detecção.
 - [ ] **T-020** Teste de fail-closed: indisponibilizar a auditoria e confirmar negação de
