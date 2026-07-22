@@ -37,7 +37,11 @@ type AuditVerifier struct {
 	verifier domain.SealVerifier
 }
 
-// NewAuditVerifier wires the connection with the seal signature verifier.
+// NewAuditVerifier wires the connection with the seal signature verifier. The
+// verifier may be NIL: then the chain and the seal STRUCTURE (contiguity, head
+// match) are still verified — catching alteration, removal and reorder — but the
+// seal SIGNATURES are not (that needs the custodied public keys, e.g. the vault
+// in production). A dev CLI without vault access runs in this mode.
 func NewAuditVerifier(db Beginner, verifier domain.SealVerifier) *AuditVerifier {
 	return &AuditVerifier{db: db, verifier: verifier}
 }
@@ -75,6 +79,7 @@ func (v *AuditVerifier) VerifyOrganization(ctx context.Context, orgID uuid.UUID)
 		return sealRep, nil
 	}
 	rep.SealsChecked = sealRep.SealsChecked
+	rep.SealSignaturesChecked = v.verifier != nil
 	return rep, nil
 }
 
@@ -217,17 +222,19 @@ func (v *AuditVerifier) verifySeals(ctx context.Context, orgID uuid.UUID, hashBy
 		if !ok || !bytesEqualBytes(wantHead, s.headHash) {
 			return failSeal(s.seqEnd, "head_hash do selo não corresponde ao evento em seq %d", s.seqEnd), nil
 		}
-		// Assinatura.
-		content, err := domain.SealContent(orgID, s.seqStart, s.seqEnd, s.headHash, s.sealedAtMicros)
-		if err != nil {
-			return failSeal(s.seqEnd, "conteúdo do selo inválido: %v", err), nil
-		}
-		valid, err := v.verifier.Verify(ctx, content, s.sig, s.keyID)
-		if err != nil {
-			return failSeal(s.seqEnd, "verificação da assinatura falhou: %v", err), nil
-		}
-		if !valid {
-			return failSeal(s.seqEnd, "assinatura do selo inválida"), nil
+		// Assinatura — só quando há verificador (chaves custodiadas disponíveis).
+		if v.verifier != nil {
+			content, err := domain.SealContent(orgID, s.seqStart, s.seqEnd, s.headHash, s.sealedAtMicros)
+			if err != nil {
+				return failSeal(s.seqEnd, "conteúdo do selo inválido: %v", err), nil
+			}
+			valid, err := v.verifier.Verify(ctx, content, s.sig, s.keyID)
+			if err != nil {
+				return failSeal(s.seqEnd, "verificação da assinatura falhou: %v", err), nil
+			}
+			if !valid {
+				return failSeal(s.seqEnd, "assinatura do selo inválida"), nil
+			}
 		}
 		prevEnd = s.seqEnd
 		checked++

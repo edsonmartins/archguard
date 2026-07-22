@@ -46,6 +46,12 @@ type VerifyReport struct {
 	FirstDivergence int64 // seq (or seq_end for a seal) of the first problem; 0 if OK
 	Kind            DivergenceKind
 	Detail          string
+	// SealSignaturesChecked is true when the seal Ed25519 signatures were
+	// verified (a seal verifier / vault was available). When false, only the
+	// chain and the seal STRUCTURE (contiguity, head match) were checked —
+	// enough to catch alteration, removal and reorder, but not a forged
+	// signature (that needs the custodied public keys).
+	SealSignaturesChecked bool
 }
 
 // ok builds an intact report.

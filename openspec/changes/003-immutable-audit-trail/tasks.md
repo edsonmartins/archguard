@@ -169,7 +169,21 @@
       selada verifica; **evento alterado, evento removido, cadeia quebrada e selo adulterado são
       detectados no seq correto** — os três tipos de adulteração da spec + selo inválido. Destrava
       o teste de adulteração T-019. Gate verde.)*
-- [ ] **T-014** Expor verificação como comando CLI e endpoint (operação L3).
+- [x] **T-014** Expor verificação como comando CLI e endpoint (operação L3). *(Decisão do
+      arquiteto: `SealVerifier` OPCIONAL — o assinante provisório Ed25519 é in-process/efêmero,
+      então um processo separado não tem as chaves para verificar ASSINATURAS; sem verificador,
+      o `AuditVerifier` ainda checa a cadeia + estrutura dos selos (contiguidade + head_hash),
+      pegando alteração/remoção/quebra sem chave; com o cofre (produção) verifica também as
+      assinaturas (`VerifyReport.SealSignaturesChecked`). **CLI** `cmd/audit-verify`:
+      `run(args,stdout,stderr) int` testável; verifica uma org ou TODAS (de audit_chain_head),
+      imprime relatório JSON por org e sai **0=íntegra / 1=divergência / 2=erro** — o sinal para
+      cron/CI alertar pelo código de saída. **Endpoint** `internal/http/audit_verify.go` (primeiro
+      handler da camada, handler FINO §6): `GET /audit/verify?organization_id=` → relatório JSON,
+      **409** em divergência (monitor alerta só pelo status), 500 fail-closed se não pôde rodar,
+      400 em org inválida; declara `AuditVerifyAssuranceLevel = L3` (INV-8). Wiring na rota Beego +
+      gate L3 = integração de auth (posterior). Persistir chaves públicas de dev = follow-up.
+      Verificado: handler (200/409/400/500/405 + L3) e CLI (exit 0 íntegra, 1 adulterada) em PG15.
+      Gate verde.)*
 - [ ] **T-015** Agendar verificação diária com alerta de severidade máxima.
 - [ ] **T-016** Implementar exportação assinada por tenant (NDJSON + selos + chaves).
 - [ ] **T-017** Instrumentar eventos de autenticação, autorização e mutação administrativa.
