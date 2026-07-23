@@ -72,6 +72,18 @@ const (
 	ActionKeyRotate             Action = "key.rotate"
 	ActionAuditExport           Action = "audit.export"
 	ActionAuditVerify           Action = "audit.verify"
+	// MFA / step-up events (pacote 005). Enrollment and step-up are authentication
+	// events; removing a strong factor is privileged (L3, spec "reset silencioso");
+	// the peer-approved recovery and its reset are L3; lockout and stuffing alerts
+	// are security-monitoring events.
+	ActionFactorEnroll    Action = "factor.enroll"
+	ActionFactorRemove    Action = "factor.remove"
+	ActionAuthStepUp      Action = "auth.stepup"
+	ActionAuthLockout     Action = "auth.lockout"
+	ActionAuthStuffing    Action = "auth.stuffing_alert"
+	ActionRecoveryRequest Action = "recovery.request"
+	ActionRecoveryApprove Action = "recovery.approve"
+	ActionRecoveryReset   Action = "recovery.reset"
 )
 
 // actionCatalog is the closed set of canonical actions and the assurance level
@@ -95,6 +107,14 @@ var actionCatalog = map[Action]AssuranceLevel{
 	ActionKeyRotate:             L3,
 	ActionAuditExport:           L3,
 	ActionAuditVerify:           L3,
+	ActionFactorEnroll:          L2,
+	ActionFactorRemove:          L3,
+	ActionAuthStepUp:            L1,
+	ActionAuthLockout:           L1,
+	ActionAuthStuffing:          L1,
+	ActionRecoveryRequest:       L2,
+	ActionRecoveryApprove:       L3,
+	ActionRecoveryReset:         L3,
 }
 
 // Valid reports whether a is a registered canonical action.

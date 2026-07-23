@@ -203,7 +203,19 @@
       da versão durável/cross-replica (observabilidade, pacote 010). Testes (alerta no limiar e uma
       só vez; só distintas contam; origens independentes; poda da janela) passam com `-race`. Gate
       verde.)*
-- [ ] **T-016** Auditar todos os eventos de MFA (incluindo remoção de fator).
+- [x] **T-016** Auditar todos os eventos de MFA (incluindo remoção de fator). *(Vocabulário de
+      auditoria: 8 ações novas no catálogo FECHADO (`audit_event.go`) — `factor.enroll` (L2),
+      `factor.remove` (L3), `auth.stepup` (L1), `auth.lockout` (L1), `auth.stuffing_alert` (L1),
+      `recovery.request` (L2), `recovery.approve` (L3), `recovery.reset` (L3); o teste do catálogo
+      (aberto) valida que cada uma tem nível. Cenário "Remoção de fator" WIRED de ponta a ponta:
+      `CredentialStore.Remove` (predicado identity_id impede remover credencial de outrem) +
+      `FactorRemover.RemoveStrongFactor` grava `factor.remove` com ator (principal do contexto),
+      alvo (subject OPACO da identidade afetada) e resultado, ATOMICAMENTE na transação da remoção
+      (fail-closed via emitAudit: sem principal ⇒ ErrNoPrincipal ⇒ rollback, remoção não auditável
+      não acontece, I-5.4). Testes de integração PG (remoção audita com ator/alvo; sem principal
+      desfaz). A emissão dos demais eventos (enroll/step-up/lockout/stuffing/recovery) usa estas
+      ações onde cada fluxo é montado (login/enrolamento = pacote 006/008; notificação da identidade
+      afetada = porto de notificação, pacote 010). Gate verde.)*
 - [ ] **T-017** Classificar todas as operações existentes; falhar o build se houver
       operação sem classificação.
 - [ ] **T-018** Teste: operação L3 com sessão antiga exige reautenticação.

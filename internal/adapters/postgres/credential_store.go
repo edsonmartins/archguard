@@ -96,6 +96,26 @@ func (s *CredentialStore) ListByIdentity(ctx context.Context, identityID uuid.UU
 	return out, nil
 }
 
+// ErrCredentialNotFound is returned when removing a credential that does not
+// exist for the given identity.
+var ErrCredentialNotFound = errors.New("postgres: credencial não encontrada")
+
+// Remove deletes credential credID of identityID. The identity_id predicate makes
+// it impossible to remove another identity's credential by id alone. It returns
+// ErrCredentialNotFound when nothing matched — the caller (factor removal) must
+// know whether a factor was actually removed to audit the true outcome.
+func (s *CredentialStore) Remove(ctx context.Context, credID, identityID uuid.UUID) error {
+	const q = `DELETE FROM credential WHERE id = $1 AND identity_id = $2`
+	tag, err := s.db.Exec(ctx, q, credID.String(), identityID.String())
+	if err != nil {
+		return fmt.Errorf("postgres: remoção de credencial falhou: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrCredentialNotFound
+	}
+	return nil
+}
+
 func scanCredential(row pgx.Row) (domain.Credential, error) {
 	var (
 		c          domain.Credential
