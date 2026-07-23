@@ -229,3 +229,12 @@ func BuildOIDCClaims(in OIDCClaimsInput) (OIDCClaims, error) {
 	}
 	return claims, nil
 }
+
+// RefreshResult is a successful refresh-token exchange: the new access token, the
+// new refresh secret (rotation) and the access token's lifetime in seconds. It is
+// the value the token endpoint returns for the refresh_token grant.
+type RefreshResult struct {
+	AccessToken     string
+	RefreshToken    string
+	ExpiresInSecond int
+}
