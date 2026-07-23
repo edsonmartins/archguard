@@ -94,3 +94,55 @@ func ValidateAuthorizationCodeRequest(responseType, codeChallenge, codeChallenge
 	}
 	return ValidatePKCE(codeChallenge, codeChallengeMethod)
 }
+
+// ErrAudienceMismatch is returned when a token's audience does not match the
+// component validating it — the basis for "token de A recusado por B" (RFC-0006
+// §5 / ADR-0011).
+var ErrAudienceMismatch = errors.New("oidc: audiência do token não corresponde ao componente")
+
+// ValidateAudience is the resource-server side check: a component accepts a token
+// ONLY if the token's aud is exactly its own audience. A token minted for
+// component A (aud="A") presented to component B (aud="B") is rejected (spec
+// "Reuso entre componentes"). Fail-closed: an empty audience on either side never
+// matches.
+func ValidateAudience(tokenAudience, componentAudience string) error {
+	if tokenAudience == "" || componentAudience == "" || tokenAudience != componentAudience {
+		return fmt.Errorf("%w: token aud %q, componente %q", ErrAudienceMismatch, tokenAudience, componentAudience)
+	}
+	return nil
+}
+
+// MinimalScope returns the scopes actually GRANTED to a token: the intersection
+// of what the client requested and what it is allowed (RFC-0006 §5 "escopo
+// mínimo"). A client never receives a scope it did not request nor one it is not
+// allowed — least privilege by construction. Order follows `allowed`,
+// deterministically.
+func MinimalScope(requested, allowed []string) []string {
+	req := make(map[string]bool, len(requested))
+	for _, s := range requested {
+		req[s] = true
+	}
+	out := make([]string, 0, len(allowed))
+	seen := make(map[string]bool, len(allowed))
+	for _, s := range allowed {
+		if req[s] && !seen[s] {
+			seen[s] = true
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// ScopeEmail is the scope that releases the `email` claim. It is granted only to a
+// component that provably needs it (RFC-0006 §3 / I-3.2).
+const ScopeEmail = "email"
+
+// HasScope reports whether scope is present in the granted set.
+func HasScope(granted []string, scope string) bool {
+	for _, s := range granted {
+		if s == scope {
+			return true
+		}
+	}
+	return false
+}

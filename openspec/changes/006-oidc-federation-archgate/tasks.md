@@ -42,7 +42,15 @@
       + PKCE S256, fail-closed antes de emitir código. Cobre "PKCE ausente" e "Fluxo obsoleto".
       Testes: PKCE ausente/plain recusado, implicit/ROPC recusados, suportados passam. Gate verde. A
       IMPOSIÇÃO no endpoint de autorização herdado (controllers Casdoor) é wiring do T-013+.)*
-- [ ] **T-006** Implementar audiência específica por cliente e escopo mínimo.
+- [x] **T-006** Implementar audiência específica por cliente e escopo mínimo. *(Cada token já tem
+      um único `aud` (T-002). `ValidateAudience(tokenAud, componentAud)` é a checagem do lado do
+      componente: aceita só se `aud` == a própria audiência — token de A em B é recusado
+      (`ErrAudienceMismatch`, cenário "Reuso entre componentes"); fail-closed com aud vazia.
+      `MinimalScope(requested, allowed)` = interseção determinística (menor privilégio — nunca um
+      escopo não pedido nem não permitido). E-mail no builder só sob `ScopeEmail` em `GrantedScopes`
+      (cenário "Dado pessoal restrito" / I-3.2): sem o escopo, o claim `email` não é emitido mesmo
+      com e-mail no input. Testes: audiência A≠B recusada, escopo mínimo, e-mail só sob escopo. Gate
+      verde.)*
 - [ ] **T-007** Implementar rotação de refresh token com detecção de reuso.
 - [ ] **T-008** Implementar revogação em cascata da família de tokens.
 - [ ] **T-009** Implementar back-channel logout OIDC.

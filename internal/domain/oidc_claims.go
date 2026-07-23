@@ -142,6 +142,13 @@ type OIDCClaimsInput struct {
 	// GrantRef references the temporary/break-glass grant a token is issued under
 	// (T-004) — the PrivilegedGrant id. Empty when no grant backs the token.
 	GrantRef string
+	// GrantedScopes are the minimal scopes granted to this token (T-006). The
+	// `email` claim is emitted ONLY when ScopeEmail is among them; every other
+	// token omits email (I-3.2).
+	GrantedScopes []string
+	// Email is the identity's e-mail, released into the token ONLY under ScopeEmail
+	// (T-006). Ignored — never emitted — without that scope.
+	Email string
 }
 
 // pcidBytes is the length of a privileged-correlation id's random material
@@ -211,6 +218,11 @@ func BuildOIDCClaims(in OIDCClaimsInput) (OIDCClaims, error) {
 		Act:           in.Act,
 		GrantRef:      in.GrantRef,
 		ClaimsVersion: OIDCClaimsVersion,
+	}
+	// E-mail is released ONLY under an explicit email scope (T-006 / I-3.2). Without
+	// it, the e-mail never enters the token even if the caller supplied it.
+	if HasScope(in.GrantedScopes, ScopeEmail) {
+		claims.Email = in.Email
 	}
 	if err := claims.WellFormed(); err != nil {
 		return OIDCClaims{}, err
