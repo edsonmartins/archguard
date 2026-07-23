@@ -112,7 +112,17 @@
       (principal do sistema no contexto) e isenta no INV-8. Lembrando: `Authorizes` já nega no momento
       da decisão — o job só MATERIALIZA. Integração PG (cenário "Janela expirada"): grant ativo
       vencido → expira + sessão derivada revogada + expiração auditada. Gate verde.)*
-- [ ] **T-013** Implementar fail-closed para ausência de auditoria ou de canal de notificação.
+- [x] **T-013** Implementar fail-closed para ausência de auditoria ou de canal de notificação.
+      *(`BreakglassOrchestrator` (postgres) compõe o fluxo de solicitação fail-closed nos DOIS eixos:
+      (1) o `domain.BreakglassRequester` checa canal disponível e emite o alerta FORA de transação
+      (chamada remota não roda em tx, RFC-0004 §4) — sem canal ou alerta não entregue nega antes de
+      qualquer persistência; (2) a concessão e o evento de auditoria da solicitação
+      (`breakglass.request`) são gravados em UMA transação — se a auditoria não puder ser registrada
+      (sem principal / auditoria indisponível) a transação inteira desfaz, então uma solicitação não
+      auditável NUNCA persiste (I-5.4). Um alerta espúrio (emitido antes do rollback) é a direção
+      segura de falha. Integração PG: caminho feliz persiste+audita+alerta; sem canal →
+      ErrNoNotificationChannel sem criar nada; sem principal → ErrNoPrincipal e nada persiste. Gate
+      verde.)*
 - [ ] **T-014** Implementar registro de revisão pós-uso.
 - [ ] **T-015** Implementar tipo de identidade `service` sem login interativo.
 - [ ] **T-016** Impedir impersonation de conta de serviço (regra + teste).
