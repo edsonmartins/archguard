@@ -172,3 +172,42 @@ func TestBuildOIDCClaimsRejects(t *testing.T) {
 		t.Fatalf("TTL longo demais deveria ser recusado: %v", err)
 	}
 }
+
+// pcid: opaco, único, e propagado ao token; o MESMO valor vai ao contexto de
+// auditoria (cenário "Linha do tempo unificada").
+func TestPCIDGenerationAndPropagation(t *testing.T) {
+	a, err := NewPCID()
+	if err != nil {
+		t.Fatalf("NewPCID: %v", err)
+	}
+	b, _ := NewPCID()
+	if a == b {
+		t.Fatalf("pcids deveriam ser únicos")
+	}
+	if len(a) < 10 || a[:5] != "pcid_" {
+		t.Fatalf("pcid deveria ser opaco com prefixo pcid_: %q", a)
+	}
+
+	// Propagação: o builder carrega o pcid no token; o mesmo valor iria ao
+	// AuditContext.PrivilegedCorrelationID (mesma string, unindo as trilhas).
+	id, org := uuid.New(), uuid.New()
+	m, _ := NewMembership(id, org)
+	s, _ := NewAuthSession(id, AAL3, []Membership{m})
+	at := time.Date(2026, 7, 23, 10, 0, 0, 0, time.UTC)
+	_ = s.SetAuthContext(at, []FactorType{FactorWebAuthn})
+
+	claims, err := BuildOIDCClaims(OIDCClaimsInput{
+		Issuer: "iss", Audience: "warpgate", Subject: "sub", Session: &s,
+		IssuedAt: at, AccessTTL: 10 * time.Minute, PCID: a,
+	})
+	if err != nil {
+		t.Fatalf("BuildOIDCClaims: %v", err)
+	}
+	if claims.PCID != a {
+		t.Fatalf("o token deveria carregar o pcid: %q != %q", claims.PCID, a)
+	}
+	ac := AuditContext{PrivilegedCorrelationID: a}
+	if ac.PrivilegedCorrelationID != claims.PCID {
+		t.Fatalf("o pcid do token e o da auditoria deveriam ser o MESMO valor")
+	}
+}

@@ -20,7 +20,13 @@
       malformado nunca sai. `act`/`pcid`/`grant_ref`/`email` ficam para T-003/004/006. Testes:
       emissão padrão (org/mid/acr/amr/auth_time/sid do tenant ativo), recusa de sessão pendente e de
       TTL longo. Gate verde.)*
-- [ ] **T-003** Implementar `pcid` (correlação de sessão privilegiada) e sua propagação.
+- [x] **T-003** Implementar `pcid` (correlação de sessão privilegiada) e sua propagação. *(`NewPCID()`
+      gera um id opaco de 128 bits (prefixo `pcid_`, base32), não-pessoal, estável pela vida da sessão
+      privilegiada. Campo `PCID` no `OIDCClaimsInput`; o builder carrega no claim `pcid`. Propagação:
+      o MESMO valor é gravado em `AuditContext.PrivilegedCorrelationID` (já existente, pacote 003) —
+      é isto que une a trilha do ArchGuard à do componente numa linha do tempo (cenário "Linha do
+      tempo unificada"). Vazio em sessão comum. Testes: pcid único/opaco, token o carrega, mesmo
+      valor no contexto de auditoria. Gate verde.)*
 - [ ] **T-004** Implementar `act` para delegação e `grant_ref` para concessões.
 - [ ] **T-005** Tornar PKCE obrigatório; remover fluxos implicit e ROPC.
 - [ ] **T-006** Implementar audiência específica por cliente e escopo mínimo.

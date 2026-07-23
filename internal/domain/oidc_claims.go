@@ -15,8 +15,11 @@
 package domain
 
 import (
+	"crypto/rand"
+	"encoding/base32"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -126,6 +129,29 @@ type OIDCClaimsInput struct {
 	AccessTTL time.Duration
 	Groups    []string
 	Roles     []string
+	// PCID is the privileged-session correlation id (T-003), set when the token
+	// opens or belongs to a privileged session. The SAME value is stamped on the
+	// ArchGuard audit events (AuditContext.PrivilegedCorrelationID) and propagated
+	// to the component, so the two trails can be joined. Empty for an ordinary
+	// (non-privileged) session.
+	PCID string
+}
+
+// pcidBytes is the length of a privileged-correlation id's random material
+// (128 bits) — enough to be globally unique and unguessable.
+const pcidBytes = 16
+
+// NewPCID mints an opaque privileged-session correlation id (T-003). It is
+// random, non-personal and stable for the life of the privileged session; the
+// token carries it in `pcid` and every audit event of that session carries the
+// same value, so the ArchGuard trail and the component trail can be correlated
+// into one timeline.
+func NewPCID() (string, error) {
+	buf := make([]byte, pcidBytes)
+	if _, err := rand.Read(buf); err != nil {
+		return "", fmt.Errorf("oidc: geração de pcid falhou: %w", err)
+	}
+	return "pcid_" + strings.ToLower(base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(buf)), nil
 }
 
 // BuildOIDCClaims assembles the v1 claim set from an authenticated session
@@ -169,6 +195,7 @@ func BuildOIDCClaims(in OIDCClaimsInput) (OIDCClaims, error) {
 		SessionID:     in.Session.ID.String(),
 		Groups:        in.Groups,
 		Roles:         in.Roles,
+		PCID:          in.PCID,
 		ClaimsVersion: OIDCClaimsVersion,
 	}
 	if err := claims.WellFormed(); err != nil {
