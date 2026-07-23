@@ -192,7 +192,17 @@
       guarda Barreira 1). Testes de domínio (progressão, teto, sucesso zera) e integração PG
       (persiste falhas→bloqueio→sucesso zera; guarda cross-identity). Evento de auditoria do
       bloqueio = T-016. Gate verde.)*
-- [ ] **T-015** Implementar detecção de credential stuffing com alerta.
+- [x] **T-015** Implementar detecção de credential stuffing com alerta. *(`domain.StuffingDetector`:
+      rastreia, por ORIGEM, as identidades DISTINTAS que uma falha de login atingiu numa janela
+      deslizante (5min); quando uma origem cruza o limiar (10 identidades distintas) levanta o
+      alerta — o padrão distribuído, diferente do brute force de UMA conta (que é o throttle T-014).
+      A origem é uma chave OPACA fornecida pelo chamador (hash do endereço, nunca IP cru aqui —
+      contexto de acesso é do evento de auditoria, RFC-0003; INV-7). `Observe` poda entradas fora da
+      janela, conta distintas, dispara UMA vez por origem por janela (sem spam), e volta a poder
+      alertar quando a janela drena. Seguro para uso concorrente (mutex); detector in-process = seam
+      da versão durável/cross-replica (observabilidade, pacote 010). Testes (alerta no limiar e uma
+      só vez; só distintas contam; origens independentes; poda da janela) passam com `-race`. Gate
+      verde.)*
 - [ ] **T-016** Auditar todos os eventos de MFA (incluindo remoção de fator).
 - [ ] **T-017** Classificar todas as operações existentes; falhar o build se houver
       operação sem classificação.
