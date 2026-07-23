@@ -123,7 +123,14 @@
       `ErrUnknownClient`). `Register` recusa id/audiência vazios, sem fluxo, duplicata. Testes: os 5
       registrados com audiência própria, perfis por componente, validação de fluxo. Gate verde. A
       persistência/console dos clientes = wiring (T-013 modela o contrato).)*
-- [ ] **T-014** Mapear claims → políticas do OpenBao a partir da mesma fonte de papéis.
+- [x] **T-014** Mapear claims → políticas do OpenBao a partir da mesma fonte de papéis. *(`OpenBaoPolicyForRole`
+      mapeia UM papel → nome de política do cofre DETERMINISTICAMENTE (função pura do papel, prefixo
+      `archguard-`, normalizado) — a política do cofre é gerada da MESMA fonte de papéis que o claim
+      `roles`, então não divergem (mitigação do risco RFC-0006 §9). `OpenBaoPoliciesForRoles` dedup +
+      ordenado, ignora vazio. `NewOpenBaoJWTConfig` deriva a config do auth method JWT do OpenBao do
+      contrato (user_claim=sub opaco, groups_claim=roles, bound_audiences=[openbao], bound_issuer,
+      JWKS) — gerada, não mantida à mão. Testes: mapa determinístico/dedup/ordenado, config derivada,
+      recusa sem issuer. Gate verde.)*
 - [ ] **T-015** Adaptação de borda para limitações do Guacamole (documentada).
 - [ ] **T-016** Implementar suíte de conformidade por componente.
 - [ ] **T-017** Integrar a suíte como gate de release no CI.
