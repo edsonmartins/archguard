@@ -85,7 +85,16 @@
       membership usa RevokeByMembership + esta perna de refresh). Testes: logout token com/sem evento,
       propagação (envia a todos), fail-closed local, envios falhos reportados; integração PG (sessão
       e refresh revogados juntos). Gate verde.)*
-- [ ] **T-010** Implementar introspecção com TTL curto para componentes sem logout.
+- [x] **T-010** Implementar introspecção com TTL curto para componentes sem logout. *(`domain.IntrospectionResponse`
+      (RFC 7662): token INATIVO devolve SÓ `active:false` (nenhum claim vaza de token revogado/expirado/
+      desconhecido, §2.2); token ativo ecoa os claims não-pessoais do contrato. `BuildIntrospection(claims,
+      sessionLive, now)`: ativo só se a sessão está VIVA E o token não expirou — uma sessão revogada
+      introspecta como inativa ANTES do access token expirar, e é isso que leva a revogação a um
+      componente sem back-channel logout (RFC-0006 §6). Porto `SessionLiveness` fail-closed (não sabe
+      = não vivo). `RecommendedIntrospectionTTL=30s` documenta a compensação (cache curto propaga a
+      revogação rápido) — o contrato central nunca é degradado. Testes: vivo→active com claims,
+      revogada→active:false sem claims, expirado→active:false. Gate verde. O endpoint /introspect que
+      chama isto = wiring dos controllers (T-013+).)*
 - [x] **T-011** Implementar rotação de JWKS com sobreposição e `kid`. *(`internal/adapters/oidc/signer.go`
       (golang-jwt/v5 + go-jose/v4, já na árvore — sem dep nova). `Signer` assina os `OIDCClaims` em
       JWT RS256 (compat. Guacamole/OpenBao/proxy Java) com o `kid` da chave corrente no cabeçalho;
