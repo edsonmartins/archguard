@@ -169,7 +169,19 @@
       Create/Get/scan + `ClearEnrollment` (limpa na sessão ativa após enrolar). Testes de domínio
       (RequiresEnrollment por combinação; bloqueio de op comum vs permissão de enrolamento; gate
       precede garantia) e integração PG (persiste no login, limpa por ClearEnrollment). Gate verde.)*
-- [ ] **T-013** Implementar processo de recuperação com aprovação de pares.
+- [x] **T-013** Implementar processo de recuperação com aprovação de pares. *(Máquina de estados
+      de domínio `RecoveryRequest` (pending→approved→consumed | pending→rejected): justificativa
+      OBRIGATÓRIA; limiar de aprovações de PARES distintos (default 2). Separação de deveres: o
+      aprovador não pode ser o alvo (`ErrApproverIsTarget`) nem o solicitante (`ErrApproverIsRequester`),
+      e não aprova duas vezes (`ErrDuplicateApproval`). `MarkConsumed` (o reset realizado) só é
+      válido a partir de approved — nenhum caminho reseta um fator sem passar pela aprovação
+      (cenário "reset silencioso"). Persistência (migração 0025): `recovery_request` +
+      `recovery_approval` (PK composta = aprovadores distintos no banco), RLS FORCE por org. Store
+      tenant-scoped `RecoveryRequestStore` (Create/Get com aprovações/SaveDecision upsert; guarda
+      Barreira 1). Testes de domínio (limiar, separação de deveres, consumo exige aprovação,
+      rejeição terminal) e integração PG (ciclo completo: alvo abre, dois pares distintos aprovam em
+      transações separadas recarregando o estado, aprovada→consumida). Auditoria/notificação do
+      processo = T-016. Gate verde.)*
 - [ ] **T-014** Implementar limitação de taxa e bloqueio progressivo.
 - [ ] **T-015** Implementar detecção de credential stuffing com alerta.
 - [ ] **T-016** Auditar todos os eventos de MFA (incluindo remoção de fator).
