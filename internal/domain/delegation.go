@@ -230,6 +230,37 @@ func (d Delegation) TokenClaims(now time.Time) (DelegationTokenClaims, error) {
 	}, nil
 }
 
+// StartedNotification builds the notification sent to the TARGET when the
+// delegation session starts (spec "notifica o usuário-alvo do início da sessão").
+// The recipient is the target's opaque subject; the detail names the real actor
+// (also opaque) — no personal data.
+func (d Delegation) StartedNotification() Notification {
+	return Notification{
+		OrganizationID: d.OrganizationID.String(),
+		Recipient:      d.TargetSubject,
+		Kind:           NotifyDelegationStarted,
+		Detail:         "sessão de delegação iniciada por " + d.RealActorSubject,
+	}
+}
+
+// RevokedNotification builds the notification sent to the target when a
+// delegation is revoked.
+func (d Delegation) RevokedNotification() Notification {
+	return Notification{
+		OrganizationID: d.OrganizationID.String(),
+		Recipient:      d.TargetSubject,
+		Kind:           NotifyDelegationRevoked,
+		Detail:         "sessão de delegação encerrada",
+	}
+}
+
+// SessionBanner is the permanent banner text a delegation session must display
+// (ADR-0008 §2: "banner permanente na sessão"), so the operator is never unaware
+// they are impersonating. It names both parties by their opaque subjects.
+func (d Delegation) SessionBanner() string {
+	return "DELEGAÇÃO ATIVA — operando como " + d.TargetSubject + " (ator real: " + d.RealActorSubject + ")"
+}
+
 // AuditActor builds the actor for an audit event performed under this delegation:
 // the apparent subject is the impersonated identity, and Act names the REAL
 // actor — so every delegated action records BOTH and the trail can reconstruct

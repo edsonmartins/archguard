@@ -16,6 +16,7 @@ package domain
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -139,5 +140,24 @@ func TestDelegationDenyConsent(t *testing.T) {
 	}
 	if _, err := d.TokenClaims(nb.Add(time.Minute)); !errors.Is(err, ErrDelegationNotActive) {
 		t.Fatalf("delegação recusada não deveria emitir token")
+	}
+}
+
+// A notificação de início vai ao alvo, nomeando o ator real, sem dado pessoal;
+// e o banner permanente nomeia ambos (cenário "Delegação padrão", T-005).
+func TestDelegationNotificationAndBanner(t *testing.T) {
+	nb := time.Date(2026, 7, 23, 10, 0, 0, 0, time.UTC)
+	d := newTestDelegation(t, nb, nb.Add(15*time.Minute))
+
+	n := d.StartedNotification()
+	if n.Recipient != "sub-target" || n.Kind != NotifyDelegationStarted {
+		t.Fatalf("notificação de início inesperada: %+v", n)
+	}
+	if !strings.Contains(n.Detail, "sub-admin") {
+		t.Fatalf("a notificação deveria nomear o ator real: %q", n.Detail)
+	}
+	banner := d.SessionBanner()
+	if !strings.Contains(banner, "sub-target") || !strings.Contains(banner, "sub-admin") {
+		t.Fatalf("o banner deveria nomear ambos: %q", banner)
 	}
 }

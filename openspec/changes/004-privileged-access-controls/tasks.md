@@ -43,7 +43,16 @@
       token é emitido. O chamador verifica que quem consente É a identidade-alvo. Notificação do
       início é o T-005. Testes: consentimento habilita o token; recusa vai para denied e nunca emite;
       consentir uma delegação já ativa é transição inválida. Gate verde.)*
-- [ ] **T-005** Implementar notificação ao alvo e banner de sessão delegada.
+- [x] **T-005** Implementar notificação ao alvo e banner de sessão delegada. *(Porto `Notifier`
+      novo (`internal/domain/notification.go`), DISTINTO do `Alerter` best-effort do 003: sua
+      disponibilidade é PRÉ-CONDIÇÃO de fluxos privilegiados — `Available(ctx, org)` é o gate
+      fail-closed que o break-glass checa (T-013). `Notification{OrganizationID, Recipient (subject
+      opaco), Kind, Detail}` sem dado pessoal. `Delegation.StartedNotification()` notifica o ALVO do
+      início nomeando o ator real (cenário "Delegação padrão"); `RevokedNotification()` para a
+      revogação; `SessionBanner()` = o banner permanente (ADR-0008: operador nunca esquece que
+      impersona) nomeando ambos; o claim `Delegated:true` (T-002) marca o token para o console
+      renderizar. Testes: notificação/banner nomeiam ambos, sem PII. A entrega em si é wireada na
+      orquestração da delegação (com persistência); porto e conteúdo prontos. Gate verde.)*
 - [ ] **T-006** Implementar revogação de delegação pelo alvo e pelo administrador.
 - [ ] **T-007** Implementar máquina de estados de break-glass.
 - [ ] **T-008** Exigir justificativa vinculada a incidente na solicitação.
