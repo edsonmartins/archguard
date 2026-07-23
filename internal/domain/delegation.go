@@ -79,6 +79,47 @@ var (
 	ErrDelegationNotActive = errors.New("delegation: apenas delegação ativa e vigente emite token")
 )
 
+// ErrDelegationScopeExceeded is the denial returned when a delegation session
+// attempts an operation outside its reduced scope — an administrative mutation,
+// secret/vault access, an approval or another privileged action (ADR-0008 §2).
+// It is a DENIAL the caller audits as an escalation attempt (spec "o evento é
+// auditado como tentativa de escalada").
+var ErrDelegationScopeExceeded = errors.New("delegation: operação fora do escopo reduzido da delegação")
+
+// DelegationScopeGuard enforces the reduced scope of delegation sessions against
+// the operation catalog. A delegation may perform only operations NOT marked
+// ForbiddenUnderDelegation; everything administrative/privileged/approving is
+// denied. It reads the same catalog the assurance guard uses, so scope and
+// classification never drift.
+type DelegationScopeGuard struct {
+	catalog *OperationCatalog
+}
+
+// NewDelegationScopeGuard builds the guard over a populated catalog.
+func NewDelegationScopeGuard(catalog *OperationCatalog) *DelegationScopeGuard {
+	return &DelegationScopeGuard{catalog: catalog}
+}
+
+// Authorize checks whether a session may invoke operationID given whether it is a
+// DELEGATION session. For an ordinary session (delegated=false) it is a no-op
+// (nil) — this guard only constrains delegations. For a delegated session it is
+// fail-closed: an unclassified operation is refused (ErrOperationNotClassified),
+// and an operation marked ForbiddenUnderDelegation is refused
+// (ErrDelegationScopeExceeded, the escalation the caller audits).
+func (g *DelegationScopeGuard) Authorize(operationID string, delegated bool) error {
+	if !delegated {
+		return nil
+	}
+	op, ok := g.catalog.Lookup(operationID)
+	if !ok {
+		return fmt.Errorf("%w: %q", ErrOperationNotClassified, operationID)
+	}
+	if op.ForbiddenUnderDelegation {
+		return fmt.Errorf("%w: %q", ErrDelegationScopeExceeded, operationID)
+	}
+	return nil
+}
+
 // Delegation is a consented, time-limited impersonation of a target identity by
 // a real actor (ADR-0008 §2). Its safety properties are structural: the real
 // actor is always recorded (RealActorSubject → the act claim), the window is

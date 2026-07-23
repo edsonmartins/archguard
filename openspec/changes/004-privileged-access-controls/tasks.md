@@ -23,8 +23,18 @@
       não-repúdio reconstrói quem executou. O JWT assinado é o pacote 006; aqui é o conteúdo de
       domínio. Testes: nasce pendente, validações, claims carregam sub+act e recusam fora da janela,
       auditoria registra ambos. Gate verde.)*
-- [ ] **T-003** Implementar restrições de escopo da delegação (sem admin, sem segredos, sem
-      aprovação).
+- [x] **T-003** Implementar restrições de escopo da delegação (sem admin, sem segredos, sem
+      aprovação). *(Cada operação do catálogo canônico ganha `ForbiddenUnderDelegation` — EXPLÍCITO
+      e auditável: permitidas sob delegação são só as de suporte/leitura L1 (profile.read,
+      session.list, logout, tenant.select, membership.accept); TODO o resto (mutações
+      administrativas, segredos/cofre, aprovações de break-glass e de recuperação, ações
+      privilegiadas, e até factor.enroll) é proibido. `DelegationScopeGuard.Authorize(opID, delegated)`:
+      no-op para sessão comum; para sessão de delegação é fail-closed — não classificada →
+      `ErrOperationNotClassified`, proibida → `ErrDelegationScopeExceeded` (a escalada que o
+      chamador audita). Lê o MESMO catálogo do guard de garantia, então escopo e classificação nunca
+      divergem. Cobre "Tentativa de escalada" e "Tentativa de aprovação". Testes: suporte permitido,
+      admin/segredo/aprovação negados, no-op fora de delegação, fail-closed não classificada. INV-8
+      segue verde. Gate verde.)*
 - [ ] **T-004** Implementar fluxo de consentimento do usuário-alvo.
 - [ ] **T-005** Implementar notificação ao alvo e banner de sessão delegada.
 - [ ] **T-006** Implementar revogação de delegação pelo alvo e pelo administrador.

@@ -28,35 +28,40 @@ package domain
 // classifiedOperations is the explicit list of assurance-gated API operations.
 // The order is documentation only; the catalog is keyed by id.
 var classifiedOperations = []Operation{
-	// Read / low-assurance (a valid session suffices).
+	// Read / low-assurance support operations (a valid session suffices) — these
+	// are the ONLY operations a delegation session may perform (ForbiddenUnderDelegation
+	// left false): a support operator impersonating a user reads and helps, never
+	// administers.
 	{ID: "profile.read", Level: L1, Description: "ler o próprio perfil"},
 	{ID: "session.list", Level: L1, Description: "listar as próprias sessões"},
 	{ID: string(ActionAuthLogout), Level: L1, Description: "encerrar a sessão"},
 	{ID: string(ActionTenantSelect), Level: L1, Description: "selecionar o tenant ativo"},
 	{ID: string(ActionMembershipAccept), Level: L1, Description: "aceitar convite de organização"},
 
-	// Factor enrollment — permitted while a session is in mandatory enrollment.
-	{ID: string(ActionFactorEnroll), Level: L2, Description: "registrar um fator", AllowedDuringEnrollment: true},
+	// Factor enrollment — permitted while a session is in mandatory enrollment,
+	// but NEVER under delegation (a delegate must not enroll a factor as the target).
+	{ID: string(ActionFactorEnroll), Level: L2, Description: "registrar um fator", AllowedDuringEnrollment: true, ForbiddenUnderDelegation: true},
 
-	// Mutations / tenant administration (strong factor within a freshness window).
-	{ID: string(ActionTenantSwitch), Level: L2, Description: "trocar de tenant"},
-	{ID: string(ActionMembershipInvite), Level: L2, Description: "convidar para a organização"},
-	{ID: string(ActionMembershipRevoke), Level: L2, Description: "revogar membership"},
-	{ID: string(ActionIdentitySuspend), Level: L2, Description: "suspender identidade"},
-	{ID: string(ActionAdminMutation), Level: L2, Description: "mutação administrativa"},
-	{ID: string(ActionRecoveryRequest), Level: L2, Description: "abrir recuperação de fator"},
+	// Mutations / tenant administration — forbidden under delegation (no admin).
+	{ID: string(ActionTenantSwitch), Level: L2, Description: "trocar de tenant", ForbiddenUnderDelegation: true},
+	{ID: string(ActionMembershipInvite), Level: L2, Description: "convidar para a organização", ForbiddenUnderDelegation: true},
+	{ID: string(ActionMembershipRevoke), Level: L2, Description: "revogar membership", ForbiddenUnderDelegation: true},
+	{ID: string(ActionIdentitySuspend), Level: L2, Description: "suspender identidade", ForbiddenUnderDelegation: true},
+	{ID: string(ActionAdminMutation), Level: L2, Description: "mutação administrativa", ForbiddenUnderDelegation: true},
+	{ID: string(ActionRecoveryRequest), Level: L2, Description: "abrir recuperação de fator", ForbiddenUnderDelegation: true},
 
-	// Privileged (immediate phishing-resistant re-authentication).
-	{ID: string(ActionIdentityDeprovision), Level: L3, Description: "desprovisionar identidade"},
-	{ID: string(ActionPrivilegedSessionOpen), Level: L3, Description: "abrir sessão privilegiada"},
-	{ID: string(ActionBreakglassRequest), Level: L3, Description: "solicitar break-glass"},
-	{ID: string(ActionBreakglassApprove), Level: L3, Description: "aprovar break-glass"},
-	{ID: string(ActionKeyRotate), Level: L3, Description: "rotacionar chave"},
-	{ID: string(ActionAuditExport), Level: L3, Description: "exportar a trilha de auditoria"},
-	{ID: string(ActionAuditVerify), Level: L3, Description: "verificar a trilha de auditoria"},
-	{ID: string(ActionFactorRemove), Level: L3, Description: "remover um fator forte"},
-	{ID: string(ActionRecoveryApprove), Level: L3, Description: "aprovar recuperação de fator"},
-	{ID: string(ActionRecoveryReset), Level: L3, Description: "resetar fator via recuperação"},
+	// Privileged (immediate phishing-resistant re-authentication) — all forbidden
+	// under delegation (no secrets, no approvals, no privileged escalation).
+	{ID: string(ActionIdentityDeprovision), Level: L3, Description: "desprovisionar identidade", ForbiddenUnderDelegation: true},
+	{ID: string(ActionPrivilegedSessionOpen), Level: L3, Description: "abrir sessão privilegiada", ForbiddenUnderDelegation: true},
+	{ID: string(ActionBreakglassRequest), Level: L3, Description: "solicitar break-glass", ForbiddenUnderDelegation: true},
+	{ID: string(ActionBreakglassApprove), Level: L3, Description: "aprovar break-glass", ForbiddenUnderDelegation: true},
+	{ID: string(ActionKeyRotate), Level: L3, Description: "rotacionar chave", ForbiddenUnderDelegation: true},
+	{ID: string(ActionAuditExport), Level: L3, Description: "exportar a trilha de auditoria", ForbiddenUnderDelegation: true},
+	{ID: string(ActionAuditVerify), Level: L3, Description: "verificar a trilha de auditoria", ForbiddenUnderDelegation: true},
+	{ID: string(ActionFactorRemove), Level: L3, Description: "remover um fator forte", ForbiddenUnderDelegation: true},
+	{ID: string(ActionRecoveryApprove), Level: L3, Description: "aprovar recuperação de fator", ForbiddenUnderDelegation: true},
+	{ID: string(ActionRecoveryReset), Level: L3, Description: "resetar fator via recuperação", ForbiddenUnderDelegation: true},
 }
 
 // operationExemptActions are catalogued audit verbs that are NOT assurance-gated
