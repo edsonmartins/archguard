@@ -53,7 +53,12 @@
       impersona) nomeando ambos; o claim `Delegated:true` (T-002) marca o token para o console
       renderizar. Testes: notificação/banner nomeiam ambos, sem PII. A entrega em si é wireada na
       orquestração da delegação (com persistência); porto e conteúdo prontos. Gate verde.)*
-- [ ] **T-006** Implementar revogação de delegação pelo alvo e pelo administrador.
+- [x] **T-006** Implementar revogação de delegação pelo alvo e pelo administrador. *(`Delegation.Revoke()`
+      move uma delegação viva (active ou pending_consent) para revoked, idempotente; disponível a
+      AMBOS (a autorização de qual principal pode revogar — alvo ou admin — é do handler; a transição
+      é a mesma). Como `TokenClaims` exige ativa, a revogação encerra a sessão delegada IMEDIATAMENTE:
+      nenhum token é emitido depois (cenário "Revogação pelo alvo"). Não reativa terminais. Teste:
+      revogar interrompe a emissão de token na hora; idempotente. Gate verde.)*
 - [ ] **T-007** Implementar máquina de estados de break-glass.
 - [ ] **T-008** Exigir justificativa vinculada a incidente na solicitação.
 - [ ] **T-009** Integrar step-up WebAuthn obrigatório (pacote 005) e recusar TOTP.

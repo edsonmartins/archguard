@@ -161,3 +161,32 @@ func TestDelegationNotificationAndBanner(t *testing.T) {
 		t.Fatalf("o banner deveria nomear ambos: %q", banner)
 	}
 }
+
+// Revogação encerra a sessão delegada imediatamente: um token deixa de ser
+// emitido (cenário "Revogação pelo alvo").
+func TestDelegationRevokeEndsSessionImmediately(t *testing.T) {
+	nb := time.Date(2026, 7, 23, 10, 0, 0, 0, time.UTC)
+	d := newTestDelegation(t, nb, nb.Add(time.Hour))
+	if err := d.Consent(); err != nil {
+		t.Fatalf("Consent: %v", err)
+	}
+	// Ativa e vigente: emite token.
+	if _, err := d.TokenClaims(nb.Add(time.Minute)); err != nil {
+		t.Fatalf("pré-condição: deveria emitir token: %v", err)
+	}
+
+	d.Revoke()
+	if d.Status != DelegationRevoked {
+		t.Fatalf("status = %s, quero revoked", d.Status)
+	}
+	// Imediatamente após revogar, nenhum token é emitido (sessão encerrada).
+	if _, err := d.TokenClaims(nb.Add(2 * time.Minute)); !errors.Is(err, ErrDelegationNotActive) {
+		t.Fatalf("delegação revogada não deveria emitir token: %v", err)
+	}
+
+	// Idempotente e não reativa uma delegação revogada.
+	d.Revoke()
+	if d.Status != DelegationRevoked {
+		t.Fatalf("revoke deveria ser idempotente")
+	}
+}

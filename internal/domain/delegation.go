@@ -206,6 +206,20 @@ func (d *Delegation) DenyConsent() error {
 	return nil
 }
 
+// Revoke ends a live delegation immediately, moving it to revoked. It is
+// available to BOTH the target and an administrator (the caller authorizes which
+// principal may revoke; the transition itself is the same). It only affects a
+// still-live delegation (active or pending_consent) — an already-terminal one
+// (revoked/denied/expired) is left as is. It is idempotent. Because TokenClaims
+// requires an active delegation, a revoked one emits no further token: the
+// delegated session ends at once (spec "a sessão delegada é encerrada
+// imediatamente").
+func (d *Delegation) Revoke() {
+	if d.Status == DelegationActive || d.Status == DelegationPendingConsent {
+		d.Status = DelegationRevoked
+	}
+}
+
 // Active reports whether the delegation currently confers impersonation at now:
 // status active AND within the window. Fail-closed on any other status or a now
 // outside the window.
