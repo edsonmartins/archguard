@@ -107,6 +107,12 @@ type SessionRevoker interface {
 	RevokeSession(ctx context.Context, sessionID uuid.UUID) error
 }
 
+// ErrLocalRevocationFailed wraps a failure to revoke the session/tokens locally
+// during logout — the ONLY logout failure that is fatal (a failed component
+// notification is compensated by introspection). Callers gate on it with
+// errors.Is to decide whether the logout truly failed.
+var ErrLocalRevocationFailed = errors.New("logout: revogação local falhou")
+
 // LogoutSigner mints the signed back-channel logout token — the oidc.Signer
 // implements it.
 type LogoutSigner interface {
@@ -148,7 +154,7 @@ func (p *LogoutPropagator) Logout(ctx context.Context, sessionID uuid.UUID, sid 
 	// Fail-closed local revocation first: if we cannot end the derived sessions,
 	// we do not send logout tokens that would falsely imply completion.
 	if err := p.revoker.RevokeSession(ctx, sessionID); err != nil {
-		return fmt.Errorf("logout: revogação local falhou: %w", err)
+		return fmt.Errorf("%w: %v", ErrLocalRevocationFailed, err)
 	}
 	var sendErrs []error
 	for _, c := range clients {
@@ -167,4 +173,41 @@ func (p *LogoutPropagator) Logout(ctx context.Context, sessionID uuid.UUID, sid 
 		}
 	}
 	return errors.Join(sendErrs...)
+}
+
+// EndSessionService is the RP-initiated logout composition (the /logout endpoint
+// depends on it): it propagates back-channel logout to the registered components
+// that support it and revokes the session locally. It returns an error ONLY when
+// the LOCAL revocation failed (ErrLocalRevocationFailed) — a failed component
+// notification is not fatal to the user's logout (introspection compensates), so
+// it is swallowed here (the propagator still records it).
+type EndSessionService struct {
+	propagator *LogoutPropagator
+	registry   *ClientRegistry
+	now        func() time.Time
+}
+
+// NewEndSessionService builds the service. now supplies the logout token's iat.
+func NewEndSessionService(propagator *LogoutPropagator, registry *ClientRegistry, now func() time.Time) *EndSessionService {
+	if now == nil {
+		now = time.Now
+	}
+	return &EndSessionService{propagator: propagator, registry: registry, now: now}
+}
+
+// EndSession revokes the session and sends back-channel logout to every
+// registered component that supports it.
+func (s *EndSessionService) EndSession(ctx context.Context, sessionID uuid.UUID, sid string) error {
+	var clients []LogoutClient
+	for _, id := range s.registry.IDs() {
+		c, err := s.registry.Lookup(id)
+		if err == nil && c.SupportsBackchannelLogout() {
+			clients = append(clients, LogoutClient{Audience: c.Audience, Endpoint: c.BackchannelLogoutURI})
+		}
+	}
+	err := s.propagator.Logout(ctx, sessionID, sid, clients, s.now())
+	if errors.Is(err, ErrLocalRevocationFailed) {
+		return err // the only fatal case
+	}
+	return nil // failed component sends are non-fatal to the user's logout
 }

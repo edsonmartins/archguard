@@ -133,3 +133,24 @@ func TestLogoutReportsFailedSends(t *testing.T) {
 		t.Fatalf("a revogação local deveria ter acontecido apesar do envio falho")
 	}
 }
+
+// EndSessionService: envio falho a componente é NÃO-fatal (logout do usuário
+// vale); falha na revogação local É fatal.
+func TestEndSessionService(t *testing.T) {
+	reg, _ := DefaultClientRegistry()
+
+	// Envio falho a um componente com logout: não-fatal.
+	notif := &fakeLogoutNotifier{failFor: "https://warpgate.archgate.internal/@warpgate/oidc/logout"}
+	prop := NewLogoutPropagator("iss", fakeLogoutSigner{}, notif, &fakeRevoker{})
+	svc := NewEndSessionService(prop, reg, nil)
+	if err := svc.EndSession(context.Background(), uuid.New(), "sid-1"); err != nil {
+		t.Fatalf("envio falho não deveria falhar o logout do usuário: %v", err)
+	}
+
+	// Revogação local falha: fatal.
+	prop2 := NewLogoutPropagator("iss", fakeLogoutSigner{}, &fakeLogoutNotifier{}, &fakeRevoker{failErr: errors.New("db")})
+	svc2 := NewEndSessionService(prop2, reg, nil)
+	if err := svc2.EndSession(context.Background(), uuid.New(), "sid-1"); !errors.Is(err, ErrLocalRevocationFailed) {
+		t.Fatalf("falha de revogação local deveria ser fatal: %v", err)
+	}
+}
