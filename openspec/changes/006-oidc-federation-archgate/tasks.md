@@ -1,6 +1,16 @@
 # Tasks — 006 · Federação OIDC
 
-- [ ] **T-001** Especificar e versionar o contrato de claims v1 (OpenAPI + documentação).
+- [x] **T-001** Especificar e versionar o contrato de claims v1 (OpenAPI + documentação). *(Contrato
+      versionado como TIPO de domínio verificável + doc. `internal/domain/oidc_claims.go`:
+      `OIDCClaims` (RFC-0006 §3, agnóstico de fornecedor — nada do fork vaza), tags JSON exatas do
+      contrato, `OIDCClaimsVersion="v1"` no claim `archguard_claims_version` (mudança de semântica de
+      claim v1 exige NOVA versão, nunca redefinição silenciosa). `WellFormed()` é o gate estrutural
+      antes de assinar: obrigatórios presentes (iss/sub/aud/org/mid/acr/amr/auth_time/sid/versão),
+      acr é nível válido, janela iat/exp coerente. E-mail/act/pcid/grant_ref/groups/roles opcionais
+      (omitempty) — e-mail NUNCA aparece sem escopo (I-3.2). Reusa `ActClaim` do pacote 004. Doc:
+      `docs/oidc/CLAIMS-v1.md` (tabela de claims + regras invariantes + ciclo de vida; RFC-0006
+      governa). Testes: WellFormed aceita/rejeita por claim, contrato JSON usa os nomes certos e não
+      vaza opcionais/e-mail. Gate verde.)*
 - [ ] **T-002** Implementar emissão dos claims `org`, `mid`, `acr`, `amr`, `sid`.
 - [ ] **T-003** Implementar `pcid` (correlação de sessão privilegiada) e sua propagação.
 - [ ] **T-004** Implementar `act` para delegação e `grant_ref` para concessões.
