@@ -51,7 +51,16 @@
       (cenário "Dado pessoal restrito" / I-3.2): sem o escopo, o claim `email` não é emitido mesmo
       com e-mail no input. Testes: audiência A≠B recusada, escopo mínimo, e-mail só sob escopo. Gate
       verde.)*
-- [ ] **T-007** Implementar rotação de refresh token com detecção de reuso.
+- [x] **T-007** Implementar rotação de refresh token com detecção de reuso. *(`internal/domain/refresh_token.go`,
+      domínio puro. `NewRefreshSecret()` entrega o segredo UMA vez (prefixo rt_, 160 bits) e o hash
+      SHA-256 guardado (INV-7 — segredo nunca persistido; casa por hash). `RefreshToken` pertence a
+      uma FAMÍLIA (`FamilyID` = cadeia de rotações da sessão); status active→rotated|revoked. `Rotate`
+      (só de token ativo, `ErrRefreshNotActive`) marca o atual rotated e devolve o SUCESSOR ativo na
+      mesma família (cenário "Renovação normal"). `CheckReuse` = o sinal de reuso: apresentar um token
+      rotated/revoked é `ErrRefreshReuse` — o chamador revoga a família inteira (T-008). `Usable`/`Expired`
+      cobrem expiração. Testes: segredo/hash único, rotação (anterior invalidado, sucessor na família),
+      reuso detectado (rotated e revoked), expiração. Gate verde. A revogação de família + evento de
+      severidade alta é o T-008.)*
 - [ ] **T-008** Implementar revogação em cascata da família de tokens.
 - [ ] **T-009** Implementar back-channel logout OIDC.
 - [ ] **T-010** Implementar introspecção com TTL curto para componentes sem logout.
