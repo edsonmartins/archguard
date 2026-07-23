@@ -211,3 +211,57 @@ func TestPCIDGenerationAndPropagation(t *testing.T) {
 		t.Fatalf("o pcid do token e o da auditoria deveriam ser o MESMO valor")
 	}
 }
+
+// Delegação: o token carrega act (ator real, do pacote 004) e grant_ref quando
+// emitido sob concessão (T-004).
+func TestOIDCClaimsActAndGrantRef(t *testing.T) {
+	id, org := uuid.New(), uuid.New()
+	m, _ := NewMembership(id, org)
+	s, _ := NewAuthSession(id, AAL3, []Membership{m})
+	at := time.Date(2026, 7, 23, 10, 0, 0, 0, time.UTC)
+	_ = s.SetAuthContext(at, []FactorType{FactorWebAuthn})
+
+	// act vem de uma delegação (pacote 004).
+	nb := at
+	d, err := NewDelegation(org, uuid.New(), "sub-admin", uuid.New(), "sub-target", IdentityHuman, nb, nb.Add(time.Hour))
+	if err != nil {
+		t.Fatalf("NewDelegation: %v", err)
+	}
+	_ = d.Consent()
+	dclaims, err := d.TokenClaims(nb.Add(time.Minute))
+	if err != nil {
+		t.Fatalf("Delegation.TokenClaims: %v", err)
+	}
+
+	grantID := uuid.New()
+	claims, err := BuildOIDCClaims(OIDCClaimsInput{
+		Issuer: "iss", Audience: "warpgate", Subject: "sub-target", Session: &s,
+		IssuedAt: at, AccessTTL: 10 * time.Minute,
+		Act: &dclaims.Act, GrantRef: grantID.String(),
+	})
+	if err != nil {
+		t.Fatalf("BuildOIDCClaims: %v", err)
+	}
+	if claims.Act == nil || claims.Act.Sub != "sub-admin" {
+		t.Fatalf("act deveria nomear o ator real: %+v", claims.Act)
+	}
+	if claims.GrantRef != grantID.String() {
+		t.Fatalf("grant_ref = %q, quero %q", claims.GrantRef, grantID.String())
+	}
+}
+
+// Um act sem sub (delegação quebrada) não é montado.
+func TestOIDCClaimsRejectsActWithoutSub(t *testing.T) {
+	id, org := uuid.New(), uuid.New()
+	m, _ := NewMembership(id, org)
+	s, _ := NewAuthSession(id, AAL2, []Membership{m})
+	at := time.Date(2026, 7, 23, 10, 0, 0, 0, time.UTC)
+	_ = s.SetAuthContext(at, []FactorType{FactorPassword})
+
+	if _, err := BuildOIDCClaims(OIDCClaimsInput{
+		Issuer: "iss", Audience: "aud", Subject: "sub", Session: &s,
+		IssuedAt: at, AccessTTL: 10 * time.Minute, Act: &ActClaim{},
+	}); !errors.Is(err, ErrInvalidClaims) {
+		t.Fatalf("act sem sub deveria ser recusado: %v", err)
+	}
+}

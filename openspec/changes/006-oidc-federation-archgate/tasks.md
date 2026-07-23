@@ -27,7 +27,12 @@
       é isto que une a trilha do ArchGuard à do componente numa linha do tempo (cenário "Linha do
       tempo unificada"). Vazio em sessão comum. Testes: pcid único/opaco, token o carrega, mesmo
       valor no contexto de auditoria. Gate verde.)*
-- [ ] **T-004** Implementar `act` para delegação e `grant_ref` para concessões.
+- [x] **T-004** Implementar `act` para delegação e `grant_ref` para concessões. *(Campos `Act *ActClaim`
+      e `GrantRef` no `OIDCClaimsInput`; o builder os carrega nos claims `act`/`grant_ref`. `act` vem
+      de `Delegation.TokenClaims().Act` (pacote 004, ator real RFC 8693); `grant_ref` = id da
+      `PrivilegedGrant`. Validação: `act` presente DEVE ter `sub` (delegação quebrada — act sem sub —
+      nunca é montada). Testes: token de delegação carrega act (nomeia o ator real) + grant_ref;
+      act sem sub recusado. Gate verde.)*
 - [ ] **T-005** Tornar PKCE obrigatório; remover fluxos implicit e ROPC.
 - [ ] **T-006** Implementar audiência específica por cliente e escopo mínimo.
 - [ ] **T-007** Implementar rotação de refresh token com detecção de reuso.

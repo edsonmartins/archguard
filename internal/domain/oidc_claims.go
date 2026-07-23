@@ -135,6 +135,13 @@ type OIDCClaimsInput struct {
 	// to the component, so the two trails can be joined. Empty for an ordinary
 	// (non-privileged) session.
 	PCID string
+	// Act is the real actor of a DELEGATION token (T-004): present exactly when the
+	// token is issued under a delegation (pacote 004). Obtain it from
+	// Delegation.TokenClaims().Act. Nil for an ordinary session.
+	Act *ActClaim
+	// GrantRef references the temporary/break-glass grant a token is issued under
+	// (T-004) — the PrivilegedGrant id. Empty when no grant backs the token.
+	GrantRef string
 }
 
 // pcidBytes is the length of a privileged-correlation id's random material
@@ -175,6 +182,11 @@ func BuildOIDCClaims(in OIDCClaimsInput) (OIDCClaims, error) {
 	if in.AccessTTL < MinAccessTTL || in.AccessTTL > MaxAccessTTL {
 		return OIDCClaims{}, fmt.Errorf("%w: TTL de access fora de [%s,%s]", ErrInvalidClaims, MinAccessTTL, MaxAccessTTL)
 	}
+	// A delegation token's act must name the real actor — an act with no sub is a
+	// broken delegation claim and must never be minted.
+	if in.Act != nil && in.Act.Sub == "" {
+		return OIDCClaims{}, fmt.Errorf("%w: act sem sub", ErrInvalidClaims)
+	}
 	// A token exists only for a session with an active tenant — the same gate token
 	// issuance already passes (ActiveTenant denies pending/revoked).
 	membershipID, organizationID, err := in.Session.ActiveTenant()
@@ -196,6 +208,8 @@ func BuildOIDCClaims(in OIDCClaimsInput) (OIDCClaims, error) {
 		Groups:        in.Groups,
 		Roles:         in.Roles,
 		PCID:          in.PCID,
+		Act:           in.Act,
+		GrantRef:      in.GrantRef,
 		ClaimsVersion: OIDCClaimsVersion,
 	}
 	if err := claims.WellFormed(); err != nil {
