@@ -204,3 +204,26 @@ func TestBreakglassExpireAndRevoke(t *testing.T) {
 		t.Fatalf("status = %s, quero revoked", g2.Status)
 	}
 }
+
+// Break-glass exige justificativa E referência de incidente (cenário
+// "Solicitação completa" / requisito de justificativa).
+func TestNewBreakglassRequestRequiresJustificationAndIncident(t *testing.T) {
+	org, sub := uuid.New(), uuid.New()
+	nb := time.Date(2026, 7, 23, 10, 0, 0, 0, time.UTC)
+	exp := nb.Add(30 * time.Minute)
+
+	if _, err := NewBreakglassRequest(org, sub, validTarget(), 2, "", "INC-1", nb, exp); !errors.Is(err, ErrInvalidGrant) {
+		t.Fatalf("sem justificativa: err = %v, quero ErrInvalidGrant", err)
+	}
+	if _, err := NewBreakglassRequest(org, sub, validTarget(), 2, "incidente de produção", "", nb, exp); !errors.Is(err, ErrInvalidGrant) {
+		t.Fatalf("sem incidente: err = %v, quero ErrInvalidGrant", err)
+	}
+
+	g, err := NewBreakglassRequest(org, sub, validTarget(), 2, "banco de produção fora do ar", "INC-4231", nb, exp)
+	if err != nil {
+		t.Fatalf("NewBreakglassRequest: %v", err)
+	}
+	if g.Origin != GrantBreakglass || g.Justification == "" || g.IncidentRef == "" || g.Status != GrantRequested {
+		t.Fatalf("break-glass inesperado: %+v", g)
+	}
+}

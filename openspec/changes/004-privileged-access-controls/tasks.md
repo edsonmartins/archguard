@@ -69,7 +69,12 @@
       completa". Testes: caminho feliz (2 aprovações distintas ativam), duplicata não conta, expirar
       exige janela vencida, revogar exige ativo. (Auto-aprovação/distinção-do-solicitante = T-010;
       justificativa = T-008.) Gate verde.)*
-- [ ] **T-008** Exigir justificativa vinculada a incidente na solicitação.
+- [x] **T-008** Exigir justificativa vinculada a incidente na solicitação. *(`PrivilegedGrant`
+      ganha `Justification` + `IncidentRef` (vazios em grant normal; LGPD: justificativa é conteúdo
+      do tenant, não indexada por pessoa; incidente é referência opaca de chamado). `NewBreakglassRequest`
+      exige AMBOS não-vazios (`ErrInvalidGrant`) — acesso emergencial sem motivo declarado e sem
+      incidente a que se vincular é recusado. Nasce `requested` origem breakglass. Teste: recusa sem
+      justificativa/incidente; aceita com ambos. Gate verde.)*
 - [ ] **T-009** Integrar step-up WebAuthn obrigatório (pacote 005) e recusar TOTP.
 - [ ] **T-010** Implementar aprovação de N pares com validação de aprovadores distintos.
 - [ ] **T-011** Implementar alerta em tempo real na solicitação (SMTP/webhook).

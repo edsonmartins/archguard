@@ -125,6 +125,13 @@ type PrivilegedGrant struct {
 	// strictly within [NotBefore, ExpiresAt).
 	NotBefore time.Time
 	ExpiresAt time.Time
+	// Justification / IncidentRef are MANDATORY for a break-glass grant (T-008):
+	// the reason for the emergency access and the incident/ticket it is bound to.
+	// They are empty for a normal grant. Justification is operator-supplied text
+	// (may carry contextual personal data — treated as tenant content, not indexed
+	// by person); IncidentRef is an opaque ticket reference.
+	Justification string
+	IncidentRef   string
 }
 
 // NewPrivilegedGrant builds a grant in the requested state. It validates the
@@ -252,6 +259,29 @@ func (g *PrivilegedGrant) Revoke() error {
 	}
 	g.Status = GrantRevoked
 	return nil
+}
+
+// NewBreakglassRequest opens an emergency-access grant (origin breakglass). Over
+// NewPrivilegedGrant it additionally REQUIRES a justification and an incident
+// reference (T-008 / spec "justificativa vinculada a incidente"): an emergency
+// access with no stated reason and no incident to bind it to is refused. The
+// subject membership is the requesting operator (who receives the access); the
+// approval threshold, step-up factor and non-zero-in-production rules are checked
+// by the request flow (T-009/T-010).
+func NewBreakglassRequest(organizationID, subjectMembershipID uuid.UUID, target GrantTarget, requiredApprovals int, justification, incidentRef string, notBefore, expiresAt time.Time) (PrivilegedGrant, error) {
+	if justification == "" {
+		return PrivilegedGrant{}, fmt.Errorf("%w: justificativa obrigatória no break-glass", ErrInvalidGrant)
+	}
+	if incidentRef == "" {
+		return PrivilegedGrant{}, fmt.Errorf("%w: referência de incidente obrigatória no break-glass", ErrInvalidGrant)
+	}
+	g, err := NewPrivilegedGrant(organizationID, subjectMembershipID, target, GrantBreakglass, requiredApprovals, notBefore, expiresAt)
+	if err != nil {
+		return PrivilegedGrant{}, err
+	}
+	g.Justification = justification
+	g.IncidentRef = incidentRef
+	return g, nil
 }
 
 // Expired reports whether the grant's window has passed at now — independent of
