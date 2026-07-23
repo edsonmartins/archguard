@@ -17,6 +17,7 @@ package domain
 import (
 	"errors"
 	"fmt"
+	"time"
 )
 
 // OIDCClaimsVersion is the version of the federation claims contract (RFC-0006
@@ -103,4 +104,75 @@ func (c OIDCClaims) WellFormed() error {
 		return fmt.Errorf("%w: versão de contrato %q, esperada %q", ErrInvalidClaims, c.ClaimsVersion, OIDCClaimsVersion)
 	}
 	return nil
+}
+
+// Access-token TTL bounds (RFC-0006 §5): 5–15 minutes. Outside this range the
+// builder refuses, so no over-long access token is ever minted.
+const (
+	MinAccessTTL = 5 * time.Minute
+	MaxAccessTTL = 15 * time.Minute
+)
+
+// OIDCClaimsInput carries what a token needs beyond the session: the issuer, the
+// recipient audience, the identity's opaque subject, the active session, the
+// issue instant and access TTL, and the ACTIVE-TENANT groups/roles the caller
+// already resolved (scoped to the active organization — never another tenant's).
+type OIDCClaimsInput struct {
+	Issuer    string
+	Audience  string
+	Subject   string
+	Session   *AuthSession
+	IssuedAt  time.Time
+	AccessTTL time.Duration
+	Groups    []string
+	Roles     []string
+}
+
+// BuildOIDCClaims assembles the v1 claim set from an authenticated session
+// (T-002): org/mid come from the session's ACTIVE tenant, acr from its proven
+// assurance, amr from its methods, auth_time and sid from the session. It refuses
+// a session with no active tenant (a pending/revoked session yields no token, the
+// same rule token issuance already follows) and an access TTL outside the 5–15
+// min band. The result is validated with WellFormed before returning, so a
+// malformed claim set never leaves this function. Optional claims (act, pcid,
+// grant_ref, email) are added by the later builders (T-003/T-004/T-006).
+func BuildOIDCClaims(in OIDCClaimsInput) (OIDCClaims, error) {
+	if in.Issuer == "" || in.Audience == "" || in.Subject == "" {
+		return OIDCClaims{}, fmt.Errorf("%w: iss/aud/sub obrigatórios", ErrInvalidClaims)
+	}
+	if in.Session == nil {
+		return OIDCClaims{}, fmt.Errorf("%w: sessão ausente", ErrInvalidClaims)
+	}
+	if in.IssuedAt.IsZero() {
+		return OIDCClaims{}, fmt.Errorf("%w: iat ausente", ErrInvalidClaims)
+	}
+	if in.AccessTTL < MinAccessTTL || in.AccessTTL > MaxAccessTTL {
+		return OIDCClaims{}, fmt.Errorf("%w: TTL de access fora de [%s,%s]", ErrInvalidClaims, MinAccessTTL, MaxAccessTTL)
+	}
+	// A token exists only for a session with an active tenant — the same gate token
+	// issuance already passes (ActiveTenant denies pending/revoked).
+	membershipID, organizationID, err := in.Session.ActiveTenant()
+	if err != nil {
+		return OIDCClaims{}, fmt.Errorf("%w: %v", ErrInvalidClaims, err)
+	}
+	claims := OIDCClaims{
+		Issuer:        in.Issuer,
+		Subject:       in.Subject,
+		Audience:      in.Audience,
+		IssuedAt:      in.IssuedAt.Unix(),
+		ExpiresAt:     in.IssuedAt.Add(in.AccessTTL).Unix(),
+		Organization:  organizationID.String(),
+		MembershipID:  membershipID.String(),
+		ACR:           in.Session.ACR(),
+		AMR:           in.Session.AMR(),
+		AuthTime:      in.Session.AuthTime.Unix(),
+		SessionID:     in.Session.ID.String(),
+		Groups:        in.Groups,
+		Roles:         in.Roles,
+		ClaimsVersion: OIDCClaimsVersion,
+	}
+	if err := claims.WellFormed(); err != nil {
+		return OIDCClaims{}, err
+	}
+	return claims, nil
 }

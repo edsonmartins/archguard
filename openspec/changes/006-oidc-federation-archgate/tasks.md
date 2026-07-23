@@ -11,7 +11,15 @@
       `docs/oidc/CLAIMS-v1.md` (tabela de claims + regras invariantes + ciclo de vida; RFC-0006
       governa). Testes: WellFormed aceita/rejeita por claim, contrato JSON usa os nomes certos e não
       vaza opcionais/e-mail. Gate verde.)*
-- [ ] **T-002** Implementar emissão dos claims `org`, `mid`, `acr`, `amr`, `sid`.
+- [x] **T-002** Implementar emissão dos claims `org`, `mid`, `acr`, `amr`, `sid`. *(`BuildOIDCClaims(OIDCClaimsInput)`
+      monta o claim set v1 a partir da sessão autenticada: `org`/`mid` do TENANT ATIVO
+      (`Session.ActiveTenant()`), `acr` de `Session.ACR()` (L1/L2/L3 após a reconciliação), `amr` de
+      `Session.AMR()` (RFC 8176), `auth_time`/`sid` da sessão, `sub` opaco do input. Recusa sessão
+      sem tenant ativo (pending/revogada não emite token — mesmo gate da emissão) e TTL de access
+      fora de [5,15] min (RFC-0006 §5). Valida com `WellFormed` antes de retornar — claim set
+      malformado nunca sai. `act`/`pcid`/`grant_ref`/`email` ficam para T-003/004/006. Testes:
+      emissão padrão (org/mid/acr/amr/auth_time/sid do tenant ativo), recusa de sessão pendente e de
+      TTL longo. Gate verde.)*
 - [ ] **T-003** Implementar `pcid` (correlação de sessão privilegiada) e sua propagação.
 - [ ] **T-004** Implementar `act` para delegação e `grant_ref` para concessões.
 - [ ] **T-005** Tornar PKCE obrigatório; remover fluxos implicit e ROPC.

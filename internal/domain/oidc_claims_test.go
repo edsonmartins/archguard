@@ -18,6 +18,9 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 func validClaims() OIDCClaims {
@@ -93,5 +96,79 @@ func TestOIDCClaimsJSONContract(t *testing.T) {
 		if _, ok := m[optional]; ok {
 			t.Fatalf("claim opcional %q não deveria aparecer quando vazio", optional)
 		}
+	}
+}
+
+// Emissão padrão (cenário): o token montado a partir da sessão contém iss, sub,
+// org, mid, acr, amr, auth_time e sid — do TENANT ATIVO.
+func TestBuildOIDCClaimsFromSession(t *testing.T) {
+	id, org := uuid.New(), uuid.New()
+	m, err := NewMembership(id, org)
+	if err != nil {
+		t.Fatalf("NewMembership: %v", err)
+	}
+	s, err := NewAuthSession(id, AAL2, []Membership{m}) // 1 membership -> ativa
+	if err != nil {
+		t.Fatalf("NewAuthSession: %v", err)
+	}
+	at := time.Date(2026, 7, 23, 10, 0, 0, 0, time.UTC)
+	if err := s.SetAuthContext(at, []FactorType{FactorPassword, FactorTOTP}); err != nil {
+		t.Fatalf("SetAuthContext: %v", err)
+	}
+
+	claims, err := BuildOIDCClaims(OIDCClaimsInput{
+		Issuer:    "https://archguard.example",
+		Audience:  "warpgate",
+		Subject:   "sub-opaque",
+		Session:   &s,
+		IssuedAt:  at.Add(time.Minute),
+		AccessTTL: 10 * time.Minute,
+		Roles:     []string{"operator"},
+	})
+	if err != nil {
+		t.Fatalf("BuildOIDCClaims: %v", err)
+	}
+	if claims.Organization != org.String() || claims.MembershipID != m.ID.String() {
+		t.Fatalf("org/mid deveriam ser do tenant ativo: %+v", claims)
+	}
+	if claims.ACR != "L2" {
+		t.Fatalf("acr = %q, quero L2", claims.ACR)
+	}
+	if len(claims.AMR) != 3 || claims.AMR[0] != "pwd" {
+		t.Fatalf("amr = %v, quero [pwd otp mfa]", claims.AMR)
+	}
+	if claims.AuthTime != at.Unix() || claims.SessionID != s.ID.String() {
+		t.Fatalf("auth_time/sid inesperados: %+v", claims)
+	}
+	if claims.ExpiresAt != claims.IssuedAt+600 {
+		t.Fatalf("exp deveria ser iat + TTL")
+	}
+	if err := claims.WellFormed(); err != nil {
+		t.Fatalf("claims montados deveriam ser WellFormed: %v", err)
+	}
+}
+
+// Recusa: sessão pendente (sem tenant ativo) não emite claims; TTL fora da faixa
+// é recusado.
+func TestBuildOIDCClaimsRejects(t *testing.T) {
+	id, org := uuid.New(), uuid.New()
+	m1, _ := NewMembership(id, org)
+	m2, _ := NewMembership(id, uuid.New())
+	pending, err := NewAuthSession(id, AAL2, []Membership{m1, m2}) // 2 -> pending_selection
+	if err != nil {
+		t.Fatalf("NewAuthSession: %v", err)
+	}
+	at := time.Date(2026, 7, 23, 10, 0, 0, 0, time.UTC)
+	base := OIDCClaimsInput{Issuer: "iss", Audience: "aud", Subject: "sub", Session: &pending, IssuedAt: at, AccessTTL: 10 * time.Minute}
+	if _, err := BuildOIDCClaims(base); !errors.Is(err, ErrInvalidClaims) {
+		t.Fatalf("sessão pendente não deveria emitir claims: %v", err)
+	}
+
+	// TTL fora da faixa (RFC-0006 §5).
+	active, _ := NewAuthSession(id, AAL2, []Membership{m1})
+	_ = active.SetAuthContext(at, []FactorType{FactorPassword})
+	tooLong := OIDCClaimsInput{Issuer: "iss", Audience: "aud", Subject: "sub", Session: &active, IssuedAt: at, AccessTTL: time.Hour}
+	if _, err := BuildOIDCClaims(tooLong); !errors.Is(err, ErrInvalidClaims) {
+		t.Fatalf("TTL longo demais deveria ser recusado: %v", err)
 	}
 }
