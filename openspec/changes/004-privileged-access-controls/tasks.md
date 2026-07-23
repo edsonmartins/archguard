@@ -35,7 +35,14 @@
       divergem. Cobre "Tentativa de escalada" e "Tentativa de aprovação". Testes: suporte permitido,
       admin/segredo/aprovação negados, no-op fora de delegação, fail-closed não classificada. INV-8
       segue verde. Gate verde.)*
-- [ ] **T-004** Implementar fluxo de consentimento do usuário-alvo.
+- [x] **T-004** Implementar fluxo de consentimento do usuário-alvo. *(`Delegation.Consent()` move
+      pending_consent→active — o gate que a spec exige antes de iniciar a sessão ("requer
+      consentimento do usuário-alvo antes de iniciar a sessão"); `DenyConsent()` move para denied
+      (terminal, nunca inicia). Ambas válidas só a partir de pending_consent (`ErrDelegationTransition`).
+      Como `TokenClaims` já exige ATIVA, o consentimento é o gate estrutural: sem consentir, nenhum
+      token é emitido. O chamador verifica que quem consente É a identidade-alvo. Notificação do
+      início é o T-005. Testes: consentimento habilita o token; recusa vai para denied e nunca emite;
+      consentir uma delegação já ativa é transição inválida. Gate verde.)*
 - [ ] **T-005** Implementar notificação ao alvo e banner de sessão delegada.
 - [ ] **T-006** Implementar revogação de delegação pelo alvo e pelo administrador.
 - [ ] **T-007** Implementar máquina de estados de break-glass.

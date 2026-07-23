@@ -79,6 +79,11 @@ var (
 	ErrDelegationNotActive = errors.New("delegation: apenas delegação ativa e vigente emite token")
 )
 
+// ErrDelegationTransition is returned for a delegation state transition that is
+// not allowed from the current status (e.g. consenting a delegation that is not
+// pending consent).
+var ErrDelegationTransition = errors.New("delegation: transição de estado inválida")
+
 // ErrDelegationScopeExceeded is the denial returned when a delegation session
 // attempts an operation outside its reduced scope — an administrative mutation,
 // secret/vault access, an approval or another privileged action (ADR-0008 §2).
@@ -174,6 +179,31 @@ func NewDelegation(organizationID, realActorMembershipID uuid.UUID, realActorSub
 		NotBefore:             notBefore,
 		ExpiresAt:             expiresAt,
 	}, nil
+}
+
+// Consent records the TARGET's consent, moving the delegation from
+// pending_consent to active — the gate the spec demands before an impersonation
+// session may start ("requer consentimento do usuário-alvo antes de iniciar a
+// sessão"). It is valid only from pending_consent; the caller has already
+// verified that the consenting party IS the target identity. After it succeeds
+// the target is notified of the session start (T-005).
+func (d *Delegation) Consent() error {
+	if d.Status != DelegationPendingConsent {
+		return fmt.Errorf("%w: consentimento exige status pending_consent, está %s", ErrDelegationTransition, d.Status)
+	}
+	d.Status = DelegationActive
+	return nil
+}
+
+// DenyConsent records the target's refusal, moving the delegation to denied
+// (terminal). No impersonation session ever starts. Valid only from
+// pending_consent.
+func (d *Delegation) DenyConsent() error {
+	if d.Status != DelegationPendingConsent {
+		return fmt.Errorf("%w: recusa exige status pending_consent, está %s", ErrDelegationTransition, d.Status)
+	}
+	d.Status = DelegationDenied
+	return nil
 }
 
 // Active reports whether the delegation currently confers impersonation at now:

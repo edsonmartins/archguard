@@ -98,3 +98,46 @@ func TestDelegationAuditActorRecordsBoth(t *testing.T) {
 		t.Fatalf("o ator real deveria estar em Act, veio %+v", actor.Act)
 	}
 }
+
+// Consentimento é o gate: a delegação só ativa (e só emite token) após o alvo
+// consentir; sem consentimento nenhum token é emitido (cenário "Delegação
+// padrão").
+func TestDelegationConsentGate(t *testing.T) {
+	nb := time.Date(2026, 7, 23, 10, 0, 0, 0, time.UTC)
+	d := newTestDelegation(t, nb, nb.Add(15*time.Minute))
+
+	// Sem consentimento não emite token.
+	if _, err := d.TokenClaims(nb.Add(time.Minute)); !errors.Is(err, ErrDelegationNotActive) {
+		t.Fatalf("sem consentimento não deveria emitir token: %v", err)
+	}
+
+	if err := d.Consent(); err != nil {
+		t.Fatalf("Consent: %v", err)
+	}
+	if d.Status != DelegationActive {
+		t.Fatalf("após consentir deveria estar ativa, veio %s", d.Status)
+	}
+	if _, err := d.TokenClaims(nb.Add(time.Minute)); err != nil {
+		t.Fatalf("após consentir deveria emitir token: %v", err)
+	}
+
+	// Consentir de novo (já ativa) é transição inválida.
+	if err := d.Consent(); !errors.Is(err, ErrDelegationTransition) {
+		t.Fatalf("consentir ativa: err = %v, quero ErrDelegationTransition", err)
+	}
+}
+
+// Recusa do alvo: a delegação vai para denied e nunca inicia.
+func TestDelegationDenyConsent(t *testing.T) {
+	nb := time.Date(2026, 7, 23, 10, 0, 0, 0, time.UTC)
+	d := newTestDelegation(t, nb, nb.Add(15*time.Minute))
+	if err := d.DenyConsent(); err != nil {
+		t.Fatalf("DenyConsent: %v", err)
+	}
+	if d.Status != DelegationDenied {
+		t.Fatalf("status = %s, quero denied", d.Status)
+	}
+	if _, err := d.TokenClaims(nb.Add(time.Minute)); !errors.Is(err, ErrDelegationNotActive) {
+		t.Fatalf("delegação recusada não deveria emitir token")
+	}
+}
