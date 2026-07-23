@@ -94,6 +94,32 @@ func (s *Signer) Sign(claims domain.OIDCClaims) (string, error) {
 	return signed, nil
 }
 
+// SignLogoutToken mints a signed back-channel logout token (RS256, current kid).
+// It refuses a malformed token (WellFormed), so a logout token without the
+// back-channel event is never signed.
+func (s *Signer) SignLogoutToken(claims domain.LogoutTokenClaims) (string, error) {
+	if err := claims.WellFormed(); err != nil {
+		return "", err
+	}
+	b, err := json.Marshal(claims)
+	if err != nil {
+		return "", fmt.Errorf("oidc: serialização do logout token falhou: %w", err)
+	}
+	var m jwt.MapClaims
+	if err := json.Unmarshal(b, &m); err != nil {
+		return "", fmt.Errorf("oidc: mapeamento do logout token falhou: %w", err)
+	}
+	tok := jwt.NewWithClaims(jwt.SigningMethodRS256, m)
+	tok.Header["kid"] = s.current.KID
+	// OIDC BCL §2.4: a logout token uses typ "logout+jwt".
+	tok.Header["typ"] = "logout+jwt"
+	signed, err := tok.SignedString(s.current.private)
+	if err != nil {
+		return "", fmt.Errorf("oidc: assinatura do logout token falhou: %w", err)
+	}
+	return signed, nil
+}
+
 // Rotate installs a new current key, retaining the outgoing one in the published
 // set (overlap). The caller retires a previous key only AFTER the longest token
 // TTL has elapsed, so no in-flight token is ever orphaned. keepPrevious bounds

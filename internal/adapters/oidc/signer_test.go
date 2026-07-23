@@ -17,6 +17,7 @@ package oidc
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/casdoor/casdoor/internal/domain"
 	jose "github.com/go-jose/go-jose/v4"
@@ -122,5 +123,32 @@ func TestUnknownKID(t *testing.T) {
 
 	if _, err := verifyAgainstJWKS(t, jwks, tokenZ); err == nil {
 		t.Fatalf("token com kid ausente do JWKS não deveria validar")
+	}
+}
+
+// O logout token assinado é verificável, tem typ logout+jwt e carrega o evento.
+func TestSignLogoutToken(t *testing.T) {
+	key, _ := GenerateSigningKey("kid-1")
+	s, _ := NewSigner(key)
+	at := time.Date(2026, 7, 23, 10, 0, 0, 0, time.UTC)
+	claims, err := domain.NewLogoutTokenClaims("iss", "warpgate", "sid-1", "jti-1", at)
+	if err != nil {
+		t.Fatalf("NewLogoutTokenClaims: %v", err)
+	}
+	token, err := s.SignLogoutToken(claims)
+	if err != nil {
+		t.Fatalf("SignLogoutToken: %v", err)
+	}
+	jwks, _ := s.JWKS()
+	verified, err := verifyAgainstJWKS(t, jwks, token)
+	if err != nil {
+		t.Fatalf("logout token deveria verificar: %v", err)
+	}
+	if verified["sid"] != "sid-1" {
+		t.Fatalf("sid = %v, quero sid-1", verified["sid"])
+	}
+	events, ok := verified["events"].(map[string]interface{})
+	if !ok || events[domain.BackchannelLogoutEvent] == nil {
+		t.Fatalf("o evento de back-channel logout deveria estar no token: %v", verified["events"])
 	}
 }

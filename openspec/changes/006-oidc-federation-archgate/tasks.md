@@ -72,7 +72,19 @@
       (L1, isenta no INV-8 — emitida na detecção). Integração PG: renovação normal, reuso revoga a
       família (sucessor incluído) + auditoria + alerta crítico, sucessor revogado também nega. Gate
       verde.)*
-- [ ] **T-009** Implementar back-channel logout OIDC.
+- [x] **T-009** Implementar back-channel logout OIDC. *(`domain.LogoutTokenClaims` (OIDC BCL: iss/aud/
+      sid/jti/iat + o membro `events` com o evento de back-channel logout — `WellFormed` recusa um
+      logout token SEM o evento, para não ser confundido com id token). `Signer.SignLogoutToken`
+      assina em RS256 com `typ: logout+jwt` e o kid corrente (verificável contra o JWKS). Portos
+      `LogoutNotifier` (entrega o POST ao backchannel_logout_uri; impl real = pacote 010) e
+      `SessionRevoker` (revogação local). `LogoutPropagator.Logout`: revoga LOCALMENTE primeiro
+      (fail-closed — sem revogar as derivadas, nada é enviado) e então envia o logout token assinado
+      a cada componente; devolve os envios que FALHARAM (para o chamador se apoiar na introspecção,
+      T-010) — não finge logout completo. `postgres.SessionRevoker` compõe revoke da auth_session +
+      `RevokeBySession` dos refresh tokens, atômico (cenário "Logout no ArchGuard"; a revogação por
+      membership usa RevokeByMembership + esta perna de refresh). Testes: logout token com/sem evento,
+      propagação (envia a todos), fail-closed local, envios falhos reportados; integração PG (sessão
+      e refresh revogados juntos). Gate verde.)*
 - [ ] **T-010** Implementar introspecção com TTL curto para componentes sem logout.
 - [x] **T-011** Implementar rotação de JWKS com sobreposição e `kid`. *(`internal/adapters/oidc/signer.go`
       (golang-jwt/v5 + go-jose/v4, já na árvore — sem dep nova). `Signer` assina os `OIDCClaims` em
