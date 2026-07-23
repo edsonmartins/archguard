@@ -156,6 +156,46 @@ func (s *Signer) JWKS() ([]byte, error) {
 	return b, nil
 }
 
+// Verify parses a token, checks its RS256 signature against the key named by its
+// `kid` (current or a retained previous key), and returns the claims. It does NOT
+// validate expiry — liveness is decided by introspection, which composes this
+// with a session-liveness check (T-010). A token whose kid is unknown or whose
+// signature is invalid is rejected.
+func (s *Signer) Verify(tokenStr string) (domain.OIDCClaims, error) {
+	m := jwt.MapClaims{}
+	_, err := jwt.ParseWithClaims(tokenStr, m, func(tok *jwt.Token) (interface{}, error) {
+		kid, _ := tok.Header["kid"].(string)
+		key, ok := s.publicKeyByKID(kid)
+		if !ok {
+			return nil, fmt.Errorf("oidc: kid %q desconhecido", kid)
+		}
+		return key, nil
+	}, jwt.WithValidMethods([]string{"RS256"}), jwt.WithoutClaimsValidation())
+	if err != nil {
+		return domain.OIDCClaims{}, fmt.Errorf("oidc: verificação do token falhou: %w", err)
+	}
+	b, err := json.Marshal(m)
+	if err != nil {
+		return domain.OIDCClaims{}, fmt.Errorf("oidc: remontagem dos claims falhou: %w", err)
+	}
+	var claims domain.OIDCClaims
+	if err := json.Unmarshal(b, &claims); err != nil {
+		return domain.OIDCClaims{}, fmt.Errorf("oidc: decodificação dos claims falhou: %w", err)
+	}
+	return claims, nil
+}
+
+// publicKeyByKID returns the RSA public key for a kid among the current and
+// retained previous keys.
+func (s *Signer) publicKeyByKID(kid string) (*rsa.PublicKey, bool) {
+	for _, k := range append([]SigningKey{s.current}, s.previous...) {
+		if k.KID == kid {
+			return &k.private.PublicKey, true
+		}
+	}
+	return nil, false
+}
+
 // claimsToMap converts the domain claims to the map form the JWT library signs,
 // preserving the exact claim names (json tags) of the contract.
 func claimsToMap(claims domain.OIDCClaims) (jwt.MapClaims, error) {
