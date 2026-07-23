@@ -149,7 +149,11 @@
       (sobreposição); (5) encerramento — logout token assinado/verificável (Warpgate/NetBird) OU
       introspecção active:false na revogação (Guacamole/OpenBao/Oracle); (6) correlação pcid — token
       privilegiado carrega pcid que casa com o AuditContext. Roda no gate (`make test`). Gate verde.)*
-- [ ] **T-017** Integrar a suíte como gate de release no CI.
+- [x] **T-017** Integrar a suíte como gate de release no CI. *(Makefile: alvo `conformance` (suíte de
+      conformidade OIDC por componente + testes de assinatura/rotação/logout/aceitação) e alvo
+      `release-gate: gate conformance` — é este que o CI roda para liberar release; falha em qualquer
+      item de conformidade BLOQUEIA o release (I-9.4). `make conformance` verde. A suíte também roda em
+      `make test`; o alvo dedicado a materializa como gate de release explícito.)*
 - [x] **T-018** Teste: token de um componente recusado por outro (audiência). *(`TestAcceptanceTokenRejectedByAudience`
       (adapter oidc): token assinado para Warpgate — assinatura VÁLIDA para ambos (mesmo JWKS) — é
       recusado por Guacamole na checagem de audiência (`ErrAudienceMismatch`), aceito por Warpgate.
@@ -165,3 +169,18 @@
 ## Gate de verificação
 Suíte de conformidade verde para todos os componentes; reuso de refresh detectado e punido;
 linha do tempo correlacionada demonstrada em ambiente de homologação.
+
+**FECHADO (2026-07-23).** 20/20 tarefas [x]. Gate completo verde (`make lint/test/invariants/
+deps-check/sbom/build` + `make conformance`) contra PG 15 real.
+- **Contrato de claims v1** versionado, agnóstico de fornecedor (T-001..T-004); acr reconciliado a
+  L1/L2/L3 (fonte única `AAL.Level()`).
+- **Fluxos seguros** (T-005/006/012): PKCE obrigatório, sem implicit/ROPC, audiência por componente,
+  escopo mínimo, L3 bloqueado em device flow.
+- **Ciclo de token** (T-007/008/011): rotação de refresh + detecção de reuso → revoga família + evento
+  severidade alta + alerta; signer RS256 + JWKS com kid e sobreposição.
+- **Encerramento** (T-009/010): back-channel logout (fail-closed local + envios reportados) +
+  introspecção de TTL curto.
+- **Componentes** (T-013/014/015): 5 clientes; mapa determinístico claims→OpenBao; borda documentada
+  do Guacamole. **Conformidade** como gate de release (T-016/017).
+- **Sem dependência nova**. Impls in-process = seam do real (pacote 010); wiring dos endpoints nos
+  controllers + demonstração em homologação = deploy (archguard-devops) + pacote 008.

@@ -3,9 +3,14 @@
 # Bloco 0/1: invariants, deps-check e sbom são stubs que FALHAM até T-018/T-019 (gate parcial
 # esperado e aceito — ver openspec/changes/001-bootstrap-fork/tasks.md).
 
-.PHONY: gate lint test invariants deps-check sbom build upstream-triage
+.PHONY: gate release-gate lint test invariants deps-check sbom build conformance upstream-triage
 
 gate: lint test invariants deps-check sbom build
+
+# Gate de RELEASE (pacote 006, RFC-0006 §8): o gate de verificação + a suíte de
+# conformidade OIDC por componente. Falha em qualquer item de conformidade
+# BLOQUEIA o release (I-9.4). É este alvo que o CI roda para liberar uma release.
+release-gate: gate conformance
 
 # Triagem semanal de upstream (ADR-0003): atualiza o espelho somente-leitura
 # vendor/upstream e emite a fila de triagem classificada. NUNCA faz merge em main.
@@ -25,6 +30,12 @@ test:
 
 invariants:
 	go test ./test/invariants/ -count=1 -timeout 30m
+
+# Suíte de conformidade OIDC por componente (pacote 006 T-016/T-017): valida o
+# contrato de federação (claims, acr, rotação de chave, logout, correlação pcid)
+# para cada componente registrado. Gate de release — falha bloqueia a liberação.
+conformance:
+	go test ./internal/adapters/oidc/ -count=1 -run 'Conformance|SignAndVerify|Rotation|UnknownKID|SignLogout|Acceptance'
 
 deps-check:
 	go test ./test/invariants/ -count=1 -run 'TestINV3|TestSelfINV3'
