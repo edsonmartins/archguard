@@ -48,18 +48,26 @@ type tokenSuccessBody struct {
 	RefreshToken string `json:"refresh_token,omitempty"`
 }
 
-// TokenHandler serves POST /token. It supports the refresh_token grant here
-// (authorization_code is added with the authorization endpoint). Implicit and
-// ROPC are refused by ValidateGrantType. A reuse-detected refresh returns
-// invalid_grant AFTER the family has been revoked (the security response, not a
-// mere error).
+// AuthCodeGrant exchanges an authorization code (+ PKCE verifier) for tokens —
+// the postgres adapter implements it. It returns invalid_grant-class errors
+// (expired/used code, PKCE mismatch, redirect mismatch, unknown code).
+type AuthCodeGrant interface {
+	Exchange(ctx context.Context, code, redirectURI, codeVerifier string) (domain.RefreshResult, error)
+}
+
+// TokenHandler serves POST /token. It supports the authorization_code and
+// refresh_token grants. Implicit and ROPC are refused by ValidateGrantType. A
+// reuse-detected refresh returns invalid_grant AFTER the family has been revoked
+// (the security response, not a mere error).
 type TokenHandler struct {
+	code    AuthCodeGrant
 	refresh RefreshGrant
 }
 
-// NewTokenHandler builds the handler over a refresh grant.
-func NewTokenHandler(refresh RefreshGrant) *TokenHandler {
-	return &TokenHandler{refresh: refresh}
+// NewTokenHandler builds the handler over the authorization-code and refresh
+// grants. Either may be nil in a partial wiring.
+func NewTokenHandler(code AuthCodeGrant, refresh RefreshGrant) *TokenHandler {
+	return &TokenHandler{code: code, refresh: refresh}
 }
 
 func (h *TokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -79,12 +87,36 @@ func (h *TokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch grantType {
+	case "authorization_code":
+		h.handleAuthCode(w, r)
 	case "refresh_token":
 		h.handleRefresh(w, r)
 	default:
-		// authorization_code / device_code chegam com a fiação do /authorize.
+		// device_code chega com a fiação do fluxo de device.
 		writeTokenError(w, http.StatusBadRequest, "unsupported_grant_type", "grant ainda não fiado neste endpoint")
 	}
+}
+
+func (h *TokenHandler) handleAuthCode(w http.ResponseWriter, r *http.Request) {
+	if h.code == nil {
+		writeTokenError(w, http.StatusBadRequest, "unsupported_grant_type", "authorization_code não configurado")
+		return
+	}
+	code := r.PostForm.Get("code")
+	redirectURI := r.PostForm.Get("redirect_uri")
+	verifier := r.PostForm.Get("code_verifier")
+	if code == "" || redirectURI == "" || verifier == "" {
+		writeTokenError(w, http.StatusBadRequest, "invalid_request", "code, redirect_uri e code_verifier são obrigatórios")
+		return
+	}
+	res, err := h.code.Exchange(r.Context(), code, redirectURI, verifier)
+	if err != nil {
+		// Todo erro do resgate (código inválido/usado/expirado, PKCE, redirect) é
+		// invalid_grant — nada de detalhe que ajude um ataque.
+		writeTokenError(w, http.StatusBadRequest, "invalid_grant", "código de autorização inválido")
+		return
+	}
+	writeTokenSuccess(w, res)
 }
 
 func (h *TokenHandler) handleRefresh(w http.ResponseWriter, r *http.Request) {
@@ -104,7 +136,11 @@ func (h *TokenHandler) handleRefresh(w http.ResponseWriter, r *http.Request) {
 		writeTokenError(w, http.StatusBadRequest, "invalid_grant", "refresh token inválido")
 		return
 	}
-	// A rotated refresh token MUST NOT be cached by intermediaries.
+	writeTokenSuccess(w, res)
+}
+
+func writeTokenSuccess(w http.ResponseWriter, res domain.RefreshResult) {
+	// Tokens MUST NOT be cached by intermediaries.
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Pragma", "no-cache")
 	writeJSON(w, http.StatusOK, tokenSuccessBody{

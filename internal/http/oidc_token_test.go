@@ -46,7 +46,7 @@ func postToken(t *testing.T, h *TokenHandler, form url.Values) *httptest.Respons
 
 // Renovação normal: retorna access + refresh novos.
 func TestTokenHandlerRefreshOK(t *testing.T) {
-	h := NewTokenHandler(fakeRefreshGrant{result: domain.RefreshResult{
+	h := NewTokenHandler(nil, fakeRefreshGrant{result: domain.RefreshResult{
 		AccessToken: "access-jwt", RefreshToken: "rt_new", ExpiresInSecond: 600,
 	}})
 	rec := postToken(t, h, url.Values{"grant_type": {"refresh_token"}, "refresh_token": {"rt_old"}})
@@ -65,7 +65,7 @@ func TestTokenHandlerRefreshOK(t *testing.T) {
 
 // Reuso detectado: invalid_grant (a família já foi revogada no adapter).
 func TestTokenHandlerRefreshReuse(t *testing.T) {
-	h := NewTokenHandler(fakeRefreshGrant{err: domain.ErrRefreshReuse})
+	h := NewTokenHandler(nil, fakeRefreshGrant{err: domain.ErrRefreshReuse})
 	rec := postToken(t, h, url.Values{"grant_type": {"refresh_token"}, "refresh_token": {"rt_reused"}})
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("code = %d, quero 400", rec.Code)
@@ -79,7 +79,7 @@ func TestTokenHandlerRefreshReuse(t *testing.T) {
 
 // ROPC e grants não suportados são recusados.
 func TestTokenHandlerRejectsUnsupportedGrant(t *testing.T) {
-	h := NewTokenHandler(fakeRefreshGrant{})
+	h := NewTokenHandler(nil, fakeRefreshGrant{})
 	rec := postToken(t, h, url.Values{"grant_type": {"password"}, "username": {"x"}, "password": {"y"}})
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("ROPC deveria ser recusado com 400, veio %d", rec.Code)
