@@ -101,7 +101,17 @@
       canal (`Available` → `ErrNoNotificationChannel`, cenário "Canal indisponível") — inseparável de
       emitir o alerta; a perna de auditoria fail-closed fecha no T-013. Testes: alerta na solicitação
       sem PII, negado sem canal, falha se alerta não entregue. Gate verde.)*
-- [ ] **T-012** Implementar expiração automática e revogação em cascata das sessões derivadas.
+- [x] **T-012** Implementar expiração automática e revogação em cascata das sessões derivadas.
+      *(Persistência (migração 0027): `privileged_grant` + `grant_approval` (PK composta = aprovadores
+      distintos no banco) + coluna `auth_session.privileged_grant_id` (liga a sessão DERIVADA à
+      concessão), RLS FORCE por org. `PrivilegedGrantStore` (Create/Get+aprovações/SaveDecision/
+      `ListActiveExpired`). `TenantSessionStore.RevokeByGrant` = a cascata. `GrantExpirer.ExpireDue`
+      roda por tenant numa transação: lista concessões ativas com janela vencida, e para cada uma
+      `Expire`→SaveDecision→RevokeByGrant→audita `privileged.grant.expire` — ATÔMICO, então nunca
+      fica expirada sem revogar as sessões (ou vice-versa). Ação de expiração é emitida pelo job
+      (principal do sistema no contexto) e isenta no INV-8. Lembrando: `Authorizes` já nega no momento
+      da decisão — o job só MATERIALIZA. Integração PG (cenário "Janela expirada"): grant ativo
+      vencido → expira + sessão derivada revogada + expiração auditada. Gate verde.)*
 - [ ] **T-013** Implementar fail-closed para ausência de auditoria ou de canal de notificação.
 - [ ] **T-014** Implementar registro de revisão pós-uso.
 - [ ] **T-015** Implementar tipo de identidade `service` sem login interativo.

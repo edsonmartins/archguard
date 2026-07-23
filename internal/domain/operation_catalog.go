@@ -70,11 +70,12 @@ var classifiedOperations = []Operation{
 // either classified as an operation or added here on purpose (the INV-8 gate
 // leaves no silent gap).
 var operationExemptActions = map[Action]string{
-	ActionAuthLogin:       "entrada pré-autenticação: não há sessão cuja garantia avaliar",
-	ActionAuthLoginDenied: "resultado de auditoria de um login que falhou, nunca uma operação invocada",
-	ActionAuthStepUp:      "a própria cerimônia de step-up (reautenticação), gated pelo seu fluxo, não pelo middleware",
-	ActionAuthLockout:     "evento emitido pelo sistema (bloqueio progressivo), não invocado",
-	ActionAuthStuffing:    "alerta emitido pelo sistema (credential stuffing), não invocado",
+	ActionAuthLogin:             "entrada pré-autenticação: não há sessão cuja garantia avaliar",
+	ActionAuthLoginDenied:       "resultado de auditoria de um login que falhou, nunca uma operação invocada",
+	ActionAuthStepUp:            "a própria cerimônia de step-up (reautenticação), gated pelo seu fluxo, não pelo middleware",
+	ActionAuthLockout:           "evento emitido pelo sistema (bloqueio progressivo), não invocado",
+	ActionAuthStuffing:          "alerta emitido pelo sistema (credential stuffing), não invocado",
+	ActionPrivilegedGrantExpire: "expiração emitida pelo job de limpeza (T-012), não invocada",
 }
 
 // BuildOperationCatalog builds the canonical, fully-populated operation catalog.

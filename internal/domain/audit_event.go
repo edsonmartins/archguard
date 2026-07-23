@@ -84,6 +84,10 @@ const (
 	ActionRecoveryRequest Action = "recovery.request"
 	ActionRecoveryApprove Action = "recovery.approve"
 	ActionRecoveryReset   Action = "recovery.reset"
+	// Privileged-access lifecycle events (pacote 004). ActionPrivilegedGrantExpire
+	// is emitted by the expiry job (T-012); the request/approval/use/revoke/review
+	// verbs are added with the flows in T-017.
+	ActionPrivilegedGrantExpire Action = "privileged.grant.expire"
 )
 
 // actionCatalog is the closed set of canonical actions and the assurance level
@@ -115,6 +119,7 @@ var actionCatalog = map[Action]AssuranceLevel{
 	ActionRecoveryRequest:       L2,
 	ActionRecoveryApprove:       L3,
 	ActionRecoveryReset:         L3,
+	ActionPrivilegedGrantExpire: L1,
 }
 
 // Valid reports whether a is a registered canonical action.

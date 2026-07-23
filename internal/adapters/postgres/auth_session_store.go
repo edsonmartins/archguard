@@ -328,6 +328,22 @@ func (s *TenantSessionStore) RevokeByMembership(ctx context.Context, membershipI
 	return int(tag.RowsAffected()), nil
 }
 
+// RevokeByGrant terminates the active sessions DERIVED from a privileged grant of
+// this organization — the cascade the break-glass expiry/revocation triggers
+// (spec "Janela expirada": as sessões derivadas são revogadas). Returns how many
+// sessions were ended. Idempotent.
+func (s *TenantSessionStore) RevokeByGrant(ctx context.Context, grantID uuid.UUID) (int, error) {
+	const q = `
+		UPDATE auth_session
+		SET status = 'revoked', revoked_at = COALESCE(revoked_at, now()), updated_at = now()
+		WHERE privileged_grant_id = $1 AND organization_id = $2 AND status <> 'revoked'`
+	tag, err := s.ttx.tx.Exec(ctx, q, grantID.String(), s.ttx.scope.OrganizationID().String())
+	if err != nil {
+		return 0, fmt.Errorf("postgres: revogação em cascata das sessões derivadas falhou: %w", err)
+	}
+	return int(tag.RowsAffected()), nil
+}
+
 // scanAuthSession reads one auth_session row (see the SELECT column order the
 // stores share). UUIDs travel as text, nullable ones as *string.
 func scanAuthSession(row pgx.Row) (domain.AuthSession, error) {
