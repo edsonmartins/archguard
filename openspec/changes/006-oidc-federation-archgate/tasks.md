@@ -33,7 +33,15 @@
       `PrivilegedGrant`. Validação: `act` presente DEVE ter `sub` (delegação quebrada — act sem sub —
       nunca é montada). Testes: token de delegação carrega act (nomeia o ator real) + grant_ref;
       act sem sub recusado. Gate verde.)*
-- [ ] **T-005** Tornar PKCE obrigatório; remover fluxos implicit e ROPC.
+- [x] **T-005** Tornar PKCE obrigatório; remover fluxos implicit e ROPC. *(`internal/domain/oidc_flow.go`,
+      política de fluxo pura. `OAuthFlow` só tem authorization_code e device_code — implicit e ROPC
+      NÃO são valores suportados (recusados, não desabilitados por config). `ValidateResponseType`
+      recusa qualquer coisa != "code" (barra implicit/hybrid com token); `ValidateGrantType` recusa
+      `password` (ROPC) e grants não suportados; `ValidatePKCE` exige `code_challenge` não-vazio +
+      método `S256` (plain recusado). `ValidateAuthorizationCodeRequest` combina response_type=code
+      + PKCE S256, fail-closed antes de emitir código. Cobre "PKCE ausente" e "Fluxo obsoleto".
+      Testes: PKCE ausente/plain recusado, implicit/ROPC recusados, suportados passam. Gate verde. A
+      IMPOSIÇÃO no endpoint de autorização herdado (controllers Casdoor) é wiring do T-013+.)*
 - [ ] **T-006** Implementar audiência específica por cliente e escopo mínimo.
 - [ ] **T-007** Implementar rotação de refresh token com detecção de reuso.
 - [ ] **T-008** Implementar revogação em cascata da família de tokens.
