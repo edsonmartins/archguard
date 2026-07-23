@@ -132,7 +132,12 @@
       pendência visível; o console mostra e o job de escalada notifica os responsáveis, cenário
       "Revisão pendente"). Integração PG: encerrado aparece pendente; após registrar, deixa de ser
       pendente. Gate verde.)*
-- [ ] **T-015** Implementar tipo de identidade `service` sem login interativo.
+- [x] **T-015** Implementar tipo de identidade `service` sem login interativo. *(`IdentityService`
+      já existia (pacote 002). Acrescenta a regra: `IdentityType.AllowsInteractiveLogin()` = só humano;
+      `Identity.EnsureInteractiveLoginAllowed()` é o gate que o fluxo de login interativo chama e
+      recusa conta de serviço com `ErrInteractiveLoginForbidden` (cenário "Login interativo de conta
+      de serviço") — uma conta de serviço autentica por credencial rotacionável no cofre, nunca
+      interativamente. Teste: humano permitido, serviço barrado. Gate verde.)*
 - [ ] **T-016** Impedir impersonation de conta de serviço (regra + teste).
 - [ ] **T-017** Auditar todos os eventos do ciclo (solicitação, aprovação, uso, expiração,
       revogação, revisão).

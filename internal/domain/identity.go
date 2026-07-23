@@ -40,6 +40,16 @@ func (t IdentityType) Valid() bool {
 	return t == IdentityHuman || t == IdentityService
 }
 
+// AllowsInteractiveLogin reports whether an identity of this type may authenticate
+// through the interactive browser flow. Only a HUMAN identity may (pacote 004
+// T-015 / ADR-0008 §4): a service account has no interactive login interface — it
+// authenticates by a rotatable credential custodied in the vault — so the login
+// flow refuses an interactive attempt by a service account (spec "Login
+// interativo de conta de serviço").
+func (t IdentityType) AllowsInteractiveLogin() bool {
+	return t == IdentityHuman
+}
+
 // IdentityStatus is the lifecycle state of the global identity. Deprovisioned is
 // terminal: RFC-0002 R5 forbids physical deletion, so an identity is retired by
 // crypto-shredding (ADR-0014), never removed. The status field carries that.
@@ -74,6 +84,10 @@ var (
 	// ErrIdentityDeprovisioned is returned when a transition is attempted on a
 	// deprovisioned identity — a terminal state (RFC-0002 R5).
 	ErrIdentityDeprovisioned = errors.New("identity: identidade deprovisionada é estado terminal")
+	// ErrInteractiveLoginForbidden is returned when a service account attempts the
+	// interactive browser login flow (T-015): a service account authenticates by a
+	// vault-custodied rotatable credential, never interactively.
+	ErrInteractiveLoginForbidden = errors.New("identity: conta de serviço não autentica por fluxo interativo")
 )
 
 // Identity is the global identity (RFC-0002 §2.1): exactly one per person or
@@ -106,6 +120,16 @@ type Identity struct {
 	// are read back on load. Zero on a freshly constructed, unpersisted identity.
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+// EnsureInteractiveLoginAllowed is the gate the interactive login flow calls
+// before authenticating an identity: it refuses a service account
+// (ErrInteractiveLoginForbidden), which has no interactive login (T-015).
+func (i Identity) EnsureInteractiveLoginAllowed() error {
+	if !i.Type.AllowsInteractiveLogin() {
+		return fmt.Errorf("%w: identidade %s é do tipo %s", ErrInteractiveLoginForbidden, i.Subject, i.Type)
+	}
+	return nil
 }
 
 // subjectBytes is the length of the opaque subject's random material (128 bits).
