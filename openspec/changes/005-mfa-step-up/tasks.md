@@ -216,8 +216,19 @@
       desfaz). A emissão dos demais eventos (enroll/step-up/lockout/stuffing/recovery) usa estas
       ações onde cada fluxo é montado (login/enrolamento = pacote 006/008; notificação da identidade
       afetada = porto de notificação, pacote 010). Gate verde.)*
-- [ ] **T-017** Classificar todas as operações existentes; falhar o build se houver
-      operação sem classificação.
+- [x] **T-017** Classificar todas as operações existentes; falhar o build se houver
+      operação sem classificação. *(`internal/domain/operation_catalog.go` é a FONTE ÚNICA de
+      classificação: `classifiedOperations` lista EXPLICITAMENTE cada operação gated com seu nível
+      (ids reusam os verbos de auditoria onde há trilha, para endpoint e verbo nunca divergirem;
+      alguns reads têm id próprio). `BuildOperationCatalog()` falha se qualquer operação for
+      malformada/duplicada. `operationExemptActions` isenta, COM MOTIVO, os verbos que não são
+      operações gated (login pré-auth, login.denied de resultado, a própria cerimônia de step-up,
+      lockout/stuffing emitidos pelo sistema). Invariante INV-8 (`test/invariants/inv8_*`, entra no
+      `make invariants` do gate): (1) o catálogo constrói e toda operação tem nível válido; (2)
+      COMPLETUDE — todo verbo de auditoria é classificado como operação OU isento, nunca ambos nunca
+      nenhum: adicionar um verbo novo sem classificar/isentar QUEBRA O BUILD (cenário "Operação sem
+      classificação"); (3) consistência — operação cujo id é verbo tem o mesmo nível do verbo. Gate
+      verde.)*
 - [ ] **T-018** Teste: operação L3 com sessão antiga exige reautenticação.
 - [ ] **T-019** Teste: TOTP recusado em operação L3.
 - [ ] **T-020** Teste: nenhum caminho de reset administrativo silencioso de fator.
