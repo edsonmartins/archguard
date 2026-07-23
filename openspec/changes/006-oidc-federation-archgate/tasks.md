@@ -131,7 +131,15 @@
       contrato (user_claim=sub opaco, groups_claim=roles, bound_audiences=[openbao], bound_issuer,
       JWKS) — gerada, não mantida à mão. Testes: mapa determinístico/dedup/ordenado, config derivada,
       recusa sem issuer. Gate verde.)*
-- [ ] **T-015** Adaptação de borda para limitações do Guacamole (documentada).
+- [x] **T-015** Adaptação de borda para limitações do Guacamole (documentada). *(`docs/oidc/GUACAMOLE-EDGE.md`
+      documenta as limitações da extensão OIDC do Guacamole (sem back-channel logout confiável, claims
+      restritos, sem enforce de acr, sem honra automática do JWKS) e as compensações NA BORDA (shim à
+      frente do Guacamole): introspecção de TTL curto para revogação, tradução de claims, enforce de
+      acr com redirect a step-up, renovação de JWKS em kid desconhecido, correlação por pcid —
+      **sem degradar o contrato central** (design 006 §"Adaptação sem contaminação"). `domain.GuacamoleEdgeConfig`
+      + `NewGuacamoleEdgeConfig(client)` derivam os parâmetros do registro do cliente (recusa cliente
+      que não é Guacamole ou que declare logout — a borda pressupõe a ausência dele). Teste: config de
+      borda derivada (introspecção curta + enforce acr), específica do Guacamole. Gate verde.)*
 - [ ] **T-016** Implementar suíte de conformidade por componente.
 - [ ] **T-017** Integrar a suíte como gate de release no CI.
 - [x] **T-018** Teste: token de um componente recusado por outro (audiência). *(`TestAcceptanceTokenRejectedByAudience`
