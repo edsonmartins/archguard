@@ -61,7 +61,17 @@
       cobrem expiração. Testes: segredo/hash único, rotação (anterior invalidado, sucessor na família),
       reuso detectado (rotated e revoked), expiração. Gate verde. A revogação de família + evento de
       severidade alta é o T-008.)*
-- [ ] **T-008** Implementar revogação em cascata da família de tokens.
+- [x] **T-008** Implementar revogação em cascata da família de tokens. *(Persistência (migração 0029):
+      `refresh_token` (family_id, session_id, org, token_hash UNIQUE, status, expires_at), RLS FORCE
+      por org — só o HASH (INV-7). `RefreshTokenStore` (Create/GetByHash FOR UPDATE/SetStatus/
+      `RevokeFamily`/`RevokeBySession` para a cascata de logout/revogação). `RefreshExchanger.Exchange`
+      numa transação com a linha travada: renovação normal rotaciona (anterior→rotated, sucessor ativo);
+      REUSO (`CheckReuse`) revoga a FAMÍLIA inteira + grava evento `token.refresh.reuse` (ator sistema,
+      severidade alta) + alerta CRÍTICO, tudo COMMITADO (o sinal de reuso é retornado FORA da tx —
+      retorná-lo dentro daria rollback da própria revogação), e então NEGA. Nova ação `token.refresh.reuse`
+      (L1, isenta no INV-8 — emitida na detecção). Integração PG: renovação normal, reuso revoga a
+      família (sucessor incluído) + auditoria + alerta crítico, sucessor revogado também nega. Gate
+      verde.)*
 - [ ] **T-009** Implementar back-channel logout OIDC.
 - [ ] **T-010** Implementar introspecção com TTL curto para componentes sem logout.
 - [ ] **T-011** Implementar rotação de JWKS com sobreposição e `kid`.

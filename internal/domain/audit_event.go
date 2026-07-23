@@ -96,6 +96,10 @@ const (
 	ActionDelegationStart       Action = "delegation.start"
 	ActionDelegationRevoke      Action = "delegation.revoke"
 	ActionDelegationEscalation  Action = "delegation.escalation_denied"
+	// Federation events (pacote 006). Refresh-token reuse is a high-severity
+	// security event emitted by the token endpoint on detection, not an invoked
+	// operation.
+	ActionRefreshReuse Action = "token.refresh.reuse"
 )
 
 // actionCatalog is the closed set of canonical actions and the assurance level
@@ -134,6 +138,7 @@ var actionCatalog = map[Action]AssuranceLevel{
 	ActionDelegationStart:       L3,
 	ActionDelegationRevoke:      L2,
 	ActionDelegationEscalation:  L1,
+	ActionRefreshReuse:          L1,
 }
 
 // Valid reports whether a is a registered canonical action.

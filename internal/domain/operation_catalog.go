@@ -86,6 +86,7 @@ var operationExemptActions = map[Action]string{
 	ActionAuthStuffing:          "alerta emitido pelo sistema (credential stuffing), não invocado",
 	ActionPrivilegedGrantExpire: "expiração emitida pelo job de limpeza (T-012), não invocada",
 	ActionDelegationEscalation:  "sinal emitido pelo sistema quando uma delegação tenta escalar, não invocado",
+	ActionRefreshReuse:          "evento de segurança emitido na detecção de reuso de refresh, não invocado",
 }
 
 // BuildOperationCatalog builds the canonical, fully-populated operation catalog.
