@@ -112,7 +112,17 @@
       RFC-0006 §2. O middleware compõe com a checagem de garantia — mesmo um token de device flow
       cujo acr alegasse L3 é negado, porque o FLUXO não sustenta L3. Teste: L3 via device flow negado,
       L1/L2 permitidos, L3 fora do device flow não bloqueado por esta regra. Gate verde.)*
-- [ ] **T-013** Registrar clientes: Warpgate, Guacamole, NetBird, OpenBao, proxy Oracle JDBC.
+- [x] **T-013** Registrar clientes: Warpgate, Guacamole, NetBird, OpenBao, proxy Oracle JDBC.
+      *(`domain.OIDCClient` + `ClientRegistry` + `DefaultClientRegistry()` com os 5 componentes
+      (RFC-0006 §2), cada um com AUDIÊNCIA própria (o que torna um token de um inutilizável por outro,
+      ADR-0011) e fluxos/escopos MÍNIMOS: Warpgate (Auth Code + PKCE, back-channel logout), Guacamole
+      (Auth Code, SEM logout confiável → introspecção TTL curto + borda T-015), NetBird (Auth Code +
+      PKCE + Device Grant, sem L3), OpenBao (auth JWT/OIDC, mapa T-014), proxy Oracle (só validação de
+      JWT, sem fluxo interativo). `AllowsFlow`/`SupportsBackchannelLogout`/`AuthorizeClientFlow`
+      (device flow em cliente que não o permite → `ErrFlowNotAllowedForClient`; desconhecido →
+      `ErrUnknownClient`). `Register` recusa id/audiência vazios, sem fluxo, duplicata. Testes: os 5
+      registrados com audiência própria, perfis por componente, validação de fluxo. Gate verde. A
+      persistência/console dos clientes = wiring (T-013 modela o contrato).)*
 - [ ] **T-014** Mapear claims → políticas do OpenBao a partir da mesma fonte de papéis.
 - [ ] **T-015** Adaptação de borda para limitações do Guacamole (documentada).
 - [ ] **T-016** Implementar suíte de conformidade por componente.
