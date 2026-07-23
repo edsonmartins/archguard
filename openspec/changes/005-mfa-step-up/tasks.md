@@ -182,7 +182,16 @@
       rejeição terminal) e integração PG (ciclo completo: alvo abre, dois pares distintos aprovam em
       transações separadas recarregando o estado, aprovada→consumida). Auditoria/notificação do
       processo = T-016. Gate verde.)*
-- [ ] **T-014** Implementar limitação de taxa e bloqueio progressivo.
+- [x] **T-014** Implementar limitação de taxa e bloqueio progressivo. *(`domain.Throttle{Failures,
+      LockedUntil}` por identidade: `Locked(now)` é o gate antes de validar credencial; `RecordFailure`
+      incrementa e, a partir do limiar (5 falhas), aplica bloqueio que DOBRA a cada falha adicional
+      (base 30s, teto 1h) — brute force fica impraticável e alguns erros honestos não custam nada;
+      `RecordSuccess` zera o estado. `ThrottleStore` port fail-closed (falha de store nega, nunca
+      bypassa). Persistência (migração 0026): `auth_throttle` (PK identity, RLS FORCE pelo eixo
+      `app.current_identity`). Store identity-scoped (Get devolve zero sem linha, upsert em Save,
+      guarda Barreira 1). Testes de domínio (progressão, teto, sucesso zera) e integração PG
+      (persiste falhas→bloqueio→sucesso zera; guarda cross-identity). Evento de auditoria do
+      bloqueio = T-016. Gate verde.)*
 - [ ] **T-015** Implementar detecção de credential stuffing com alerta.
 - [ ] **T-016** Auditar todos os eventos de MFA (incluindo remoção de fator).
 - [ ] **T-017** Classificar todas as operações existentes; falhar o build se houver
