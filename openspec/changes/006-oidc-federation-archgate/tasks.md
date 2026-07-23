@@ -127,9 +127,17 @@
 - [ ] **T-015** Adaptação de borda para limitações do Guacamole (documentada).
 - [ ] **T-016** Implementar suíte de conformidade por componente.
 - [ ] **T-017** Integrar a suíte como gate de release no CI.
-- [ ] **T-018** Teste: token de um componente recusado por outro (audiência).
-- [ ] **T-019** Teste: logout no ArchGuard encerra sessões nos componentes.
-- [ ] **T-020** Teste: correlação `pcid` reconstrói a linha do tempo ponta a ponta.
+- [x] **T-018** Teste: token de um componente recusado por outro (audiência). *(`TestAcceptanceTokenRejectedByAudience`
+      (adapter oidc): token assinado para Warpgate — assinatura VÁLIDA para ambos (mesmo JWKS) — é
+      recusado por Guacamole na checagem de audiência (`ErrAudienceMismatch`), aceito por Warpgate.
+      Ponta a ponta: signer + DefaultClientRegistry + ValidateAudience.)*
+- [x] **T-019** Teste: logout no ArchGuard encerra sessões nos componentes. *(`TestAcceptanceLogoutEndsComponentSessions`:
+      `LogoutPropagator.Logout` revoga localmente E envia back-channel logout a cada componente
+      REGISTRADO com suporte (Warpgate, NetBird). Também `TestSessionRevokerRevokesSessionAndRefresh`
+      (integração PG) e `TestLogoutPropagation`.)*
+- [x] **T-020** Teste: correlação `pcid` reconstrói a linha do tempo ponta a ponta. *(`TestAcceptancePCIDCorrelation`:
+      o mesmo `pcid` está no token do componente (via BuildOIDCClaims) E no `AuditContext.PrivilegedCorrelationID`
+      do ArchGuard — o valor comum é o que une as duas trilhas. Também `TestPCIDGenerationAndPropagation`.)*
 
 ## Gate de verificação
 Suíte de conformidade verde para todos os componentes; reuso de refresh detectado e punido;
