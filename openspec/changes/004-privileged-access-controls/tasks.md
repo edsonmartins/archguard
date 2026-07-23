@@ -123,7 +123,15 @@
       segura de falha. Integração PG: caminho feliz persiste+audita+alerta; sem canal →
       ErrNoNotificationChannel sem criar nada; sem principal → ErrNoPrincipal e nada persiste. Gate
       verde.)*
-- [ ] **T-014** Implementar registro de revisão pós-uso.
+- [x] **T-014** Implementar registro de revisão pós-uso. *(`domain.PostUseReview` (artefato do
+      revisor, parecer obrigatório) + `PrivilegedGrant.NeedsReview()` = break-glass que ATIVOU e
+      encerrou (expired/revoked); denied/rejected (nunca ativou) e grant normal não requerem.
+      `NewPostUseReview` recusa concessão que não requer revisão e parecer vazio. Persistência
+      (migração 0028): `breakglass_review` (grant_id UNIQUE = uma revisão por concessão), RLS por org.
+      Store: `RecordReview` + `ListPendingReviews` (LEFT JOIN — break-glass encerrado SEM revisão =
+      pendência visível; o console mostra e o job de escalada notifica os responsáveis, cenário
+      "Revisão pendente"). Integração PG: encerrado aparece pendente; após registrar, deixa de ser
+      pendente. Gate verde.)*
 - [ ] **T-015** Implementar tipo de identidade `service` sem login interativo.
 - [ ] **T-016** Impedir impersonation de conta de serviço (regra + teste).
 - [ ] **T-017** Auditar todos os eventos do ciclo (solicitação, aprovação, uso, expiração,

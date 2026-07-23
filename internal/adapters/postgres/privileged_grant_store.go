@@ -189,3 +189,52 @@ func scanGrant(row pgx.Row) (domain.PrivilegedGrant, error) {
 	g.Status = domain.GrantStatus(status)
 	return g, nil
 }
+
+// RecordReview persists a post-use review of a break-glass grant. The grant_id
+// UNIQUE constraint enforces one review per grant. It refuses a review of another
+// organization.
+func (s *PrivilegedGrantStore) RecordReview(ctx context.Context, r domain.PostUseReview) error {
+	if r.OrganizationID != s.ttx.scope.OrganizationID() {
+		return fmt.Errorf("%w: alvo %s, escopo %s", ErrCrossTenantGrant, r.OrganizationID, s.ttx.scope.OrganizationID())
+	}
+	const q = `
+		INSERT INTO breakglass_review (id, grant_id, organization_id, reviewer_membership_id, notes)
+		VALUES ($1, $2, $3, $4, $5)`
+	if _, err := s.ttx.tx.Exec(ctx, q,
+		r.ID.String(), r.GrantID.String(), r.OrganizationID.String(), r.ReviewerMembershipID.String(), r.Notes); err != nil {
+		return fmt.Errorf("postgres: gravação de revisão pós-uso falhou: %w", err)
+	}
+	return nil
+}
+
+// ListPendingReviews returns the ids of the tenant's break-glass grants that have
+// ENDED (expired or revoked) but have NO post-use review yet — the pending
+// reviews the console keeps visible and the escalation job notifies about (spec
+// "Revisão pendente").
+func (s *PrivilegedGrantStore) ListPendingReviews(ctx context.Context) ([]uuid.UUID, error) {
+	const q = `
+		SELECT g.id::text
+		FROM privileged_grant g
+		LEFT JOIN breakglass_review r ON r.grant_id = g.id
+		WHERE g.organization_id = $1 AND g.origin = 'breakglass'
+		  AND g.status IN ('expired', 'revoked') AND r.grant_id IS NULL
+		ORDER BY g.updated_at`
+	rows, err := s.ttx.tx.Query(ctx, q, s.ttx.scope.OrganizationID().String())
+	if err != nil {
+		return nil, fmt.Errorf("postgres: listagem de revisões pendentes falhou: %w", err)
+	}
+	defer rows.Close()
+	var out []uuid.UUID
+	for rows.Next() {
+		var text string
+		if err := rows.Scan(&text); err != nil {
+			return nil, fmt.Errorf("postgres: leitura de pendência falhou: %w", err)
+		}
+		id, err := uuid.Parse(text)
+		if err != nil {
+			return nil, fmt.Errorf("postgres: id de concessão inválido: %w", err)
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
+}
