@@ -139,6 +139,12 @@ type Operation struct {
 	// registration) — every other operation is denied until a strong factor is
 	// enrolled (spec "somente operações de registro de fator são permitidas").
 	AllowedDuringEnrollment bool
+	// ForbiddenUnderDelegation marks operations a delegation (impersonation)
+	// session may NEVER perform — administrative mutations, secret/vault access,
+	// approvals and other privileged actions (ADR-0008 §2: a delegation never
+	// inherits admin rights, never touches secrets, never approves). The
+	// DelegationScopeGuard denies these to a delegated session (pacote 004 T-003).
+	ForbiddenUnderDelegation bool
 }
 
 // Errors of the operation catalog.
