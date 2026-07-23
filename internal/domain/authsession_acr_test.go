@@ -44,8 +44,8 @@ func TestACRAMRWebAuthnHardware(t *testing.T) {
 	if err := s.SetAuthContext(at, []FactorType{FactorWebAuthn}); err != nil {
 		t.Fatalf("SetAuthContext: %v", err)
 	}
-	if s.ACR() != "aal3" {
-		t.Fatalf("acr = %q, quero aal3", s.ACR())
+	if s.ACR() != "L3" {
+		t.Fatalf("acr = %q, quero L3", s.ACR())
 	}
 	if got := s.AMR(); len(got) != 1 || got[0] != "hwk" {
 		t.Fatalf("amr = %v, quero [hwk]", got)
@@ -62,8 +62,8 @@ func TestACRAMRPasswordPlusTOTPIsMFA(t *testing.T) {
 	if err := s.SetAuthContext(at, []FactorType{FactorPassword, FactorTOTP}); err != nil {
 		t.Fatalf("SetAuthContext: %v", err)
 	}
-	if s.ACR() != "aal2" {
-		t.Fatalf("acr = %q, quero aal2", s.ACR())
+	if s.ACR() != "L2" {
+		t.Fatalf("acr = %q, quero L2", s.ACR())
 	}
 	got := s.AMR()
 	want := []string{"pwd", "otp", "mfa"}
@@ -84,8 +84,8 @@ func TestACRAMRRecoveryCodeHasNoToken(t *testing.T) {
 	if err := s.SetAuthContext(at, []FactorType{FactorRecoveryCode}); err != nil {
 		t.Fatalf("SetAuthContext: %v", err)
 	}
-	if s.ACR() != "aal2" {
-		t.Fatalf("acr = %q, quero aal2", s.ACR())
+	if s.ACR() != "L2" {
+		t.Fatalf("acr = %q, quero L2", s.ACR())
 	}
 	if got := s.AMR(); len(got) != 0 {
 		t.Fatalf("amr = %v, quero vazio", got)

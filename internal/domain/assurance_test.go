@@ -205,10 +205,10 @@ func TestGuardDeniesWithSpecificError(t *testing.T) {
 	if !errors.As(err, &iae) {
 		t.Fatalf("erro = %v, quero InsufficientAssuranceError", err)
 	}
-	if iae.Required != L3 || iae.RequiredACR != "aal3" || !iae.NeedsPhishingResistant {
+	if iae.Required != L3 || iae.RequiredACR != "L3" || !iae.NeedsPhishingResistant {
 		t.Fatalf("erro deveria exigir L3/aal3/phishing-resistant: %+v", iae)
 	}
-	if iae.ProvenACR != "aal2" || iae.Stale {
+	if iae.ProvenACR != "L2" || iae.Stale {
 		t.Fatalf("recusa deveria ser por nível (não frescor), com acr atual aal2: %+v", iae)
 	}
 }
@@ -228,7 +228,7 @@ func TestGuardDeniesStaleSession(t *testing.T) {
 	if !iae.Stale {
 		t.Fatalf("recusa de sessão antiga deveria ser marcada Stale: %+v", iae)
 	}
-	if iae.RequiredACR != "aal3" {
+	if iae.RequiredACR != "L3" {
 		t.Fatalf("mesmo obsoleta, o acr exigido para reautenticar é aal3: %+v", iae)
 	}
 }
@@ -293,7 +293,7 @@ func TestGuardTenantFloorRaisesRequirement(t *testing.T) {
 	if !errors.As(err, &iae) {
 		t.Fatalf("piso AAL3 deveria recusar sessão AAL2 em L1: %v", err)
 	}
-	if iae.RequiredACR != "aal3" || !iae.NeedsPhishingResistant {
+	if iae.RequiredACR != "L3" || !iae.NeedsPhishingResistant {
 		t.Fatalf("o desafio deveria informar aal3 + phishing-resistant: %+v", iae)
 	}
 

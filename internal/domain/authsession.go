@@ -354,14 +354,15 @@ func strongestCeiling(methods []FactorType) AAL {
 }
 
 // ACR is the OIDC Authentication Context Class Reference of the session: the
-// assurance level actually obtained, as its aal token ("aal1"/"aal2"/"aal3").
+// assurance CLASS actually obtained, as its L token ("L1"/"L2"/"L3" — RFC-0006
+// §3, the same vocabulary the audit context and the token's acr claim use).
 // Empty when the session carries no valid proven level (fail-closed — no acr is
 // asserted rather than a false one).
 func (s *AuthSession) ACR() string {
 	if !s.ProvenAAL.Valid() {
 		return ""
 	}
-	return string(s.ProvenAAL)
+	return string(s.ProvenAAL.Level())
 }
 
 // PhishingResistant reports whether the session was authenticated with a

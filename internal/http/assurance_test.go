@@ -120,7 +120,7 @@ func TestAssuranceMiddlewareAllows(t *testing.T) {
 }
 
 // TOTP AAL2 numa operação L3: 401 com desafio de step-up (RFC 9470) informando
-// acr_values=aal3, e o handler NÃO roda.
+// acr_values=L3, e o handler NÃO roda.
 func TestAssuranceMiddlewareChallengesInsufficient(t *testing.T) {
 	mw := middlewareAt(t, staticResolver{buildSession(t, domain.AAL2, domain.FactorTOTP), true}, fixtureNow)
 	next, called := nextOK()
@@ -134,14 +134,14 @@ func TestAssuranceMiddlewareChallengesInsufficient(t *testing.T) {
 		t.Fatalf("code = %d, quero 401", rec.Code)
 	}
 	wa := rec.Header().Get("WWW-Authenticate")
-	if !strings.Contains(wa, "insufficient_user_authentication") || !strings.Contains(wa, `acr_values="aal3"`) {
-		t.Fatalf("WWW-Authenticate deveria trazer o desafio de step-up com acr_values=aal3: %q", wa)
+	if !strings.Contains(wa, "insufficient_user_authentication") || !strings.Contains(wa, `acr_values="L3"`) {
+		t.Fatalf("WWW-Authenticate deveria trazer o desafio de step-up com acr_values=L3: %q", wa)
 	}
 	var body assuranceErrorBody
 	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
 		t.Fatalf("decodifica corpo: %v", err)
 	}
-	if body.RequiredLevel != "L3" || body.ACRValues != "aal3" || body.NeedsPhishingResistant == nil || !*body.NeedsPhishingResistant {
+	if body.RequiredLevel != "L3" || body.ACRValues != "L3" || body.NeedsPhishingResistant == nil || !*body.NeedsPhishingResistant {
 		t.Fatalf("corpo deveria informar L3/aal3/phishing-resistant: %+v", body)
 	}
 }
@@ -157,8 +157,8 @@ func TestAssuranceMiddlewareChallengesStale(t *testing.T) {
 	if *called || rec.Code != http.StatusUnauthorized {
 		t.Fatalf("sessão antiga deveria ser desafiada: code=%d called=%v", rec.Code, *called)
 	}
-	if !strings.Contains(rec.Header().Get("WWW-Authenticate"), `acr_values="aal3"`) {
-		t.Fatalf("desafio de sessão antiga deveria trazer acr_values=aal3")
+	if !strings.Contains(rec.Header().Get("WWW-Authenticate"), `acr_values="L3"`) {
+		t.Fatalf("desafio de sessão antiga deveria trazer acr_values=L3")
 	}
 }
 
@@ -174,7 +174,7 @@ func TestAssuranceMiddlewareNoSession(t *testing.T) {
 }
 
 // Precedência "mais restritiva vence" (T-011): num tenant com piso AAL3, uma
-// operação L1 exige WebAuthn — a sessão TOTP AAL2 é desafiada com acr_values=aal3.
+// operação L1 exige WebAuthn — a sessão TOTP AAL2 é desafiada com acr_values=L3.
 func TestAssuranceMiddlewareTenantFloorRaises(t *testing.T) {
 	mw := middlewareWithFloor(t,
 		staticResolver{buildSession(t, domain.AAL2, domain.FactorTOTP), true},
@@ -185,8 +185,8 @@ func TestAssuranceMiddlewareTenantFloorRaises(t *testing.T) {
 	if *called || rec.Code != http.StatusUnauthorized {
 		t.Fatalf("piso AAL3 deveria desafiar L1 com sessão AAL2: code=%d called=%v", rec.Code, *called)
 	}
-	if !strings.Contains(rec.Header().Get("WWW-Authenticate"), `acr_values="aal3"`) {
-		t.Fatalf("desafio deveria trazer acr_values=aal3 pelo piso do tenant")
+	if !strings.Contains(rec.Header().Get("WWW-Authenticate"), `acr_values="L3"`) {
+		t.Fatalf("desafio deveria trazer acr_values=L3 pelo piso do tenant")
 	}
 }
 

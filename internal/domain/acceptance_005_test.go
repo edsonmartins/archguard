@@ -66,7 +66,7 @@ func TestAcceptanceL3StaleSessionRequiresReauth(t *testing.T) {
 	if !errors.As(err, &iae) {
 		t.Fatalf("sessão antiga deveria ser recusada: %v", err)
 	}
-	if !iae.Stale || iae.RequiredACR != "aal3" {
+	if !iae.Stale || iae.RequiredACR != "L3" {
 		t.Fatalf("recusa deveria ser por frescor, exigindo acr aal3: %+v", iae)
 	}
 
@@ -97,7 +97,7 @@ func TestAcceptanceTOTPDeniedAtL3(t *testing.T) {
 	if !errors.As(err, &iae) {
 		t.Fatalf("TOTP em L3 deveria ser recusado: %v", err)
 	}
-	if !iae.NeedsPhishingResistant || iae.RequiredACR != "aal3" {
+	if !iae.NeedsPhishingResistant || iae.RequiredACR != "L3" {
 		t.Fatalf("a recusa deveria exigir WebAuthn (aal3, phishing-resistant): %+v", iae)
 	}
 }

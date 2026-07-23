@@ -53,8 +53,8 @@ func TestStepUpResumesOriginalOperation(t *testing.T) {
 	if err := g.Authorize("audit.export", &s, AAL1, stepAt.Add(time.Minute)); err != nil {
 		t.Fatalf("pós-step-up a operação deveria passar: %v", err)
 	}
-	if s.ACR() != "aal3" {
-		t.Fatalf("acr = %q, quero aal3 após step-up", s.ACR())
+	if s.ACR() != "L3" {
+		t.Fatalf("acr = %q, quero L3 após step-up", s.ACR())
 	}
 	if got := s.AMR(); len(got) != 1 || got[0] != "hwk" {
 		t.Fatalf("amr = %v, quero [hwk] após step-up WebAuthn", got)

@@ -320,7 +320,7 @@ func (g *AssuranceGuard) Authorize(operationID string, s *AuthSession, tenantFlo
 		return &InsufficientAssuranceError{
 			Operation:              operationID,
 			Required:               level,
-			RequiredACR:            string(reqAAL),
+			RequiredACR:            string(reqAAL.Level()),
 			NeedsPhishingResistant: reqPhishing,
 			ProvenACR:              provenACR,
 			Stale:                  stale,

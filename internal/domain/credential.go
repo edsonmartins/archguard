@@ -82,6 +82,24 @@ func (a AAL) AtLeast(min AAL) bool {
 	return okA && okMin && ra >= rm
 }
 
+// Level maps an authenticator assurance level to the assurance CLASS it yields —
+// the acr vocabulary of RFC-0006 §3 and the audit context: aal1→L1, aal2→L2,
+// aal3→L3 (the inverse of AssuranceLevel.RequiredAAL). It is the SINGLE source of
+// the acr representation, so a token's acr, the step-up challenge acr_values and
+// the audit trail's acr never disagree. An undefined AAL yields "".
+func (a AAL) Level() AssuranceLevel {
+	switch a {
+	case AAL1:
+		return L1
+	case AAL2:
+		return L2
+	case AAL3:
+		return L3
+	default:
+		return ""
+	}
+}
+
 // DefaultAAL is the conservative assurance level of a freshly-migrated factor.
 // WebAuthn is capped at AAL2 here: claiming AAL3 requires user-verification /
 // hardware-attestation evidence that a bulk migration does not have — it is

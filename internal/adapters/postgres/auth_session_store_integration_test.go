@@ -833,8 +833,8 @@ func TestAuthSessionAuthContextRoundTrip(t *testing.T) {
 	if len(got.AuthMethods) != 2 || got.AuthMethods[0] != domain.FactorPassword || got.AuthMethods[1] != domain.FactorTOTP {
 		t.Fatalf("auth_methods = %v, quero [password totp]", got.AuthMethods)
 	}
-	if got.ACR() != "aal2" {
-		t.Fatalf("acr = %q, quero aal2", got.ACR())
+	if got.ACR() != "L2" {
+		t.Fatalf("acr = %q, quero L2", got.ACR())
 	}
 	amr := got.AMR()
 	if len(amr) != 3 || amr[0] != "pwd" || amr[1] != "otp" || amr[2] != "mfa" {
@@ -895,8 +895,8 @@ func TestAuthSessionStepUpPersists(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
-	if got.ProvenAAL != domain.AAL3 || got.ACR() != "aal3" {
-		t.Fatalf("acr pós-step-up = %q, quero aal3", got.ACR())
+	if got.ProvenAAL != domain.AAL3 || got.ACR() != "L3" {
+		t.Fatalf("acr pós-step-up = %q, quero L3", got.ACR())
 	}
 	if !got.AuthTime.UTC().Equal(stepAt) {
 		t.Fatalf("auth_time = %v, quero %v (renovado no step-up)", got.AuthTime.UTC(), stepAt)
