@@ -229,10 +229,37 @@
       nenhum: adicionar um verbo novo sem classificar/isentar QUEBRA O BUILD (cenário "Operação sem
       classificação"); (3) consistência — operação cujo id é verbo tem o mesmo nível do verbo. Gate
       verde.)*
-- [ ] **T-018** Teste: operação L3 com sessão antiga exige reautenticação.
-- [ ] **T-019** Teste: TOTP recusado em operação L3.
-- [ ] **T-020** Teste: nenhum caminho de reset administrativo silencioso de fator.
+- [x] **T-018** Teste: operação L3 com sessão antiga exige reautenticação. *(Teste de aceitação
+      `TestAcceptanceL3StaleSessionRequiresReauth` contra o catálogo canônico (BuildOperationCatalog,
+      a mesma classificação de produção): sessão WebAuthn AAL3 mas ANTIGA em `privileged.session.open`
+      (L3) → recusa `Stale` exigindo acr aal3; após StepUp a operação passa. Também coberto por
+      `TestGuardDeniesStaleSession`/`TestAssuranceMiddlewareChallengesStale`.)*
+- [x] **T-019** Teste: TOTP recusado em operação L3. *(`TestAcceptanceTOTPDeniedAtL3` contra o
+      catálogo canônico: sessão TOTP AAL2 em `audit.export` (L3) → recusa exigindo explicitamente
+      fator resistente a phishing (aal3). Também: `TestTOTPCannotSatisfyL3` (estrutural, T-001) e
+      `TestGuardDeniesWithSpecificError`.)*
+- [x] **T-020** Teste: nenhum caminho de reset administrativo silencioso de fator.
+      *(`TestAcceptanceNoSilentAdminFactorReset`: os dois caminhos são estruturalmente
+      não-silenciosos — (a) `factor.remove` é operação L3 e NÃO permitida em enrolamento (auditada
+      + step-up; atomicidade da auditoria provada em `TestFactorRemoverAuditsRemoval` e o fail-closed
+      sem principal em `TestFactorRemoverFailsClosedWithoutPrincipal`); (b) recuperação: `MarkConsumed`
+      exige aprovado — sem aprovação de pares não há reset. Também `TestRecoveryConsumeRequiresApproval`.)*
 
 ## Gate de verificação
 100% das operações classificadas; nenhuma operação L3 acessível sem WebAuthn recente; teste de
 ausência de backdoor de recuperação verde.
+
+**FECHADO (2026-07-22).** 20/20 tarefas [x]. Gate completo verde (`make lint/invariants/deps-check/
+sbom/build` + suíte `go test ./internal/... ./cmd/... ./test/...` contra PG 15 real).
+- **100% das operações classificadas**: `BuildOperationCatalog` é a fonte única; o invariante INV-8
+  (`test/invariants/inv8_*`, no `make invariants`) rejeita o build se um verbo de auditoria não for
+  classificado nem isento com motivo (T-017).
+- **Nenhuma operação L3 sem WebAuthn recente**: teto de AAL por tipo (TOTP≤AAL2, T-001) + `Satisfies`
+  exige phishing-resistant em L3 + frescor L3 de 5min (T-008); aceitação em T-018/T-019.
+- **Sem backdoor de recuperação**: remoção de fator é L3 auditada fail-closed (T-016) e a recuperação
+  exige aprovação de pares distintos (`MarkConsumed` só após aprovado, T-013); aceitação em T-020.
+- Dependências: NENHUMA nova (go-webauthn e pquerna/otp já eram do Casdoor).
+- Impls in-process marcadas como seam do durável (StuffingDetector → observabilidade, pacote 010).
+- Emissão de auditoria de login/enrolamento/step-up e notificação da identidade afetada wireadas
+  onde os fluxos são montados (pacotes 006/008/010); vocabulário (ações) e o caminho de remoção já
+  prontos.
