@@ -119,7 +119,7 @@ func TestBreakglassStateMachineHappyPath(t *testing.T) {
 	nb := time.Date(2026, 7, 23, 10, 0, 0, 0, time.UTC)
 	g, _ := NewPrivilegedGrant(org, sub, validTarget(), GrantBreakglass, 2, nb, nb.Add(30*time.Minute))
 
-	if err := g.PassStepUp(); err != nil {
+	if err := g.PassStepUp(AAL3, true); err != nil {
 		t.Fatalf("PassStepUp: %v", err)
 	}
 	if g.Status != GrantAwaitingApproval {
@@ -154,7 +154,7 @@ func TestBreakglassStateMachineGuards(t *testing.T) {
 	if err := g.Approve(uuid.New()); !errors.Is(err, ErrGrantTransition) {
 		t.Fatalf("aprovar em requested: err = %v", err)
 	}
-	_ = g.PassStepUp()
+	_ = g.PassStepUp(AAL3, true)
 
 	peer := uuid.New()
 	_ = g.Approve(peer)
@@ -174,7 +174,7 @@ func TestBreakglassExpireAndRevoke(t *testing.T) {
 
 	// Expiração de um grant ativo.
 	g, _ := NewPrivilegedGrant(org, sub, validTarget(), GrantBreakglass, 1, nb, exp)
-	_ = g.PassStepUp()
+	_ = g.PassStepUp(AAL3, true)
 	_ = g.Approve(uuid.New())
 	if g.Status != GrantActive {
 		t.Fatalf("pré-condição: deveria estar ativo")
@@ -195,7 +195,7 @@ func TestBreakglassExpireAndRevoke(t *testing.T) {
 	if err := g2.Revoke(); !errors.Is(err, ErrGrantTransition) {
 		t.Fatalf("revogar em requested: err = %v", err)
 	}
-	_ = g2.PassStepUp()
+	_ = g2.PassStepUp(AAL3, true)
 	_ = g2.Approve(uuid.New())
 	if err := g2.Revoke(); err != nil {
 		t.Fatalf("Revoke ativo: %v", err)
@@ -225,5 +225,29 @@ func TestNewBreakglassRequestRequiresJustificationAndIncident(t *testing.T) {
 	}
 	if g.Origin != GrantBreakglass || g.Justification == "" || g.IncidentRef == "" || g.Status != GrantRequested {
 		t.Fatalf("break-glass inesperado: %+v", g)
+	}
+}
+
+// Step-up com TOTP (não resistente a phishing) é recusado no break-glass
+// (cenário "Fator insuficiente").
+func TestBreakglassStepUpRejectsTOTP(t *testing.T) {
+	org, sub := uuid.New(), uuid.New()
+	nb := time.Date(2026, 7, 23, 10, 0, 0, 0, time.UTC)
+	g, _ := NewBreakglassRequest(org, sub, validTarget(), 2, "incidente", "INC-9", nb, nb.Add(30*time.Minute))
+
+	// TOTP = AAL2, não phishing-resistant → recusado.
+	if err := g.PassStepUp(AAL2, false); !errors.Is(err, ErrStepUpNotPhishingResistant) {
+		t.Fatalf("TOTP no break-glass: err = %v, quero ErrStepUpNotPhishingResistant", err)
+	}
+	if g.Status != GrantRequested {
+		t.Fatalf("step-up recusado não deveria mudar o estado, veio %s", g.Status)
+	}
+
+	// WebAuthn (phishing-resistant) → aceito.
+	if err := g.PassStepUp(AAL3, true); err != nil {
+		t.Fatalf("WebAuthn deveria ser aceito: %v", err)
+	}
+	if g.Status != GrantAwaitingApproval {
+		t.Fatalf("após step-up WebAuthn deveria aguardar aprovação, veio %s", g.Status)
 	}
 }

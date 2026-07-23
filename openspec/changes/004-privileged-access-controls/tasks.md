@@ -75,7 +75,13 @@
       exige AMBOS não-vazios (`ErrInvalidGrant`) — acesso emergencial sem motivo declarado e sem
       incidente a que se vincular é recusado. Nasce `requested` origem breakglass. Teste: recusa sem
       justificativa/incidente; aceita com ambos. Gate verde.)*
-- [ ] **T-009** Integrar step-up WebAuthn obrigatório (pacote 005) e recusar TOTP.
+- [x] **T-009** Integrar step-up WebAuthn obrigatório (pacote 005) e recusar TOTP. *(`PassStepUp`
+      passa a consumir o resultado do step-up do pacote 005 — `PassStepUp(provenAAL, phishingResistant)`
+      (o chamador passa `session.ProvenAAL`/`session.PhishingResistant()` após o `AuthSession.StepUp`).
+      RECUSA fator não resistente a phishing (`ErrStepUpNotPhishingResistant`): TOTP (AAL2, não
+      phishing-resistant) não qualifica para break-glass, só WebAuthn (cenário "Fator insuficiente").
+      Exige também AAL≥2. Step-up recusado não muda o estado. Teste: TOTP recusado, WebAuthn aceito.
+      Gate verde.)*
 - [ ] **T-010** Implementar aprovação de N pares com validação de aprovadores distintos.
 - [ ] **T-011** Implementar alerta em tempo real na solicitação (SMTP/webhook).
 - [ ] **T-012** Implementar expiração automática e revogação em cascata das sessões derivadas.

@@ -100,6 +100,10 @@ var (
 	// ErrGrantDuplicateApproval is returned when the same approver approves twice —
 	// the threshold must be met by DISTINCT approvers.
 	ErrGrantDuplicateApproval = errors.New("privileged_grant: aprovação duplicada do mesmo par")
+	// ErrStepUpNotPhishingResistant is returned when the break-glass step-up was
+	// completed with a factor that is not phishing-resistant (e.g. TOTP): emergency
+	// access demands WebAuthn (ADR-0008 / spec "Fator insuficiente").
+	ErrStepUpNotPhishingResistant = errors.New("privileged_grant: break-glass exige step-up com fator resistente a phishing (WebAuthn)")
 )
 
 // PrivilegedGrant is a time-limited authorization for a membership to act on a
@@ -175,12 +179,18 @@ func NewPrivilegedGrant(organizationID, subjectMembershipID uuid.UUID, target Gr
 
 // PassStepUp advances a requested grant past the reinforced-authentication gate
 // to awaiting_approval — the "solicitado ──step-up OK──► aguardando_aprovacao"
-// edge (design 004). The caller has already verified the step-up used a
-// phishing-resistant factor (T-009). When zero approvals are required (a dev-only
-// configuration; production forbids it, T-010) the grant becomes active at once.
-func (g *PrivilegedGrant) PassStepUp() error {
+// edge (design 004). It consumes the step-up result from pacote 005 (the
+// session's proven AAL and whether it was phishing-resistant) and REFUSES a
+// step-up that is not phishing-resistant: TOTP does not qualify for break-glass,
+// only WebAuthn (ErrStepUpNotPhishingResistant / spec "Fator insuficiente").
+// When zero approvals are required (a dev-only configuration; production forbids
+// it, T-010) the grant becomes active at once.
+func (g *PrivilegedGrant) PassStepUp(provenAAL AAL, phishingResistant bool) error {
 	if g.Status != GrantRequested {
 		return fmt.Errorf("%w: step-up exige status requested, está %s", ErrGrantTransition, g.Status)
+	}
+	if !phishingResistant || !provenAAL.AtLeast(AAL2) {
+		return ErrStepUpNotPhishingResistant
 	}
 	if g.RequiredApprovals == 0 {
 		g.Status = GrantActive
