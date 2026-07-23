@@ -1,6 +1,17 @@
 # Tasks — 004 · Controles de acesso privilegiado
 
-- [ ] **T-001** Modelar `privileged_grant` (sujeito, alvo, janela, origem, aprovações, status).
+- [x] **T-001** Modelar `privileged_grant` (sujeito, alvo, janela, origem, aprovações, status).
+      *(`internal/domain/privileged_grant.go`, domínio puro. `PrivilegedGrant`: sujeito =
+      `SubjectMembershipID` (R2 — privilégio por MEMBERSHIP, nunca segue a pessoa a outra org),
+      `GrantTarget{Type,ID,Scope}` (ativo opaco + escopo), janela `[NotBefore, ExpiresAt)`, `Origin`
+      (normal|breakglass), `Status` (requested→awaiting_approval→active→expired|revoked; +denied/
+      rejected — a máquina em si é T-007), `RequiredApprovals`/`Approvals`. `NewPrivilegedGrant`
+      valida referências, alvo completo, origem e janela POSITIVA; nasce em `requested`. Propriedade
+      de segurança central: `Authorizes(now)` avalia autoridade NO MOMENTO DA DECISÃO — status active
+      E now estritamente dentro da janela; um grant fora da janela não autoriza NADA mesmo com status
+      ainda 'active' (job não materializou) — base do cenário "Token emitido antes da expiração".
+      Fail-closed. Timestamps injetados (domínio sem relógio). Testes: construção, validações,
+      autorização só dentro da janela. Gate verde.)*
 - [ ] **T-002** Implementar emissão de token de delegação com claim `act`.
 - [ ] **T-003** Implementar restrições de escopo da delegação (sem admin, sem segredos, sem
       aprovação).
