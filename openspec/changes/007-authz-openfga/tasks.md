@@ -1,7 +1,7 @@
 # Tasks — 007 · Autorização granular
 
 - [x] **T-001** Definir a interface `PolicyDecisionPoint` no domínio (sem tipos de SDK).
-- [ ] **T-002** Escrever o modelo de autorização (tipos, relações, herança, condições).
+- [x] **T-002** Escrever o modelo de autorização (tipos, relações, herança, condições).
 - [ ] **T-003** Implementar qualificação de objetos por tenant no identificador.
 - [ ] **T-004** Modelar `asset` e `asset_group` com hierarquia no ArchGuard.
 - [ ] **T-005** Implementar outbox transacional para mutações relevantes.
