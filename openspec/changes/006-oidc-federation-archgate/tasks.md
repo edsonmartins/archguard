@@ -75,7 +75,13 @@
 - [ ] **T-009** Implementar back-channel logout OIDC.
 - [ ] **T-010** Implementar introspecção com TTL curto para componentes sem logout.
 - [ ] **T-011** Implementar rotação de JWKS com sobreposição e `kid`.
-- [ ] **T-012** Bloquear operações L3 originadas de device flow.
+- [x] **T-012** Bloquear operações L3 originadas de device flow. *(`DeviceFlowAuthorize(level,
+      viaDeviceFlow)`: recusa L3 quando o token veio do Device Authorization Grant
+      (`ErrL3ViaDeviceFlow`) — o device flow não sustenta step-up confiável (sem navegador para
+      cerimônia WebAuthn fresca); no-op para L1/L2 ou token que não é de device flow. Regra dura do
+      RFC-0006 §2. O middleware compõe com a checagem de garantia — mesmo um token de device flow
+      cujo acr alegasse L3 é negado, porque o FLUXO não sustenta L3. Teste: L3 via device flow negado,
+      L1/L2 permitidos, L3 fora do device flow não bloqueado por esta regra. Gate verde.)*
 - [ ] **T-013** Registrar clientes: Warpgate, Guacamole, NetBird, OpenBao, proxy Oracle JDBC.
 - [ ] **T-014** Mapear claims → políticas do OpenBao a partir da mesma fonte de papéis.
 - [ ] **T-015** Adaptação de borda para limitações do Guacamole (documentada).

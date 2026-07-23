@@ -146,3 +146,20 @@ func HasScope(granted []string, scope string) bool {
 	}
 	return false
 }
+
+// ErrL3ViaDeviceFlow is the denial for an L3 operation attempted with a token
+// obtained through the Device Authorization Grant. The device flow cannot sustain
+// a reliable step-up (no browser for a fresh WebAuthn ceremony), so L3 is never
+// authorized from it (RFC-0006 §2 / design 006 "Regra dura").
+var ErrL3ViaDeviceFlow = errors.New("oidc: operação L3 não é autorizada por device flow")
+
+// DeviceFlowAuthorize refuses an L3 operation when the token came from the device
+// flow. For any other level, or a token not from device flow, it is a no-op. The
+// middleware composes it with the assurance check: even a device-flow token whose
+// acr somehow claimed L3 is denied, because the flow itself cannot back L3.
+func DeviceFlowAuthorize(level AssuranceLevel, viaDeviceFlow bool) error {
+	if viaDeviceFlow && level == L3 {
+		return fmt.Errorf("%w: nível %s", ErrL3ViaDeviceFlow, level)
+	}
+	return nil
+}
