@@ -251,3 +251,37 @@ func TestBreakglassStepUpRejectsTOTP(t *testing.T) {
 		t.Fatalf("após step-up WebAuthn deveria aguardar aprovação, veio %s", g.Status)
 	}
 }
+
+// Autoaprovação é recusada: o solicitante (subject) não aprova a própria
+// solicitação (cenário "Autoaprovação").
+func TestBreakglassSelfApprovalRefused(t *testing.T) {
+	org, sub := uuid.New(), uuid.New()
+	nb := time.Date(2026, 7, 23, 10, 0, 0, 0, time.UTC)
+	g, _ := NewBreakglassRequest(org, sub, validTarget(), 2, "incidente", "INC-1", nb, nb.Add(30*time.Minute))
+	_ = g.PassStepUp(AAL3, true)
+
+	if err := g.Approve(sub); !errors.Is(err, ErrSelfApproval) {
+		t.Fatalf("autoaprovação: err = %v, quero ErrSelfApproval", err)
+	}
+	if len(g.Approvals) != 0 {
+		t.Fatalf("autoaprovação não deveria ser registrada")
+	}
+}
+
+// Zero aprovadores é proibido em produção, permitido fora dela (cenário "Zero
+// aprovadores em produção").
+func TestBreakglassPolicyZeroApproversInProduction(t *testing.T) {
+	if _, err := NewBreakglassPolicy(0, true); !errors.Is(err, ErrZeroApproversInProduction) {
+		t.Fatalf("zero em produção: err = %v, quero ErrZeroApproversInProduction", err)
+	}
+	if _, err := NewBreakglassPolicy(0, false); err != nil {
+		t.Fatalf("zero fora de produção deveria ser permitido: %v", err)
+	}
+	if _, err := NewBreakglassPolicy(-1, false); !errors.Is(err, ErrInvalidGrant) {
+		t.Fatalf("negativo: err = %v", err)
+	}
+	p, err := NewBreakglassPolicy(2, true)
+	if err != nil || p.RequiredApprovals != 2 {
+		t.Fatalf("política 2 em produção deveria valer: %+v %v", p, err)
+	}
+}

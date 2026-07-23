@@ -82,7 +82,15 @@
       phishing-resistant) não qualifica para break-glass, só WebAuthn (cenário "Fator insuficiente").
       Exige também AAL≥2. Step-up recusado não muda o estado. Teste: TOTP recusado, WebAuthn aceito.
       Gate verde.)*
-- [ ] **T-010** Implementar aprovação de N pares com validação de aprovadores distintos.
+- [x] **T-010** Implementar aprovação de N pares com validação de aprovadores distintos. *(Distinção
+      já em `Approve` (T-007). Acrescenta: (a) autoaprovação recusada — `Approve` rejeita
+      approver==SubjectMembershipID (o solicitante) com `ErrSelfApproval` (cenário "Autoaprovação");
+      (b) `BreakglassPolicy{RequiredApprovals}` + `NewBreakglassPolicy(required, production)` que
+      recusa ZERO aprovadores em produção (`ErrZeroApproversInProduction`, cenário "Zero aprovadores
+      em produção") — o domínio recebe `production bool` (o wiring mapeia `deploy.Profile`),
+      mantendo-se puro; negativo sempre inválido; zero permitido só fora de produção. `DefaultBreakglassApprovals=2`.
+      Testes: autoaprovação recusada e não registrada; zero em produção rejeitado, fora permitido.
+      Gate verde.)*
 - [ ] **T-011** Implementar alerta em tempo real na solicitação (SMTP/webhook).
 - [ ] **T-012** Implementar expiração automática e revogação em cascata das sessões derivadas.
 - [ ] **T-013** Implementar fail-closed para ausência de auditoria ou de canal de notificação.

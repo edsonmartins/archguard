@@ -104,7 +104,39 @@ var (
 	// completed with a factor that is not phishing-resistant (e.g. TOTP): emergency
 	// access demands WebAuthn (ADR-0008 / spec "Fator insuficiente").
 	ErrStepUpNotPhishingResistant = errors.New("privileged_grant: break-glass exige step-up com fator resistente a phishing (WebAuthn)")
+	// ErrSelfApproval enforces separation of duties: the requester (the grant's
+	// subject) cannot approve their own break-glass (spec "Autoaprovação").
+	ErrSelfApproval = errors.New("privileged_grant: o solicitante não pode aprovar a própria solicitação")
+	// ErrZeroApproversInProduction is returned when a break-glass policy is
+	// configured with zero required approvers in a production environment (spec
+	// "Zero aprovadores em produção").
+	ErrZeroApproversInProduction = errors.New("privileged_grant: zero aprovadores é proibido em produção")
 )
+
+// DefaultBreakglassApprovals is the default number of distinct peer approvers a
+// break-glass grant requires (ADR-0008: padrão 2).
+const DefaultBreakglassApprovals = 2
+
+// BreakglassPolicy is a tenant's break-glass configuration: how many distinct
+// peers must approve. It is validated against the environment — zero approvers,
+// which turns break-glass into a self-service backdoor, is REFUSED in production
+// (spec "Zero aprovadores em produção").
+type BreakglassPolicy struct {
+	RequiredApprovals int
+}
+
+// NewBreakglassPolicy builds and validates a policy. In production, zero
+// approvers is rejected (ErrZeroApproversInProduction); a negative count is
+// always invalid. In non-production, zero is permitted (a dev/test shortcut).
+func NewBreakglassPolicy(requiredApprovals int, production bool) (BreakglassPolicy, error) {
+	if requiredApprovals < 0 {
+		return BreakglassPolicy{}, fmt.Errorf("%w: aprovações negativas", ErrInvalidGrant)
+	}
+	if production && requiredApprovals == 0 {
+		return BreakglassPolicy{}, ErrZeroApproversInProduction
+	}
+	return BreakglassPolicy{RequiredApprovals: requiredApprovals}, nil
+}
 
 // PrivilegedGrant is a time-limited authorization for a membership to act on a
 // target with a given scope (design 004 §"Concessões"). It is the record the
@@ -221,6 +253,11 @@ func (g *PrivilegedGrant) Approve(approverMembershipID uuid.UUID) error {
 	}
 	if approverMembershipID == uuid.Nil {
 		return fmt.Errorf("%w: aprovador nulo", ErrInvalidGrant)
+	}
+	// Separation of duties: the requester (the grant's subject) cannot approve
+	// their own break-glass.
+	if approverMembershipID == g.SubjectMembershipID {
+		return ErrSelfApproval
 	}
 	for _, a := range g.Approvals {
 		if a.ApproverMembershipID == approverMembershipID {
