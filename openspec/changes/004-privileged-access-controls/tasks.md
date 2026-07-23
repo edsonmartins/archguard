@@ -154,11 +154,35 @@
       via `Delegation.AuditActor()` (T-002) — reconstrói 100% do ator real nas ações delegadas.
       Integração PG: aprovação→ativa+auditada, revogação→cascata+auditada, revisão auditada. INV-8
       verde. Gate verde.)*
-- [ ] **T-018** Teste: delegação não escala privilégio nem aprova solicitações.
-- [ ] **T-019** Teste: break-glass sem canal de notificação é negado.
-- [ ] **T-020** Teste: concessão expirada não autoriza acesso mesmo com token válido em mãos.
+- [x] **T-018** Teste: delegação não escala privilégio nem aprova solicitações. *(`TestAcceptanceDelegationDoesNotEscalateNorApprove`
+      contra o catálogo canônico: sessão de delegação recusada em `admin.mutation`, `breakglass.approve`,
+      `privileged.grant.use` (`ErrDelegationScopeExceeded`), mas alcança `profile.read`. Também
+      `TestDelegationScopeGuard`.)*
+- [x] **T-019** Teste: break-glass sem canal de notificação é negado. *(`TestAcceptanceBreakglassDeniedWithoutChannel`
+      (domínio, `ErrNoNotificationChannel`) + integração `TestBreakglassOrchestratorDeniedWithoutChannel`
+      (nada persiste).)*
+- [x] **T-020** Teste: concessão expirada não autoriza acesso mesmo com token válido em mãos.
+      *(`TestAcceptanceExpiredGrantDeniesEvenWithValidToken`: com status ainda 'active' (job não
+      materializou) mas janela vencida, `Authorizes` nega — a decisão é pela janela, não pelo token.
+      Também `TestPrivilegedGrantAuthorizesWithinWindowOnly` e a integração do GrantExpirer.)*
 
 ## Gate de verificação
 Nenhum caminho concede acesso privilegiado sem justificativa, step-up e aprovação; testes de
 escalada de privilégio via delegação falham em conceder; auditoria reconstrói ator real em
 100% das ações delegadas.
+
+**FECHADO (2026-07-23).** 20/20 tarefas [x]. Gate completo verde (`make lint/invariants/deps-check/
+sbom/build` + suíte `go test ./internal/... ./cmd/... ./test/...` contra PG 15 real).
+- **Nenhum acesso privilegiado sem justificativa+step-up+aprovação**: break-glass exige justificativa+
+  incidente (T-008), step-up WebAuthn recusando TOTP (T-009), N pares distintos sem autoaprovação e
+  zero-proibido-em-produção (T-010), tudo fail-closed em auditoria e canal (T-013).
+- **Escalada via delegação não concede**: `ForbiddenUnderDelegation` no catálogo + `DelegationScopeGuard`
+  (T-003), aceitação em T-018; escopo reduzido estrutural (sem admin/segredo/aprovação).
+- **Ator real reconstruído em 100% das ações delegadas**: `Delegation.AuditActor()` grava sub+act
+  (T-002); ciclo auditado (T-017).
+- **Expiração no momento da decisão**: `PrivilegedGrant.Authorizes` nega fora da janela mesmo com token
+  válido (T-020); job materializa + cascata (T-012).
+- Contas de serviço: sem login interativo (T-015), nunca impersonáveis (T-016).
+- Sem dependência nova. Persistência: migrações 0027 (privileged_grant/grant_approval/link de sessão) e
+  0028 (breakglass_review), todas RLS FORCE por org. Impls in-process (Notifier fake) = seam do
+  SMTP/webhook real (pacote 010). Wiring de handlers HTTP e do console = pacotes 006/008.
