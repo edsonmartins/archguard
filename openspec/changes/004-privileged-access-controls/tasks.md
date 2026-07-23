@@ -12,7 +12,17 @@
       ainda 'active' (job não materializou) — base do cenário "Token emitido antes da expiração".
       Fail-closed. Timestamps injetados (domínio sem relógio). Testes: construção, validações,
       autorização só dentro da janela. Gate verde.)*
-- [ ] **T-002** Implementar emissão de token de delegação com claim `act`.
+- [x] **T-002** Implementar emissão de token de delegação com claim `act`. *(`internal/domain/
+      delegation.go`. `Delegation`: ator real (`RealActorMembershipID`/`RealActorSubject`) + alvo
+      impersonado (`TargetIdentityID`/`TargetSubject`), janela, status. NASCE `pending_consent`
+      (consentimento é o padrão, ADR-0008 — não há construtor que já inicie ativo; acesso sem
+      consentimento só via break-glass). Recusa ator==alvo. `TokenClaims(now)` emite `DelegationTokenClaims`
+      só se ATIVA e vigente (`ErrDelegationNotActive`, fail-closed): `sub` = sujeito impersonado,
+      `act` = ator real (RFC 8693), `delegated: true` marca o token para o banner (T-005) e o guard
+      de escopo (T-003). `AuditActor()` registra AMBOS (aparente = impersonado, `Act` = ator real) —
+      não-repúdio reconstrói quem executou. O JWT assinado é o pacote 006; aqui é o conteúdo de
+      domínio. Testes: nasce pendente, validações, claims carregam sub+act e recusam fora da janela,
+      auditoria registra ambos. Gate verde.)*
 - [ ] **T-003** Implementar restrições de escopo da delegação (sem admin, sem segredos, sem
       aprovação).
 - [ ] **T-004** Implementar fluxo de consentimento do usuário-alvo.
