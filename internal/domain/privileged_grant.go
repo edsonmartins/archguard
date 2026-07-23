@@ -88,12 +88,18 @@ type GrantApproval struct {
 	ApproverMembershipID uuid.UUID
 }
 
-// Errors of privileged-grant construction.
+// Errors of privileged-grant construction and transitions.
 var (
 	ErrInvalidGrant = errors.New("privileged_grant: dados obrigatórios ausentes")
 	// ErrInvalidGrantWindow is returned when the window is not a positive interval
 	// (expiry must be strictly after the start).
 	ErrInvalidGrantWindow = errors.New("privileged_grant: janela temporal inválida")
+	// ErrGrantTransition is returned for a state transition not allowed from the
+	// current status.
+	ErrGrantTransition = errors.New("privileged_grant: transição de estado inválida")
+	// ErrGrantDuplicateApproval is returned when the same approver approves twice —
+	// the threshold must be met by DISTINCT approvers.
+	ErrGrantDuplicateApproval = errors.New("privileged_grant: aprovação duplicada do mesmo par")
 )
 
 // PrivilegedGrant is a time-limited authorization for a membership to act on a
@@ -158,6 +164,94 @@ func NewPrivilegedGrant(organizationID, subjectMembershipID uuid.UUID, target Gr
 		NotBefore:           notBefore,
 		ExpiresAt:           expiresAt,
 	}, nil
+}
+
+// PassStepUp advances a requested grant past the reinforced-authentication gate
+// to awaiting_approval — the "solicitado ──step-up OK──► aguardando_aprovacao"
+// edge (design 004). The caller has already verified the step-up used a
+// phishing-resistant factor (T-009). When zero approvals are required (a dev-only
+// configuration; production forbids it, T-010) the grant becomes active at once.
+func (g *PrivilegedGrant) PassStepUp() error {
+	if g.Status != GrantRequested {
+		return fmt.Errorf("%w: step-up exige status requested, está %s", ErrGrantTransition, g.Status)
+	}
+	if g.RequiredApprovals == 0 {
+		g.Status = GrantActive
+	} else {
+		g.Status = GrantAwaitingApproval
+	}
+	return nil
+}
+
+// Deny terminates a requested grant that did not pass the gate (e.g. step-up
+// failed) — the "solicitado ─ negado" edge. Valid only from requested.
+func (g *PrivilegedGrant) Deny() error {
+	if g.Status != GrantRequested {
+		return fmt.Errorf("%w: negação exige status requested, está %s", ErrGrantTransition, g.Status)
+	}
+	g.Status = GrantDenied
+	return nil
+}
+
+// Approve records one peer approval. The threshold must be met by DISTINCT
+// approvers (a duplicate is ErrGrantDuplicateApproval); when the count reaches
+// RequiredApprovals the grant becomes active. Valid only from awaiting_approval.
+// The rules that an approver is neither the requester nor a delegation session
+// are enforced by the request flow (T-010).
+func (g *PrivilegedGrant) Approve(approverMembershipID uuid.UUID) error {
+	if g.Status != GrantAwaitingApproval {
+		return fmt.Errorf("%w: aprovação exige status awaiting_approval, está %s", ErrGrantTransition, g.Status)
+	}
+	if approverMembershipID == uuid.Nil {
+		return fmt.Errorf("%w: aprovador nulo", ErrInvalidGrant)
+	}
+	for _, a := range g.Approvals {
+		if a.ApproverMembershipID == approverMembershipID {
+			return ErrGrantDuplicateApproval
+		}
+	}
+	g.Approvals = append(g.Approvals, GrantApproval{ApproverMembershipID: approverMembershipID})
+	if len(g.Approvals) >= g.RequiredApprovals {
+		g.Status = GrantActive
+	}
+	return nil
+}
+
+// Reject terminates a grant awaiting approval — the "aguardando_aprovacao ─
+// rejeitado" edge. Valid only from awaiting_approval.
+func (g *PrivilegedGrant) Reject() error {
+	if g.Status != GrantAwaitingApproval {
+		return fmt.Errorf("%w: rejeição exige status awaiting_approval, está %s", ErrGrantTransition, g.Status)
+	}
+	g.Status = GrantRejected
+	return nil
+}
+
+// Expire moves a grant to expired when its window has passed at now. Valid from
+// awaiting_approval or active (both edges lead to expired). It refuses to expire
+// a grant whose window has NOT passed (fail-safe: no premature expiry). This is
+// the state materialization the cleanup job performs (T-012); Authorizes already
+// denies a past-window grant regardless of whether this ran.
+func (g *PrivilegedGrant) Expire(now time.Time) error {
+	if g.Status != GrantAwaitingApproval && g.Status != GrantActive {
+		return fmt.Errorf("%w: expiração exige awaiting_approval ou active, está %s", ErrGrantTransition, g.Status)
+	}
+	if !g.Expired(now) {
+		return fmt.Errorf("%w: janela ainda não expirou", ErrGrantTransition)
+	}
+	g.Status = GrantExpired
+	return nil
+}
+
+// Revoke terminates an active grant immediately — the "ativo ─ revogado" edge and
+// the trigger for the cascade revocation of derived sessions (T-012). Valid only
+// from active.
+func (g *PrivilegedGrant) Revoke() error {
+	if g.Status != GrantActive {
+		return fmt.Errorf("%w: revogação exige status active, está %s", ErrGrantTransition, g.Status)
+	}
+	g.Status = GrantRevoked
+	return nil
 }
 
 // Expired reports whether the grant's window has passed at now — independent of

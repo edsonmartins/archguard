@@ -59,7 +59,16 @@
       é a mesma). Como `TokenClaims` exige ativa, a revogação encerra a sessão delegada IMEDIATAMENTE:
       nenhum token é emitido depois (cenário "Revogação pelo alvo"). Não reativa terminais. Teste:
       revogar interrompe a emissão de token na hora; idempotente. Gate verde.)*
-- [ ] **T-007** Implementar máquina de estados de break-glass.
+- [x] **T-007** Implementar máquina de estados de break-glass. *(Transições no `PrivilegedGrant`:
+      `PassStepUp()` requested→awaiting_approval (o caller já validou fator resistente a phishing,
+      T-009; se 0 aprovações — só dev, prod proíbe em T-010 — ativa direto), `Deny()` requested→denied,
+      `Approve(approver)` conta aprovadores DISTINTOS (duplicata = `ErrGrantDuplicateApproval`) e ao
+      atingir o limiar ativa, `Reject()` awaiting→rejected, `Expire(now)` awaiting/active→expired só
+      com janela VENCIDA (sem expiração prematura), `Revoke()` active→revoked (gatilho da cascata,
+      T-012). Cada transição valida o estado de origem (`ErrGrantTransition`). Cobre "Solicitação
+      completa". Testes: caminho feliz (2 aprovações distintas ativam), duplicata não conta, expirar
+      exige janela vencida, revogar exige ativo. (Auto-aprovação/distinção-do-solicitante = T-010;
+      justificativa = T-008.) Gate verde.)*
 - [ ] **T-008** Exigir justificativa vinculada a incidente na solicitação.
 - [ ] **T-009** Integrar step-up WebAuthn obrigatório (pacote 005) e recusar TOTP.
 - [ ] **T-010** Implementar aprovação de N pares com validação de aprovadores distintos.

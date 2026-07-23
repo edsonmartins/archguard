@@ -111,3 +111,96 @@ func TestPrivilegedGrantAuthorizesWithinWindowOnly(t *testing.T) {
 		t.Fatalf("Expired deveria ser verdadeiro no instante da expiração")
 	}
 }
+
+// Máquina de estados feliz: requested → (step-up) awaiting_approval → (2
+// aprovações distintas) active (cenário "Solicitação completa").
+func TestBreakglassStateMachineHappyPath(t *testing.T) {
+	org, sub := uuid.New(), uuid.New()
+	nb := time.Date(2026, 7, 23, 10, 0, 0, 0, time.UTC)
+	g, _ := NewPrivilegedGrant(org, sub, validTarget(), GrantBreakglass, 2, nb, nb.Add(30*time.Minute))
+
+	if err := g.PassStepUp(); err != nil {
+		t.Fatalf("PassStepUp: %v", err)
+	}
+	if g.Status != GrantAwaitingApproval {
+		t.Fatalf("após step-up deveria aguardar aprovação, veio %s", g.Status)
+	}
+
+	peer1, peer2 := uuid.New(), uuid.New()
+	if err := g.Approve(peer1); err != nil {
+		t.Fatalf("Approve peer1: %v", err)
+	}
+	if g.Status != GrantAwaitingApproval {
+		t.Fatalf("uma aprovação não deveria ativar")
+	}
+	if err := g.Approve(peer2); err != nil {
+		t.Fatalf("Approve peer2: %v", err)
+	}
+	if g.Status != GrantActive {
+		t.Fatalf("duas aprovações distintas deveriam ativar, veio %s", g.Status)
+	}
+	if !g.Authorizes(nb.Add(time.Minute)) {
+		t.Fatalf("grant ativo e vigente deveria autorizar")
+	}
+}
+
+// Aprovações duplicadas não contam; transições fora de estado são recusadas.
+func TestBreakglassStateMachineGuards(t *testing.T) {
+	org, sub := uuid.New(), uuid.New()
+	nb := time.Date(2026, 7, 23, 10, 0, 0, 0, time.UTC)
+	g, _ := NewPrivilegedGrant(org, sub, validTarget(), GrantBreakglass, 2, nb, nb.Add(30*time.Minute))
+
+	// Aprovar antes do step-up é inválido.
+	if err := g.Approve(uuid.New()); !errors.Is(err, ErrGrantTransition) {
+		t.Fatalf("aprovar em requested: err = %v", err)
+	}
+	_ = g.PassStepUp()
+
+	peer := uuid.New()
+	_ = g.Approve(peer)
+	if err := g.Approve(peer); !errors.Is(err, ErrGrantDuplicateApproval) {
+		t.Fatalf("aprovação duplicada: err = %v", err)
+	}
+	if g.Status != GrantAwaitingApproval {
+		t.Fatalf("duplicata não deveria ativar (só 1 aprovador distinto)")
+	}
+}
+
+// Expiração e revogação: expirar exige janela vencida; revogar exige ativo.
+func TestBreakglassExpireAndRevoke(t *testing.T) {
+	org, sub := uuid.New(), uuid.New()
+	nb := time.Date(2026, 7, 23, 10, 0, 0, 0, time.UTC)
+	exp := nb.Add(30 * time.Minute)
+
+	// Expiração de um grant ativo.
+	g, _ := NewPrivilegedGrant(org, sub, validTarget(), GrantBreakglass, 1, nb, exp)
+	_ = g.PassStepUp()
+	_ = g.Approve(uuid.New())
+	if g.Status != GrantActive {
+		t.Fatalf("pré-condição: deveria estar ativo")
+	}
+	// Expirar antes da janela vencer é recusado.
+	if err := g.Expire(nb.Add(time.Minute)); !errors.Is(err, ErrGrantTransition) {
+		t.Fatalf("expirar prematuramente: err = %v", err)
+	}
+	if err := g.Expire(exp); err != nil {
+		t.Fatalf("Expire na janela vencida: %v", err)
+	}
+	if g.Status != GrantExpired || g.Authorizes(exp) {
+		t.Fatalf("expirado não deveria autorizar")
+	}
+
+	// Revogar exige ativo.
+	g2, _ := NewPrivilegedGrant(org, sub, validTarget(), GrantBreakglass, 1, nb, exp)
+	if err := g2.Revoke(); !errors.Is(err, ErrGrantTransition) {
+		t.Fatalf("revogar em requested: err = %v", err)
+	}
+	_ = g2.PassStepUp()
+	_ = g2.Approve(uuid.New())
+	if err := g2.Revoke(); err != nil {
+		t.Fatalf("Revoke ativo: %v", err)
+	}
+	if g2.Status != GrantRevoked {
+		t.Fatalf("status = %s, quero revoked", g2.Status)
+	}
+}
