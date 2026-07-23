@@ -138,7 +138,10 @@
       recusa conta de serviço com `ErrInteractiveLoginForbidden` (cenário "Login interativo de conta
       de serviço") — uma conta de serviço autentica por credencial rotacionável no cofre, nunca
       interativamente. Teste: humano permitido, serviço barrado. Gate verde.)*
-- [ ] **T-016** Impedir impersonation de conta de serviço (regra + teste).
+- [x] **T-016** Impedir impersonation de conta de serviço (regra + teste). *(`NewDelegation` passa a
+      receber o `IdentityType` do alvo e RECUSA `IdentityService` com `ErrCannotImpersonateService`
+      (ADR-0008 §4 / cenário "Tentativa de impersonar conta de serviço") — uma conta de serviço nunca
+      é impersonada, por construção. Teste: delegação sobre conta de serviço recusada. Gate verde.)*
 - [ ] **T-017** Auditar todos os eventos do ciclo (solicitação, aprovação, uso, expiração,
       revogação, revisão).
 - [ ] **T-018** Teste: delegação não escala privilégio nem aprova solicitações.

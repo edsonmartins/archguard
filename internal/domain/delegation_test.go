@@ -25,11 +25,20 @@ import (
 
 func newTestDelegation(t *testing.T, nb, exp time.Time) Delegation {
 	t.Helper()
-	d, err := NewDelegation(uuid.New(), uuid.New(), "sub-admin", uuid.New(), "sub-target", nb, exp)
+	d, err := NewDelegation(uuid.New(), uuid.New(), "sub-admin", uuid.New(), "sub-target", IdentityHuman, nb, exp)
 	if err != nil {
 		t.Fatalf("NewDelegation: %v", err)
 	}
 	return d
+}
+
+// Conta de serviço nunca é impersonada (cenário "Tentativa de impersonar conta
+// de serviço").
+func TestDelegationRefusesServiceAccountTarget(t *testing.T) {
+	nb := time.Date(2026, 7, 23, 10, 0, 0, 0, time.UTC)
+	if _, err := NewDelegation(uuid.New(), uuid.New(), "sub-admin", uuid.New(), "sub-svc", IdentityService, nb, nb.Add(time.Hour)); !errors.Is(err, ErrCannotImpersonateService) {
+		t.Fatalf("impersonar conta de serviço: err = %v, quero ErrCannotImpersonateService", err)
+	}
 }
 
 func TestNewDelegationStartsPendingConsent(t *testing.T) {
@@ -44,11 +53,11 @@ func TestNewDelegationValidation(t *testing.T) {
 	nb := time.Date(2026, 7, 23, 10, 0, 0, 0, time.UTC)
 	exp := nb.Add(time.Hour)
 	// Ator real == alvo é recusado.
-	if _, err := NewDelegation(uuid.New(), uuid.New(), "same", uuid.New(), "same", nb, exp); !errors.Is(err, ErrInvalidDelegation) {
+	if _, err := NewDelegation(uuid.New(), uuid.New(), "same", uuid.New(), "same", IdentityHuman, nb, exp); !errors.Is(err, ErrInvalidDelegation) {
 		t.Fatalf("mesmo sujeito: err = %v, quero ErrInvalidDelegation", err)
 	}
 	// Janela invertida.
-	if _, err := NewDelegation(uuid.New(), uuid.New(), "a", uuid.New(), "b", exp, nb); !errors.Is(err, ErrInvalidDelegation) {
+	if _, err := NewDelegation(uuid.New(), uuid.New(), "a", uuid.New(), "b", IdentityHuman, exp, nb); !errors.Is(err, ErrInvalidDelegation) {
 		t.Fatalf("janela invertida: err = %v", err)
 	}
 }

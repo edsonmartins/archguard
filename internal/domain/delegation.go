@@ -77,6 +77,10 @@ var (
 	// that is not active, or whose window has passed — fail-closed: an expired or
 	// unconsented delegation mints no token.
 	ErrDelegationNotActive = errors.New("delegation: apenas delegação ativa e vigente emite token")
+	// ErrCannotImpersonateService is returned when a delegation is opened over a
+	// SERVICE account: a service account is never impersonated (ADR-0008 §4 / spec
+	// "Tentativa de impersonar conta de serviço", T-016).
+	ErrCannotImpersonateService = errors.New("delegation: conta de serviço não pode ser impersonada")
 )
 
 // ErrDelegationTransition is returned for a delegation state transition that is
@@ -151,12 +155,16 @@ type Delegation struct {
 // references and a POSITIVE window. Consent (T-004) moves it to active; there is
 // no constructor that starts active. The subjects are the opaque identity
 // subjects (never e-mail/name).
-func NewDelegation(organizationID, realActorMembershipID uuid.UUID, realActorSubject string, targetIdentityID uuid.UUID, targetSubject string, notBefore, expiresAt time.Time) (Delegation, error) {
+func NewDelegation(organizationID, realActorMembershipID uuid.UUID, realActorSubject string, targetIdentityID uuid.UUID, targetSubject string, targetType IdentityType, notBefore, expiresAt time.Time) (Delegation, error) {
 	if organizationID == uuid.Nil || realActorMembershipID == uuid.Nil || targetIdentityID == uuid.Nil {
 		return Delegation{}, fmt.Errorf("%w: referências", ErrInvalidDelegation)
 	}
 	if realActorSubject == "" || targetSubject == "" {
 		return Delegation{}, fmt.Errorf("%w: subjects", ErrInvalidDelegation)
+	}
+	// A service account is never impersonated (T-016).
+	if targetType == IdentityService {
+		return Delegation{}, ErrCannotImpersonateService
 	}
 	if realActorSubject == targetSubject {
 		return Delegation{}, fmt.Errorf("%w: ator real e alvo não podem ser o mesmo sujeito", ErrInvalidDelegation)
