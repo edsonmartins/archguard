@@ -121,9 +121,15 @@ type AuthSession struct {
 	// the evidence that ProvenAAL is honest (SetAuthContext refuses an AAL above
 	// what these methods can attest).
 	AuthMethods []FactorType
-	RevokedAt   *time.Time
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	// EnrollmentRequired is the BLOCKING mandatory-enrollment state (spec
+	// "Privilegiado sem fator"): a privileged identity authenticated without a
+	// strong factor registered. While set, the assurance guard permits ONLY
+	// factor-enrollment operations — every other operation is denied until a
+	// strong factor is enrolled and the flag cleared (ClearEnrollmentRequired).
+	EnrollmentRequired bool
+	RevokedAt          *time.Time
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 // NewAuthSession resolves the tenant context of a fresh login from the
@@ -267,6 +273,38 @@ func (s *AuthSession) SetAuthContext(at time.Time, methods []FactorType) error {
 // ErrStepUpLowersAssurance is returned when a step-up would REDUCE the session's
 // proven level — a step-up may only raise or refresh it, never weaken it.
 var ErrStepUpLowersAssurance = errors.New("session: step-up não pode reduzir a garantia comprovada")
+
+// RequiresEnrollment reports whether a PRIVILEGED identity is missing the strong
+// factor that policy demands (spec "MFA obrigatório para identidades
+// privilegiadas") — the condition that forces the blocking mandatory-enrollment
+// state. A non-privileged identity never requires it here; a privileged one does
+// UNLESS it already holds a strong factor (Credential.Strong() — WebAuthn or
+// TOTP). The `privileged` input is computed by the caller from the identity's
+// role assignments in the active tenant (the authz source is pacote 004/007).
+func RequiresEnrollment(privileged bool, creds []Credential) bool {
+	if !privileged {
+		return false
+	}
+	for _, c := range creds {
+		if c.Strong() {
+			return false
+		}
+	}
+	return true
+}
+
+// MarkEnrollmentRequired puts the session into the blocking mandatory-enrollment
+// state. The login flow calls it when RequiresEnrollment is true.
+func (s *AuthSession) MarkEnrollmentRequired() {
+	s.EnrollmentRequired = true
+}
+
+// ClearEnrollmentRequired lifts the mandatory-enrollment state — called once a
+// strong factor has been enrolled, so the identity may proceed to other
+// operations.
+func (s *AuthSession) ClearEnrollmentRequired() {
+	s.EnrollmentRequired = false
+}
 
 // StepUp applies a reauthentication to the session: it raises (or holds) the
 // proven assurance to aal and refreshes the authentication context (auth_time,

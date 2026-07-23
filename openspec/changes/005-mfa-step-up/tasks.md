@@ -157,7 +157,18 @@
       falha ao resolver a política é fail-closed (500). O desafio RFC 9470 informa o acr EFETIVO
       (aal3 pelo piso). Testes de domínio (piso eleva L1, estrita não afrouxa, piso inválido
       fail-closed) e HTTP (piso AAL3 desafia L1; política indisponível → 500). Gate verde.)*
-- [ ] **T-012** Implementar estado `enrollment_required` bloqueante.
+- [x] **T-012** Implementar estado `enrollment_required` bloqueante. *(`domain.RequiresEnrollment(privileged, creds)`:
+      um privilegiado sem fator forte (nenhum `Credential.Strong()`) exige enrolamento; não-privilegiado
+      nunca. O `privileged` é computado pelo chamador a partir dos papéis no tenant ativo (authz é
+      pacote 004/007). `AuthSession.EnrollmentRequired` + Mark/Clear; a sessão entra no estado no
+      login. `Operation.AllowedDuringEnrollment` marca as poucas operações de registro de fator que
+      seguem permitidas. `AssuranceGuard.Authorize` usa `Lookup` e, ANTES da checagem de garantia,
+      se a sessão está em enrolamento e a operação não é exceção → `ErrEnrollmentRequired` (o gate
+      precede o de AAL — nem uma leitura L1 é alcançável até haver fator forte). Persistência
+      (migração 0024): coluna `enrollment_required` (default false; login LEVANTA); store threada em
+      Create/Get/scan + `ClearEnrollment` (limpa na sessão ativa após enrolar). Testes de domínio
+      (RequiresEnrollment por combinação; bloqueio de op comum vs permissão de enrolamento; gate
+      precede garantia) e integração PG (persiste no login, limpa por ClearEnrollment). Gate verde.)*
 - [ ] **T-013** Implementar processo de recuperação com aprovação de pares.
 - [ ] **T-014** Implementar limitação de taxa e bloqueio progressivo.
 - [ ] **T-015** Implementar detecção de credential stuffing com alerta.

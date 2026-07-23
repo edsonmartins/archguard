@@ -134,6 +134,11 @@ type Operation struct {
 	ID          string
 	Level       AssuranceLevel
 	Description string
+	// AllowedDuringEnrollment marks the few operations that remain permitted while
+	// a session is in the blocking mandatory-enrollment state (factor
+	// registration) — every other operation is denied until a strong factor is
+	// enrolled (spec "somente operações de registro de fator são permitidas").
+	AllowedDuringEnrollment bool
 }
 
 // Errors of the operation catalog.
@@ -148,6 +153,11 @@ var (
 	// ErrOperationDuplicate is returned when registering an id already present —
 	// a double classification is ambiguous and must be caught at wiring time.
 	ErrOperationDuplicate = errors.New("assurance: operação já classificada")
+	// ErrEnrollmentRequired is the BLOCKING denial returned when a session in the
+	// mandatory-enrollment state attempts any operation other than factor
+	// enrollment. The client must enroll a strong factor first (spec "Privilegiado
+	// sem fator").
+	ErrEnrollmentRequired = errors.New("assurance: enrolamento de fator forte obrigatório antes desta operação")
 )
 
 // OperationCatalog is the single source of truth for API-operation
@@ -276,9 +286,16 @@ func NewAssuranceGuard(catalog *OperationCatalog) *AssuranceGuard {
 // level but too OLD is refused with Stale set — the "L3 with an old session"
 // denial. Fail-closed: an invalid tenantFloor is treated as the strongest (AAL3).
 func (g *AssuranceGuard) Authorize(operationID string, s *AuthSession, tenantFloor AAL, now time.Time) error {
-	level, err := g.catalog.Level(operationID)
-	if err != nil {
-		return err // ErrOperationNotClassified — deny, never allow.
+	op, ok := g.catalog.Lookup(operationID)
+	if !ok {
+		return fmt.Errorf("%w: %q", ErrOperationNotClassified, operationID) // deny, never allow.
+	}
+	level := op.Level
+	// Blocking mandatory-enrollment: a session in this state may ONLY reach factor
+	// enrollment. This gate precedes the assurance check — the identity cannot
+	// even reach an L1 read until it holds a strong factor.
+	if s != nil && s.EnrollmentRequired && !op.AllowedDuringEnrollment {
+		return fmt.Errorf("%w: operação %q", ErrEnrollmentRequired, operationID)
 	}
 	// Most restrictive wins: the required AAL is the higher of the operation's and
 	// the tenant floor's; an undefined floor fails closed to AAL3.

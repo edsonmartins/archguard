@@ -905,3 +905,44 @@ func TestAuthSessionStepUpPersists(t *testing.T) {
 		t.Fatalf("auth_methods = %v, quero [webauthn]", got.AuthMethods)
 	}
 }
+
+// T-012: o flag de enrolamento obrigatório persiste no login e é limpo por
+// ClearEnrollment após o enrolamento do fator.
+func TestAuthSessionEnrollmentRequiredPersistsAndClears(t *testing.T) {
+	pool := setupTenantPool(t)
+	ctx := context.Background()
+	fx := makeSessionFixture(t, pool, "enroll")
+
+	sess, err := domain.NewAuthSession(fx.other.ID, domain.AAL1, []domain.Membership{fx.otherMemA})
+	if err != nil {
+		t.Fatalf("NewAuthSession: %v", err)
+	}
+	if err := sess.SetAuthContext(time.Date(2026, 7, 22, 9, 0, 0, 0, time.UTC), []domain.FactorType{domain.FactorPassword}); err != nil {
+		t.Fatalf("SetAuthContext: %v", err)
+	}
+	sess.MarkEnrollmentRequired()
+	if err := createSession(pool, fx.scopeOther, sess); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := getSession(pool, fx.scopeOther, sess.ID)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if !got.EnrollmentRequired {
+		t.Fatalf("o flag de enrolamento deveria persistir")
+	}
+
+	if err := inIdentityTx(pool, fx.scopeOther, func(s *IdentitySessionStore) error {
+		return s.ClearEnrollment(ctx, sess.ID)
+	}); err != nil {
+		t.Fatalf("ClearEnrollment: %v", err)
+	}
+	cleared, err := getSession(pool, fx.scopeOther, sess.ID)
+	if err != nil {
+		t.Fatalf("Get pós-clear: %v", err)
+	}
+	if cleared.EnrollmentRequired {
+		t.Fatalf("o flag deveria ter sido limpo após ClearEnrollment")
+	}
+}
