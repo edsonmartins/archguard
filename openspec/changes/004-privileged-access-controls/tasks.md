@@ -91,7 +91,16 @@
       mantendo-se puro; negativo sempre inválido; zero permitido só fora de produção. `DefaultBreakglassApprovals=2`.
       Testes: autoaprovação recusada e não registrada; zero em produção rejeitado, fora permitido.
       Gate verde.)*
-- [ ] **T-011** Implementar alerta em tempo real na solicitação (SMTP/webhook).
+- [x] **T-011** Implementar alerta em tempo real na solicitação (SMTP/webhook). *(`PrivilegedGrant.RequestedNotification()`
+      constrói o alerta (kind `breakglass.requested`, incidente + alvo, SEM a justificativa — evita
+      PII no canal). `BreakglassRequester` (serviço de domínio sobre o porto `Notifier`): `Request(...)`
+      emite o alerta IMEDIATAMENTE, no momento da solicitação, ANTES de qualquer aprovação (a
+      solicitação nasce em requested, zero aprovações — cenário "Alerta na solicitação"); se o alerta
+      não pôde ser entregue, a solicitação FALHA (não prossegue silenciosa). O porto real SMTP/webhook
+      é a implementação do `Notifier` (dev = fake; produção = pacote 010). Também: gate fail-closed do
+      canal (`Available` → `ErrNoNotificationChannel`, cenário "Canal indisponível") — inseparável de
+      emitir o alerta; a perna de auditoria fail-closed fecha no T-013. Testes: alerta na solicitação
+      sem PII, negado sem canal, falha se alerta não entregue. Gate verde.)*
 - [ ] **T-012** Implementar expiração automática e revogação em cascata das sessões derivadas.
 - [ ] **T-013** Implementar fail-closed para ausência de auditoria ou de canal de notificação.
 - [ ] **T-014** Implementar registro de revisão pós-uso.

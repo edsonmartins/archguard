@@ -331,6 +331,20 @@ func NewBreakglassRequest(organizationID, subjectMembershipID uuid.UUID, target 
 	return g, nil
 }
 
+// RequestedNotification builds the real-time alert emitted to the tenant's
+// security channels the moment a break-glass is REQUESTED (T-011) — before any
+// approval. It carries the incident reference and the target (opaque), but NOT
+// the justification text, which may hold contextual personal data: the alert is
+// a signal to investigate, not a place to spill content (INV-7-minded).
+func (g PrivilegedGrant) RequestedNotification() Notification {
+	return Notification{
+		OrganizationID: g.OrganizationID.String(),
+		Recipient:      "security",
+		Kind:           NotifyBreakglassRequested,
+		Detail:         "break-glass solicitado — incidente " + g.IncidentRef + ", alvo " + g.Target.Type + ":" + g.Target.ID + " (" + g.Target.Scope + ")",
+	}
+}
+
 // Expired reports whether the grant's window has passed at now — independent of
 // the status column, so a not-yet-materialized expiry is still recognized.
 func (g PrivilegedGrant) Expired(now time.Time) bool {
