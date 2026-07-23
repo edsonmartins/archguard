@@ -74,7 +74,16 @@
       verde.)*
 - [ ] **T-009** Implementar back-channel logout OIDC.
 - [ ] **T-010** Implementar introspecção com TTL curto para componentes sem logout.
-- [ ] **T-011** Implementar rotação de JWKS com sobreposição e `kid`.
+- [x] **T-011** Implementar rotação de JWKS com sobreposição e `kid`. *(`internal/adapters/oidc/signer.go`
+      (golang-jwt/v5 + go-jose/v4, já na árvore — sem dep nova). `Signer` assina os `OIDCClaims` em
+      JWT RS256 (compat. Guacamole/OpenBao/proxy Java) com o `kid` da chave corrente no cabeçalho;
+      recusa claim set malformado (WellFormed). `JWKS()` publica a chave corrente E as anteriores
+      retidas (sobreposição). `Rotate(newKey, keepPrevious)` instala a nova corrente mantendo a antiga
+      no set — token assinado antes da rotação segue válido até expirar (cenário "Rotação com
+      sobreposição"). Chave privada nunca persistida aqui (custódia = OpenBao/keystore, ADR-0012).
+      Testes: assina→verifica pelo kid contra o JWKS publicado; rotação (token antigo e novo válidos);
+      kid ausente do JWKS não valida (componente renovaria o cache — cenário "kid desconhecido"). Gate
+      verde.)*
 - [x] **T-012** Bloquear operações L3 originadas de device flow. *(`DeviceFlowAuthorize(level,
       viaDeviceFlow)`: recusa L3 quando o token veio do Device Authorization Grant
       (`ErrL3ViaDeviceFlow`) — o device flow não sustenta step-up confiável (sem navegador para
