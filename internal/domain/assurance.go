@@ -266,21 +266,39 @@ func NewAssuranceGuard(catalog *OperationCatalog) *AssuranceGuard {
 //   - a session below the required level (AAL or phishing resistance) is refused
 //     with the same specific error.
 //
-// It returns nil only when the session meets the operation's level AND its
-// authentication is fresh enough for that level (evaluated at now, supplied by
-// the caller so the domain stays clock-free). A session at the right level but
-// too OLD is refused with Stale set — the "L3 with an old session" denial.
-func (g *AssuranceGuard) Authorize(operationID string, s *AuthSession, now time.Time) error {
+// It composes the operation level with the ACTIVE TENANT's MFA floor
+// (tenantFloor, from domain.TenantAuthPolicy) taking the MORE RESTRICTIVE on each
+// axis — "a mais restritiva vence" (T-011): an L1 operation in a WebAuthn-only
+// tenant demands AAL3, and a strict operation is never loosened by a lax tenant.
+// It returns nil only when the session meets that effective requirement AND its
+// authentication is fresh enough for the operation level (evaluated at now,
+// supplied by the caller so the domain stays clock-free). A session at the right
+// level but too OLD is refused with Stale set — the "L3 with an old session"
+// denial. Fail-closed: an invalid tenantFloor is treated as the strongest (AAL3).
+func (g *AssuranceGuard) Authorize(operationID string, s *AuthSession, tenantFloor AAL, now time.Time) error {
 	level, err := g.catalog.Level(operationID)
 	if err != nil {
 		return err // ErrOperationNotClassified — deny, never allow.
 	}
+	// Most restrictive wins: the required AAL is the higher of the operation's and
+	// the tenant floor's; an undefined floor fails closed to AAL3.
+	reqAAL := level.RequiredAAL()
+	switch {
+	case !tenantFloor.Valid():
+		reqAAL = AAL3
+	case tenantFloor.AtLeast(reqAAL):
+		reqAAL = tenantFloor
+	}
+	// AAL3 is the phishing-resistant tier, so the effective requirement demands a
+	// phishing-resistant factor exactly when the effective AAL is AAL3.
+	reqPhishing := reqAAL == AAL3
+
 	insufficient := func(provenACR string, stale bool) error {
 		return &InsufficientAssuranceError{
 			Operation:              operationID,
 			Required:               level,
-			RequiredACR:            string(level.RequiredAAL()),
-			NeedsPhishingResistant: level.RequiresPhishingResistant(),
+			RequiredACR:            string(reqAAL),
+			NeedsPhishingResistant: reqPhishing,
 			ProvenACR:              provenACR,
 			Stale:                  stale,
 		}
@@ -288,11 +306,12 @@ func (g *AssuranceGuard) Authorize(operationID string, s *AuthSession, now time.
 	if s == nil || s.Status != SessionActive {
 		return insufficient("", false)
 	}
-	if !level.Satisfies(s.ProvenAAL, s.PhishingResistant()) {
+	if !s.ProvenAAL.AtLeast(reqAAL) || (reqPhishing && !s.PhishingResistant()) {
 		return insufficient(s.ACR(), false)
 	}
-	// The factor is strong enough; now it must also be RECENT enough. A stale
-	// authentication demands step-up even at the correct level.
+	// The factor is strong enough; now it must also be RECENT enough for the
+	// operation's criticality. A stale authentication demands step-up even at the
+	// correct level.
 	if !level.Fresh(s.AuthTime, now) {
 		return insufficient(s.ACR(), true)
 	}

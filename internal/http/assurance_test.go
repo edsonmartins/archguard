@@ -15,6 +15,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -66,13 +67,34 @@ func testGuard(t *testing.T) *domain.AssuranceGuard {
 	if err := cat.Register(domain.Operation{ID: "audit.export", Level: domain.L3}); err != nil {
 		t.Fatalf("Register: %v", err)
 	}
+	if err := cat.Register(domain.Operation{ID: "profile.read", Level: domain.L1}); err != nil {
+		t.Fatalf("Register L1: %v", err)
+	}
 	return domain.NewAssuranceGuard(cat)
 }
 
-// middlewareAt builds a middleware whose clock is pinned to now.
+// staticFloor is a fixed tenant MFA floor, standing in for the org policy
+// authority.
+type staticFloor struct {
+	aal domain.AAL
+	err error
+}
+
+func (f staticFloor) RequiredAAL(context.Context, uuid.UUID) (domain.AAL, error) {
+	return f.aal, f.err
+}
+
+// middlewareAt builds a middleware whose clock is pinned to now, with no extra
+// tenant floor (AAL1).
 func middlewareAt(t *testing.T, resolve SessionResolver, now time.Time) *AssuranceMiddleware {
 	t.Helper()
-	mw := NewAssuranceMiddleware(testGuard(t), resolve)
+	return middlewareWithFloor(t, resolve, staticFloor{aal: domain.AAL1}, now)
+}
+
+// middlewareWithFloor builds a middleware with an explicit tenant-floor policy.
+func middlewareWithFloor(t *testing.T, resolve SessionResolver, floor TenantFloor, now time.Time) *AssuranceMiddleware {
+	t.Helper()
+	mw := NewAssuranceMiddleware(testGuard(t), resolve, floor)
 	mw.now = func() time.Time { return now }
 	return mw
 }
@@ -148,6 +170,36 @@ func TestAssuranceMiddlewareNoSession(t *testing.T) {
 	mw.Require("audit.export", next).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/audit/verify", nil))
 	if *called || rec.Code != http.StatusUnauthorized {
 		t.Fatalf("sem sessão deveria ser desafiado: code=%d called=%v", rec.Code, *called)
+	}
+}
+
+// Precedência "mais restritiva vence" (T-011): num tenant com piso AAL3, uma
+// operação L1 exige WebAuthn — a sessão TOTP AAL2 é desafiada com acr_values=aal3.
+func TestAssuranceMiddlewareTenantFloorRaises(t *testing.T) {
+	mw := middlewareWithFloor(t,
+		staticResolver{buildSession(t, domain.AAL2, domain.FactorTOTP), true},
+		staticFloor{aal: domain.AAL3}, fixtureNow)
+	next, called := nextOK()
+	rec := httptest.NewRecorder()
+	mw.Require("profile.read", next).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/profile", nil))
+	if *called || rec.Code != http.StatusUnauthorized {
+		t.Fatalf("piso AAL3 deveria desafiar L1 com sessão AAL2: code=%d called=%v", rec.Code, *called)
+	}
+	if !strings.Contains(rec.Header().Get("WWW-Authenticate"), `acr_values="aal3"`) {
+		t.Fatalf("desafio deveria trazer acr_values=aal3 pelo piso do tenant")
+	}
+}
+
+// Falha ao resolver a política do tenant é fail-closed: 500, handler não roda.
+func TestAssuranceMiddlewarePolicyUnavailable(t *testing.T) {
+	mw := middlewareWithFloor(t,
+		staticResolver{buildSession(t, domain.AAL3, domain.FactorWebAuthn), true},
+		staticFloor{err: context.DeadlineExceeded}, fixtureNow)
+	next, called := nextOK()
+	rec := httptest.NewRecorder()
+	mw.Require("profile.read", next).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/profile", nil))
+	if *called || rec.Code != http.StatusInternalServerError {
+		t.Fatalf("política indisponível deveria negar com 500: code=%d called=%v", rec.Code, *called)
 	}
 }
 

@@ -39,7 +39,7 @@ func TestStepUpResumesOriginalOperation(t *testing.T) {
 
 	// Recusa: TOTP AAL2 não satisfaz L3.
 	var iae *InsufficientAssuranceError
-	if err := g.Authorize("audit.export", &s, at.Add(time.Minute)); !errors.As(err, &iae) {
+	if err := g.Authorize("audit.export", &s, AAL1, at.Add(time.Minute)); !errors.As(err, &iae) {
 		t.Fatalf("pré-step-up: err = %v, quero InsufficientAssuranceError", err)
 	}
 
@@ -50,7 +50,7 @@ func TestStepUpResumesOriginalOperation(t *testing.T) {
 	}
 
 	// A operação original agora passa, e o acr reflete o nível obtido.
-	if err := g.Authorize("audit.export", &s, stepAt.Add(time.Minute)); err != nil {
+	if err := g.Authorize("audit.export", &s, AAL1, stepAt.Add(time.Minute)); err != nil {
 		t.Fatalf("pós-step-up a operação deveria passar: %v", err)
 	}
 	if s.ACR() != "aal3" {

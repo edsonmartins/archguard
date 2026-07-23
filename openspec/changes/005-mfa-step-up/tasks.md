@@ -144,7 +144,19 @@
       auditoria). Testes: domínio (construção/default/SatisfiedBy) e integração PG (default→declara
       AAL3→autoridade reflete; outra org no baseline; upsert; guarda cross-tenant). Precedência
       "mais restritiva vence" na troca é o T-011. Gate verde.)*
-- [ ] **T-011** Implementar precedência "mais restritiva vence" na troca de tenant.
+- [x] **T-011** Implementar precedência "mais restritiva vence" na troca de tenant. *(Dois eixos.
+      (1) NA TROCA: o `TenantSwitcher` (002) já lê a política do destino via `TenantAuthPolicy.
+      RequiredAAL` e `SwitchTenant` nega com `ErrStepUpRequired` se o comprovado < exigido — agora
+      ligado à política REAL (T-010, `OrgPolicyAuthority`): o cenário "TOTP troca para tenant que
+      exige WebAuthn → step-up antes de concluir" funciona por construção (AAL2 < AAL3). (2) NAS
+      OPERAÇÕES: `AssuranceGuard.Authorize` ganha o parâmetro `tenantFloor` e COMPÕE o nível da
+      operação com o piso do tenant ativo tomando o MAIS restritivo em cada eixo — uma operação L1
+      num tenant com piso AAL3 passa a exigir AAL3 (+ phishing-resistant, pois AAL3=WebAuthn), e uma
+      operação estrita NÃO é afrouxada por um tenant lasso. Fail-closed: piso indefinido é tratado
+      como AAL3. O middleware resolve o piso do tenant ativo (via `TenantFloor`/OrgPolicyAuthority);
+      falha ao resolver a política é fail-closed (500). O desafio RFC 9470 informa o acr EFETIVO
+      (aal3 pelo piso). Testes de domínio (piso eleva L1, estrita não afrouxa, piso inválido
+      fail-closed) e HTTP (piso AAL3 desafia L1; política indisponível → 500). Gate verde.)*
 - [ ] **T-012** Implementar estado `enrollment_required` bloqueante.
 - [ ] **T-013** Implementar processo de recuperação com aprovação de pares.
 - [ ] **T-014** Implementar limitação de taxa e bloqueio progressivo.

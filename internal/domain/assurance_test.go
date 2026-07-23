@@ -190,7 +190,7 @@ func newGuard(t *testing.T) *AssuranceGuard {
 func TestGuardAllowsSufficient(t *testing.T) {
 	g := newGuard(t)
 	s := activeSessionWithContext(t, AAL3, FactorWebAuthn)
-	if err := g.Authorize("audit.export", &s, testNow); err != nil {
+	if err := g.Authorize("audit.export", &s, AAL1, testNow); err != nil {
 		t.Fatalf("sessão AAL3 WebAuthn recente deveria satisfazer L3: %v", err)
 	}
 }
@@ -200,7 +200,7 @@ func TestGuardAllowsSufficient(t *testing.T) {
 func TestGuardDeniesWithSpecificError(t *testing.T) {
 	g := newGuard(t)
 	s := activeSessionWithContext(t, AAL2, FactorTOTP)
-	err := g.Authorize("audit.export", &s, testNow)
+	err := g.Authorize("audit.export", &s, AAL1, testNow)
 	var iae *InsufficientAssuranceError
 	if !errors.As(err, &iae) {
 		t.Fatalf("erro = %v, quero InsufficientAssuranceError", err)
@@ -220,7 +220,7 @@ func TestGuardDeniesStaleSession(t *testing.T) {
 	g := newGuard(t)
 	s := activeSessionWithContext(t, AAL3, FactorWebAuthn)
 	old := testAuthTime.Add(10 * time.Minute) // 10min > janela L3 de 5min
-	err := g.Authorize("audit.export", &s, old)
+	err := g.Authorize("audit.export", &s, AAL1, old)
 	var iae *InsufficientAssuranceError
 	if !errors.As(err, &iae) {
 		t.Fatalf("erro = %v, quero InsufficientAssuranceError", err)
@@ -239,14 +239,14 @@ func TestGuardStepUpRestoresFreshness(t *testing.T) {
 	g := newGuard(t)
 	s := activeSessionWithContext(t, AAL3, FactorWebAuthn)
 	stale := testAuthTime.Add(10 * time.Minute)
-	if err := g.Authorize("audit.export", &s, stale); err == nil {
+	if err := g.Authorize("audit.export", &s, AAL1, stale); err == nil {
 		t.Fatalf("pré-condição: a operação deveria estar recusada por frescor")
 	}
 	// Step-up: renova o contexto de autenticação para o instante da reautenticação.
 	if err := s.SetAuthContext(stale, []FactorType{FactorWebAuthn}); err != nil {
 		t.Fatalf("SetAuthContext (step-up): %v", err)
 	}
-	if err := g.Authorize("audit.export", &s, stale.Add(time.Minute)); err != nil {
+	if err := g.Authorize("audit.export", &s, AAL1, stale.Add(time.Minute)); err != nil {
 		t.Fatalf("após step-up a operação deveria passar: %v", err)
 	}
 }
@@ -255,7 +255,7 @@ func TestGuardStepUpRestoresFreshness(t *testing.T) {
 func TestGuardDeniesUnclassified(t *testing.T) {
 	g := newGuard(t)
 	s := activeSessionWithContext(t, AAL3, FactorWebAuthn)
-	if err := g.Authorize("session.open", &s, testNow); !errors.Is(err, ErrOperationNotClassified) {
+	if err := g.Authorize("session.open", &s, AAL1, testNow); !errors.Is(err, ErrOperationNotClassified) {
 		t.Fatalf("op não classificada: err = %v, quero ErrOperationNotClassified", err)
 	}
 }
@@ -263,13 +263,62 @@ func TestGuardDeniesUnclassified(t *testing.T) {
 // Sessão nil ou não-ativa não carrega garantia — recusada.
 func TestGuardDeniesNilOrInactiveSession(t *testing.T) {
 	g := newGuard(t)
-	if err := g.Authorize("profile.read", nil, testNow); err == nil {
+	if err := g.Authorize("profile.read", nil, AAL1, testNow); err == nil {
 		t.Fatalf("sessão nil deveria ser recusada")
 	}
 	revoked := activeSessionWithContext(t, AAL3, FactorWebAuthn)
 	revoked.Revoke()
 	var iae *InsufficientAssuranceError
-	if err := g.Authorize("profile.read", &revoked, testNow); !errors.As(err, &iae) {
+	if err := g.Authorize("profile.read", &revoked, AAL1, testNow); !errors.As(err, &iae) {
 		t.Fatalf("sessão revogada: err = %v, quero InsufficientAssuranceError", err)
+	}
+}
+
+// Precedência "mais restritiva vence" (T-011): o piso do tenant eleva o
+// requisito de uma operação de nível baixo. Uma operação L1 num tenant que exige
+// WebAuthn (piso AAL3) passa a exigir AAL3 — uma sessão TOTP AAL2 é recusada e o
+// desafio informa acr aal3.
+func TestGuardTenantFloorRaisesRequirement(t *testing.T) {
+	g := newGuard(t)
+	totp := activeSessionWithContext(t, AAL2, FactorTOTP)
+
+	// Sem piso do tenant, a operação L1 passa para a sessão AAL2.
+	if err := g.Authorize("profile.read", &totp, AAL1, testNow); err != nil {
+		t.Fatalf("L1 sem piso deveria passar: %v", err)
+	}
+
+	// Com piso AAL3, a MESMA operação L1 exige AAL3 — recusa a sessão TOTP.
+	err := g.Authorize("profile.read", &totp, AAL3, testNow)
+	var iae *InsufficientAssuranceError
+	if !errors.As(err, &iae) {
+		t.Fatalf("piso AAL3 deveria recusar sessão AAL2 em L1: %v", err)
+	}
+	if iae.RequiredACR != "aal3" || !iae.NeedsPhishingResistant {
+		t.Fatalf("o desafio deveria informar aal3 + phishing-resistant: %+v", iae)
+	}
+
+	// Uma sessão WebAuthn AAL3 satisfaz o piso.
+	web := activeSessionWithContext(t, AAL3, FactorWebAuthn)
+	if err := g.Authorize("profile.read", &web, AAL3, testNow); err != nil {
+		t.Fatalf("sessão AAL3 deveria satisfazer o piso AAL3: %v", err)
+	}
+}
+
+// Um tenant lasso NÃO afrouxa uma operação estrita: L3 continua exigindo AAL3
+// mesmo com piso AAL1.
+func TestGuardStrictOperationNotLoosenedByLaxTenant(t *testing.T) {
+	g := newGuard(t)
+	totp := activeSessionWithContext(t, AAL2, FactorTOTP)
+	if err := g.Authorize("audit.export", &totp, AAL1, testNow); err == nil {
+		t.Fatalf("L3 não deveria ser afrouxada por piso AAL1")
+	}
+}
+
+// Fail-closed: um piso indefinido é tratado como o mais forte (AAL3).
+func TestGuardInvalidFloorFailsClosed(t *testing.T) {
+	g := newGuard(t)
+	totp := activeSessionWithContext(t, AAL2, FactorTOTP)
+	if err := g.Authorize("profile.read", &totp, AAL(""), testNow); err == nil {
+		t.Fatalf("piso indefinido deveria exigir o mais forte e recusar AAL2")
 	}
 }

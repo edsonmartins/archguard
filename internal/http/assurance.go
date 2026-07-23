@@ -15,6 +15,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,6 +23,7 @@ import (
 	"time"
 
 	"github.com/casdoor/casdoor/internal/domain"
+	"github.com/google/uuid"
 )
 
 // SessionResolver extracts the authenticated session from a request — placed
@@ -31,6 +33,14 @@ type SessionResolver interface {
 	Session(r *http.Request) (*domain.AuthSession, bool)
 }
 
+// TenantFloor answers the active tenant's MFA floor for a session, so the
+// middleware can apply "a mais restritiva vence" (T-011). It is
+// domain.TenantAuthPolicy narrowed to what the middleware needs. Fail-closed: an
+// implementation that cannot decide returns an error, and the middleware denies.
+type TenantFloor interface {
+	RequiredAAL(ctx context.Context, organizationID uuid.UUID) (domain.AAL, error)
+}
+
 // AssuranceMiddleware enforces operation classification (INV-8 / ADR-0010) on
 // HTTP handlers. It is thin (CLAUDE.md §6): it resolves the session, asks the
 // domain guard, and on denial emits a step-up CHALLENGE that names the acr the
@@ -38,15 +48,17 @@ type SessionResolver interface {
 type AssuranceMiddleware struct {
 	guard   *domain.AssuranceGuard
 	resolve SessionResolver
+	floor   TenantFloor
 	// now supplies the current instant for the freshness check; overridable in
 	// tests. Defaults to time.Now.
 	now func() time.Time
 }
 
-// NewAssuranceMiddleware builds the middleware over the guard and a session
-// resolver.
-func NewAssuranceMiddleware(guard *domain.AssuranceGuard, resolve SessionResolver) *AssuranceMiddleware {
-	return &AssuranceMiddleware{guard: guard, resolve: resolve, now: time.Now}
+// NewAssuranceMiddleware builds the middleware over the guard, a session resolver
+// and the tenant-floor policy (the active tenant's MFA minimum, composed by the
+// guard as "the more restrictive wins").
+func NewAssuranceMiddleware(guard *domain.AssuranceGuard, resolve SessionResolver, floor TenantFloor) *AssuranceMiddleware {
+	return &AssuranceMiddleware{guard: guard, resolve: resolve, floor: floor, now: time.Now}
 }
 
 // Require wraps next so it runs ONLY if the request's session satisfies
@@ -58,7 +70,24 @@ func NewAssuranceMiddleware(guard *domain.AssuranceGuard, resolve SessionResolve
 func (m *AssuranceMiddleware) Require(operationID string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		session, _ := m.resolve.Session(r)
-		err := m.guard.Authorize(operationID, session, m.now())
+
+		// Resolve the active tenant's MFA floor so the guard applies "the more
+		// restrictive wins". A session with no active tenant has no floor to add
+		// (AAL1); a floor lookup that FAILS is fail-closed (deny), never ignored.
+		floor := domain.AAL1
+		if session != nil {
+			if _, orgID, err := session.ActiveTenant(); err == nil {
+				aal, ferr := m.floor.RequiredAAL(r.Context(), orgID)
+				if ferr != nil {
+					writeAssuranceError(w, http.StatusInternalServerError, "policy_unavailable",
+						"política de MFA do tenant indisponível", operationID, nil)
+					return
+				}
+				floor = aal
+			}
+		}
+
+		err := m.guard.Authorize(operationID, session, floor, m.now())
 		if err == nil {
 			next.ServeHTTP(w, r)
 			return
