@@ -142,8 +142,18 @@
       receber o `IdentityType` do alvo e RECUSA `IdentityService` com `ErrCannotImpersonateService`
       (ADR-0008 §4 / cenário "Tentativa de impersonar conta de serviço") — uma conta de serviço nunca
       é impersonada, por construção. Teste: delegação sobre conta de serviço recusada. Gate verde.)*
-- [ ] **T-017** Auditar todos os eventos do ciclo (solicitação, aprovação, uso, expiração,
-      revogação, revisão).
+- [x] **T-017** Auditar todos os eventos do ciclo (solicitação, aprovação, uso, expiração,
+      revogação, revisão). *(Vocabulário: 7 ações novas no catálogo FECHADO — `privileged.grant.use/
+      revoke` (L3), `privileged.review` (L2), `delegation.start` (L3), `delegation.revoke` (L2),
+      `privileged.grant.expire` e `delegation.escalation_denied` (emitidas pelo sistema → isentas no
+      INV-8); aprovação reusa `breakglass.approve`. Emissão: **solicitação** audita em T-013
+      (BreakglassOrchestrator), **expiração** em T-012 (GrantExpirer). `PrivilegedAccessService` fecha
+      o restante — `Approve`/`Revoke`/`RecordReview`, cada um ATÔMICO com seu evento
+      (breakglass.approve / privileged.grant.revoke com cascata / privileged.review); ator = principal
+      do contexto; auditoria indisponível ⇒ rollback (I-5.4). Delegação já registra ATOR REAL + alvo
+      via `Delegation.AuditActor()` (T-002) — reconstrói 100% do ator real nas ações delegadas.
+      Integração PG: aprovação→ativa+auditada, revogação→cascata+auditada, revisão auditada. INV-8
+      verde. Gate verde.)*
 - [ ] **T-018** Teste: delegação não escala privilégio nem aprova solicitações.
 - [ ] **T-019** Teste: break-glass sem canal de notificação é negado.
 - [ ] **T-020** Teste: concessão expirada não autoriza acesso mesmo com token válido em mãos.

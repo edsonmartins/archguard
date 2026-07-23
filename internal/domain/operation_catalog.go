@@ -62,6 +62,15 @@ var classifiedOperations = []Operation{
 	{ID: string(ActionFactorRemove), Level: L3, Description: "remover um fator forte", ForbiddenUnderDelegation: true},
 	{ID: string(ActionRecoveryApprove), Level: L3, Description: "aprovar recuperação de fator", ForbiddenUnderDelegation: true},
 	{ID: string(ActionRecoveryReset), Level: L3, Description: "resetar fator via recuperação", ForbiddenUnderDelegation: true},
+
+	// Privileged-access cycle operations (pacote 004) — all forbidden under
+	// delegation. Requesting/approving break-glass reuse the break-glass verbs
+	// above; these are use, revocation, review and delegation start/revoke.
+	{ID: string(ActionPrivilegedGrantUse), Level: L3, Description: "usar uma concessão privilegiada", ForbiddenUnderDelegation: true},
+	{ID: string(ActionPrivilegedGrantRevoke), Level: L3, Description: "revogar uma concessão privilegiada", ForbiddenUnderDelegation: true},
+	{ID: string(ActionPrivilegedReview), Level: L2, Description: "registrar revisão pós-uso", ForbiddenUnderDelegation: true},
+	{ID: string(ActionDelegationStart), Level: L3, Description: "iniciar uma delegação", ForbiddenUnderDelegation: true},
+	{ID: string(ActionDelegationRevoke), Level: L2, Description: "revogar uma delegação", ForbiddenUnderDelegation: true},
 }
 
 // operationExemptActions are catalogued audit verbs that are NOT assurance-gated
@@ -76,6 +85,7 @@ var operationExemptActions = map[Action]string{
 	ActionAuthLockout:           "evento emitido pelo sistema (bloqueio progressivo), não invocado",
 	ActionAuthStuffing:          "alerta emitido pelo sistema (credential stuffing), não invocado",
 	ActionPrivilegedGrantExpire: "expiração emitida pelo job de limpeza (T-012), não invocada",
+	ActionDelegationEscalation:  "sinal emitido pelo sistema quando uma delegação tenta escalar, não invocado",
 }
 
 // BuildOperationCatalog builds the canonical, fully-populated operation catalog.

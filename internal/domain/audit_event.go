@@ -84,10 +84,18 @@ const (
 	ActionRecoveryRequest Action = "recovery.request"
 	ActionRecoveryApprove Action = "recovery.approve"
 	ActionRecoveryReset   Action = "recovery.reset"
-	// Privileged-access lifecycle events (pacote 004). ActionPrivilegedGrantExpire
-	// is emitted by the expiry job (T-012); the request/approval/use/revoke/review
-	// verbs are added with the flows in T-017.
+	// Privileged-access lifecycle events (pacote 004). Request/approve reuse the
+	// break-glass verbs; use/revoke/review/expire and the delegation verbs cover
+	// the rest of the cycle (T-017). Grant expiry and the delegation
+	// escalation-denied signal are emitted by the system (job / denial), not
+	// invoked, so they are exempt from operation classification.
 	ActionPrivilegedGrantExpire Action = "privileged.grant.expire"
+	ActionPrivilegedGrantUse    Action = "privileged.grant.use"
+	ActionPrivilegedGrantRevoke Action = "privileged.grant.revoke"
+	ActionPrivilegedReview      Action = "privileged.review"
+	ActionDelegationStart       Action = "delegation.start"
+	ActionDelegationRevoke      Action = "delegation.revoke"
+	ActionDelegationEscalation  Action = "delegation.escalation_denied"
 )
 
 // actionCatalog is the closed set of canonical actions and the assurance level
@@ -120,6 +128,12 @@ var actionCatalog = map[Action]AssuranceLevel{
 	ActionRecoveryApprove:       L3,
 	ActionRecoveryReset:         L3,
 	ActionPrivilegedGrantExpire: L1,
+	ActionPrivilegedGrantUse:    L3,
+	ActionPrivilegedGrantRevoke: L3,
+	ActionPrivilegedReview:      L2,
+	ActionDelegationStart:       L3,
+	ActionDelegationRevoke:      L2,
+	ActionDelegationEscalation:  L1,
 }
 
 // Valid reports whether a is a registered canonical action.
