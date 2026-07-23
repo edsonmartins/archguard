@@ -140,7 +140,15 @@
       + `NewGuacamoleEdgeConfig(client)` derivam os parâmetros do registro do cliente (recusa cliente
       que não é Guacamole ou que declare logout — a borda pressupõe a ausência dele). Teste: config de
       borda derivada (introspecção curta + enforce acr), específica do Guacamole. Gate verde.)*
-- [ ] **T-016** Implementar suíte de conformidade por componente.
+- [x] **T-016** Implementar suíte de conformidade por componente. *(`internal/adapters/oidc/conformance_test.go`,
+      table-driven sobre `DefaultClientRegistry` — para CADA componente valida o lado ArchGuard do
+      contrato (RFC-0006 §8): (1) login/emissão — token assinável e verificável com a audiência do
+      componente; (2) semântica de claims — aud própria, acr L2, org/mid/sid/auth_time presentes, e
+      audiência vincula (outro componente recusa); (3) recusa por acr insuficiente (L2 não satisfaz
+      L3; device-flow bloqueia L3); (4) rotação de chave — token pré-rotação segue válido
+      (sobreposição); (5) encerramento — logout token assinado/verificável (Warpgate/NetBird) OU
+      introspecção active:false na revogação (Guacamole/OpenBao/Oracle); (6) correlação pcid — token
+      privilegiado carrega pcid que casa com o AuditContext. Roda no gate (`make test`). Gate verde.)*
 - [ ] **T-017** Integrar a suíte como gate de release no CI.
 - [x] **T-018** Teste: token de um componente recusado por outro (audiência). *(`TestAcceptanceTokenRejectedByAudience`
       (adapter oidc): token assinado para Warpgate — assinatura VÁLIDA para ambos (mesmo JWKS) — é

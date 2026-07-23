@@ -50,7 +50,10 @@ func verifyAgainstJWKS(t *testing.T, jwksJSON []byte, token string) (jwt.MapClai
 			return nil, jwt.ErrTokenUnverifiable
 		}
 		return keys[0].Key, nil
-	}, jwt.WithValidMethods([]string{"RS256"}))
+		// Estes testes verificam ASSINATURA + semântica de claims; o frescor/liveness
+		// (exp) é responsabilidade da introspecção (testada à parte), então a
+		// validação de tempo dos claims registrados é desabilitada aqui.
+	}, jwt.WithValidMethods([]string{"RS256"}), jwt.WithoutClaimsValidation())
 	return claims, err
 }
 
