@@ -5,7 +5,7 @@
 - [x] **T-003** Implementar qualificação de objetos por tenant no identificador.
 - [x] **T-004** Modelar `asset` e `asset_group` com hierarquia no ArchGuard.
       (Domínio puro; persistência/importação diferidas ao M4 — questões abertas RFC-0004 §9.)
-- [ ] **T-005** Implementar outbox transacional para mutações relevantes.
+- [x] **T-005** Implementar outbox transacional para mutações relevantes.
 - [ ] **T-006** Implementar publisher idempotente de tuplas.
 - [ ] **T-007** Implementar projeção de memberships, grupos e concessões em tuplas.
 - [ ] **T-008** Implementar reconciliação periódica com política assimétrica (restringe:
