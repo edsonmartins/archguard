@@ -9,7 +9,7 @@
 - [ ] **T-007** Versionar dashboards Grafana como artefato do produto.
 - [ ] **T-008** Implementar os alertas obrigatórios do design.
 - [ ] **T-009** Exportação de cópia da auditoria para Loki (marcada como cópia).
-- [ ] **T-010** Integrar `KeyCustodian` real com o cofre (JWKS).
+- [x] **T-010** Integrar `KeyCustodian` real com o cofre (JWKS).
 - [ ] **T-011** Integrar assinatura de selagem via transit engine.
 - [x] **T-012** Migrar segredos de client OAuth e credenciais de conector para o cofre.
 - [ ] **T-013** Implementar rotação de JWKS com sobreposição.
