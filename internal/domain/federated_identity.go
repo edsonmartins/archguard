@@ -63,6 +63,20 @@ func (f FederatedIdentity) Validate() error {
 // configuration that changes this.
 func (f FederatedIdentity) AuthorizesL3() bool { return false }
 
+// ProvenAAL is the assurance a federated login establishes AT ARCHGUARD: AAL1
+// (identification). A third-party IdP proves the person is who they say, but it
+// does NOT prove an ArchGuard-verified factor — so federation alone never reaches
+// AAL2/AAL3. Any L2/L3 operation then requires an ArchGuard step-up (RFC-0007
+// §5.3). The IdP's acr is recorded (IdPACR) but never raises this.
+func (f FederatedIdentity) ProvenAAL() AAL { return AAL1 }
+
+// PhishingResistant is ALWAYS false for a federated login: ArchGuard verified no
+// phishing-resistant factor here. Since an L3 operation REQUIRES phishing
+// resistance (AssuranceLevel.RequiresPhishingResistant), this is the mechanical
+// guarantee that a third party's acr can never satisfy L3 —
+// L3.Satisfies(f.ProvenAAL(), f.PhishingResistant()) is false for every IdP acr.
+func (f FederatedIdentity) PhishingResistant() bool { return false }
+
 // ToSyncRecord maps the federated identity to the neutral provisioning record, so
 // JIT rides the SAME dedup-by-email path as SCIM and LDAP (never a duplicate
 // identity, RFC-0007 §5.3). The record is active (a successful federated login).
