@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { isAllowedPath } from '@/server/kanidm-proxy'
+import {
+  isAllowedPath,
+  requiredPermsForKanidmProxy,
+} from '@/server/kanidm-proxy'
 
 describe('kanidm-proxy isAllowedPath (SSRF allowlist)', () => {
   describe('accepted paths', () => {
@@ -55,5 +58,48 @@ describe('kanidm-proxy isAllowedPath (SSRF allowlist)', () => {
       expect(isAllowedPath('/v1/person/')).toBe(true)
       expect(isAllowedPath('/status/')).toBe(true)
     })
+  })
+})
+
+describe('kanidm-proxy requiredPermsForKanidmProxy (RBAC)', () => {
+  it('allows viewer-level read on persons', () => {
+    const p = requiredPermsForKanidmProxy('GET', '/v1/person')
+    expect(p).toContain('persons:read')
+  })
+
+  it('requires create for POST /v1/person', () => {
+    const p = requiredPermsForKanidmProxy('POST', '/v1/person')
+    expect(p).toEqual(['persons:create'])
+  })
+
+  it('requires delete for DELETE person', () => {
+    const p = requiredPermsForKanidmProxy('DELETE', '/v1/person/alice')
+    expect(p).toEqual(['persons:delete'])
+  })
+
+  it('requires credentials for credential mutations', () => {
+    const p = requiredPermsForKanidmProxy(
+      'POST',
+      '/v1/person/alice/_credential/_update_intent/1h',
+    )
+    expect(p).toContain('persons:credentials')
+  })
+
+  it('requires groups:members for membership changes', () => {
+    const p = requiredPermsForKanidmProxy(
+      'POST',
+      '/v1/group/tenant_rio_quality/_attr/member',
+    )
+    expect(p).toContain('groups:members')
+  })
+
+  it('requires oauth2 admin perms for oauth2 write', () => {
+    const p = requiredPermsForKanidmProxy('POST', '/v1/oauth2')
+    expect(p).toEqual(['oauth2:create'])
+  })
+
+  it('requires system:admin for unknown paths', () => {
+    const p = requiredPermsForKanidmProxy('GET', '/v1/unknown')
+    expect(p).toEqual(['system:admin'])
   })
 })

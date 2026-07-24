@@ -1,4 +1,4 @@
-// W-C2 — provision + grant person access (orchestration + evidence)
+// W-C2 — provision + grant person access (orchestration + Warpgate live + evidence)
 
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
@@ -11,6 +11,12 @@ import {
 import { logger } from './logger'
 import { integrationFetch } from './http-integration-client'
 import { ensureKanidmGroup } from './kanidm-admin'
+import { listSites } from './sites'
+import {
+  bindWarpgateUserRole,
+  rolesForWarpgateTarget,
+  warpgateConfigured,
+} from './warpgate-proxy'
 
 const ORCH_URL = (
   process.env.ORCHESTRATION_URL ||
@@ -202,13 +208,68 @@ export const provisionPersonAccessFn = createServerFn({ method: 'POST' })
     }
   })
 
-/** Grant target/role access (orch warpgate + openbao adapters). */
+/**
+ * Resolve Warpgate role names that should unlock a target for an operator.
+ * Priority: explicit role → WG target roles → site SoT target/site roles.
+ */
+export async function resolveGrantRoles(
+  target: string,
+  explicitRole?: string,
+): Promise<{ roles: string[]; detail: string }> {
+  if (explicitRole?.trim()) {
+    return {
+      roles: [explicitRole.trim()],
+      detail: `explicit role ${explicitRole.trim()}`,
+    }
+  }
+
+  const fromWg = await rolesForWarpgateTarget(target)
+  if (fromWg.roles.length > 0) {
+    return { roles: fromWg.roles, detail: fromWg.detail }
+  }
+
+  // SoT: site inventory (works even if WG target.allow_roles empty)
+  try {
+    const sites = await listSites()
+    for (const site of sites) {
+      const hit = site.targets?.find((x) => x.nome === target)
+      if (!hit) continue
+      const fromTarget = hit.roles?.filter(Boolean) || []
+      const fromSite = site.warpgate_roles?.filter(Boolean) || []
+      const roles = Array.from(new Set([...fromTarget, ...fromSite]))
+      if (roles.length) {
+        return {
+          roles,
+          detail: `SoT site ${site.slug}: ${roles.join(',')}`,
+        }
+      }
+      return {
+        roles: [],
+        detail: `target in site ${site.slug} but no warpgate_roles`,
+      }
+    }
+  } catch (e) {
+    return {
+      roles: fromWg.roles,
+      detail: `SoT error: ${(e as Error).message}; ${fromWg.detail}`,
+    }
+  }
+
+  return {
+    roles: [],
+    detail: fromWg.detail || `no roles for target ${target}`,
+  }
+}
+
+/** Grant target access: Warpgate user↔role (live) + orch best-effort. */
 export const grantPersonTargetFn = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) => {
     const r = z
       .object({
         username: z.string().min(1).max(128),
         target: z.string().min(1).max(128),
+        /** Optional Warpgate role name (skip auto-resolve). */
+        role: z.string().max(128).optional(),
         ttl: z.string().max(32).optional(),
       })
       .safeParse(data)
@@ -225,6 +286,48 @@ export const grantPersonTargetFn = createServerFn({ method: 'POST' })
     const actor = sessionActor(s)
     const steps: LifecycleStep[] = []
 
+    // 1) Live Warpgate path (real grant even when orch is mock)
+    if (warpgateConfigured()) {
+      const resolved = await resolveGrantRoles(data.target, data.role)
+      steps.push({
+        component: 'role_resolve',
+        ok: resolved.roles.length > 0,
+        detail: resolved.detail,
+      })
+      if (resolved.roles.length === 0) {
+        steps.push({
+          component: 'warpgate',
+          ok: false,
+          detail:
+            'Nenhuma role WG para o target — aplique gateways no site ou informe role=',
+        })
+      } else {
+        let anyBind = false
+        for (const roleName of resolved.roles) {
+          const bind = await bindWarpgateUserRole(data.username, roleName)
+          steps.push({
+            component: 'warpgate',
+            ok: bind.ok,
+            detail: bind.detail,
+          })
+          if (bind.ok) anyBind = true
+        }
+        if (!anyBind) {
+          logger.warn(
+            { username: data.username, target: data.target, actor },
+            'grant: all warpgate binds failed',
+          )
+        }
+      }
+    } else {
+      steps.push({
+        component: 'warpgate',
+        ok: false,
+        detail: 'Warpgate admin não configurado (WARPGATE_ADMIN_PASSWORD)',
+      })
+    }
+
+    // 2) Orchestration best-effort (mock may return ok without effect)
     try {
       const { status, data: body, text } = await orchPost(
         '/orchestration/v1/access/grant',
@@ -256,14 +359,24 @@ export const grantPersonTargetFn = createServerFn({ method: 'POST' })
       })
     }
 
-    const ok = steps.some((x) => x.ok)
+    // Success = Warpgate bind OK (critical path). Orch alone is not enough.
+    const wgOk = steps.some((x) => x.component === 'warpgate' && x.ok)
+    const ok = wgOk
     recordActivity(
       'POST',
       `/archgate/persons/${encodeURIComponent(data.username)}/grant`,
       actor,
       ok ? 'success' : 'error',
       undefined,
-      { target: data.target, ttl: data.ttl || '8h' },
+      {
+        target: data.target,
+        ttl: data.ttl || '8h',
+        steps: steps.map((x) => `${x.component}:${x.ok ? 'ok' : 'fail'}`).join(','),
+      },
+    )
+    logger.info(
+      { username: data.username, target: data.target, actor, ok },
+      'grant target',
     )
 
     return {
@@ -272,7 +385,7 @@ export const grantPersonTargetFn = createServerFn({ method: 'POST' })
       target: data.target,
       steps,
       message: ok
-        ? `Grant ${data.target} → ${data.username}`
-        : `Grant falhou para ${data.username}`,
+        ? `Grant ${data.target} → ${data.username} (Warpgate role bound)`
+        : `Grant falhou para ${data.username}: confira target aplicado e role WG`,
     }
   })

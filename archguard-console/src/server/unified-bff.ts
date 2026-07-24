@@ -61,19 +61,23 @@ export async function listUnifiedConnections(
   }
 
   const isAdmin = sessionPermissions(session).includes('system:admin')
-  const groups = new Set((session.groups || []).map((g) => g.replace(/@.*$/, '')))
+  /** Normalize tenant_rio_quality ↔ tenant-rio-quality (Kanidm vs Warpgate roles). */
+  const norm = (g: string) => g.replace(/@.*$/, '').replace(/-/g, '_')
+  const groups = new Set((session.groups || []).map(norm))
 
   for (const site of sites) {
     for (const t of site.targets || []) {
       const engine = t.engine === 'guacamole' ? 'guacamole' : 'warpgate'
       const protocol = (t.protocolo || 'ssh').toLowerCase()
       if (t.roles?.length && !isAdmin) {
-        const ok = t.roles.some(
-          (r) =>
-            groups.has(r) ||
-            groups.has(r.replace(/^tenant-/, 'tenant_')) ||
-            groups.has(r.replace(/^tenant_/, 'tenant-')),
-        )
+        const ok = t.roles.some((r) => {
+          const n = norm(r)
+          return (
+            groups.has(n) ||
+            groups.has(n.replace(/^tenant_/, '')) ||
+            groups.has(`tenant_${n}`)
+          )
+        })
         if (!ok) continue
       }
       const known =
@@ -194,4 +198,67 @@ export function requireUnifiedSession(): SessionData {
   const s = getSessionOrNull()
   if (!s) throw new Error('Unauthorized')
   return s
+}
+
+/** Bastion endpoints for ArchGate Connect / UnifiedUI launch (no internal target IPs). */
+export type OperatorBastion = {
+  ssh_host: string
+  ssh_port: number
+  pg_host: string
+  pg_port: number
+  pg_database: string
+  http_base: string
+  guac_base: string
+  console_base: string
+  oracle_ui: string
+}
+
+export type OperatorBootstrap = {
+  bastion: OperatorBastion
+  profile: UnifiedSessionProfile
+  connections: UnifiedConnection[]
+}
+
+export function operatorBastionFromEnv(): OperatorBastion {
+  const n = (k: string, d: number) => {
+    const v = process.env[k]
+    if (!v) return d
+    const x = Number(v)
+    return Number.isFinite(x) ? x : d
+  }
+  // TCP 2222/55432 are published on the VPS IP; CF only fronts HTTPS for wg.*
+  return {
+    ssh_host:
+      process.env.WG_SSH_HOST ||
+      process.env.WARPGATE_SSH_HOST ||
+      process.env.ARCHGATE_VPS_IP ||
+      '217.196.60.108',
+    ssh_port: n('WG_SSH_PORT', 2222),
+    pg_host:
+      process.env.WG_PG_HOST ||
+      process.env.WARPGATE_PG_HOST ||
+      process.env.ARCHGATE_VPS_IP ||
+      '217.196.60.108',
+    pg_port: n('WG_PG_PORT', 55432),
+    pg_database: process.env.WG_PG_DB || 'archgate_lab',
+    http_base:
+      process.env.WG_HTTP_BASE ||
+      process.env.WARPGATE_PUBLIC_URL ||
+      'https://wg.archgate.com.br',
+    guac_base: process.env.GUAC_PUBLIC_URL || 'https://guac.archgate.com.br',
+    console_base: process.env.CONSOLE_PUBLIC_URL || 'https://console.archgate.com.br',
+    oracle_ui:
+      process.env.ORACLE_UI_URL ||
+      `${process.env.CONSOLE_PUBLIC_URL || 'https://console.archgate.com.br'}/oracle`,
+  }
+}
+
+export async function buildOperatorBootstrap(
+  session: SessionData,
+): Promise<OperatorBootstrap> {
+  return {
+    bastion: operatorBastionFromEnv(),
+    profile: profileFromSession(session),
+    connections: await listUnifiedConnections(session),
+  }
 }

@@ -6,9 +6,22 @@
 import { pino } from 'pino'
 
 const IS_PROD = process.env.NODE_ENV === 'production'
+const IS_TEST = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true'
+
+function prettyTransport():
+  | { target: string; options: Record<string, string> }
+  | undefined {
+  if (IS_PROD || IS_TEST) return undefined
+  // pino loads the transport worker lazily; if pino-pretty is not installed
+  // (lean CI), skip pretty output instead of failing process boot.
+  return {
+    target: 'pino-pretty',
+    options: { translateTime: 'HH:MM:ss', ignore: 'pid,hostname' },
+  }
+}
 
 export const logger = pino({
-  level: process.env.LOG_LEVEL || (IS_PROD ? 'info' : 'debug'),
+  level: process.env.LOG_LEVEL || (IS_PROD ? 'info' : IS_TEST ? 'silent' : 'debug'),
   redact: {
     paths: [
       'token',
@@ -38,10 +51,5 @@ export const logger = pino({
     ],
     remove: true,
   },
-  transport: IS_PROD
-    ? undefined
-    : {
-        target: 'pino-pretty',
-        options: { translateTime: 'HH:MM:ss', ignore: 'pid,hostname' },
-      },
+  transport: prettyTransport(),
 })

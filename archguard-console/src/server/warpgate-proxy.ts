@@ -394,6 +394,176 @@ export async function deleteRole(id: string): Promise<void> {
   await api('DELETE', `/@warpgate/admin/api/roles/${id}`)
 }
 
+type WarpgateUser = {
+  id: string
+  username?: string
+  name?: string
+  credentials?: { username?: string }
+}
+
+async function listWarpgateUsers(): Promise<WarpgateUser[]> {
+  const users = await api<WarpgateUser[]>('GET', '/@warpgate/admin/api/users')
+  return Array.isArray(users) ? users : []
+}
+
+function findUser(
+  list: WarpgateUser[],
+  username: string,
+): WarpgateUser | undefined {
+  return list.find(
+    (u) =>
+      u.username === username ||
+      u.name === username ||
+      u.credentials?.username === username,
+  )
+}
+
+/**
+ * Ensure a Warpgate local user exists (for role binding / password auth).
+ * Does not set password — operator uses SSO or existing password.
+ */
+export async function ensureWarpgateUser(
+  username: string,
+): Promise<{ ok: boolean; id?: string; detail: string }> {
+  if (!username?.trim()) {
+    return { ok: false, detail: 'username empty' }
+  }
+  if (!configured()) {
+    return { ok: false, detail: 'Warpgate admin not configured' }
+  }
+  try {
+    const list = await listWarpgateUsers()
+    const found = findUser(list, username)
+    if (found?.id) {
+      return { ok: true, id: found.id, detail: `exists id=${found.id}` }
+    }
+    const created = await api<{ id: string }>(
+      'POST',
+      '/@warpgate/admin/api/users',
+      {
+        username,
+        description: `ArchGate Manager · ${username}`,
+      },
+    )
+    if (!created?.id) {
+      return { ok: false, detail: 'create user returned no id' }
+    }
+    // Best-effort SSO credential so OIDC username can match
+    try {
+      await api(
+        'POST',
+        `/@warpgate/admin/api/users/${created.id}/credentials/sso`,
+        { email: `${username}@id.archgate.com.br` },
+      )
+    } catch {
+      // optional — password users still work
+    }
+    return { ok: true, id: created.id, detail: `created id=${created.id}` }
+  } catch (e) {
+    return { ok: false, detail: (e as Error).message.slice(0, 200) }
+  }
+}
+
+/** Bind Warpgate user → role (grant access to all targets on that role). */
+export async function bindWarpgateUserRole(
+  username: string,
+  roleName: string,
+): Promise<{ ok: boolean; detail: string }> {
+  if (!configured()) {
+    return { ok: false, detail: 'Warpgate admin not configured' }
+  }
+  try {
+    const userRes = await ensureWarpgateUser(username)
+    if (!userRes.ok || !userRes.id) {
+      return { ok: false, detail: userRes.detail }
+    }
+    const role = await ensureRole(roleName)
+    await api(
+      'POST',
+      `/@warpgate/admin/api/users/${userRes.id}/roles/${role.id}`,
+      {},
+    )
+    return {
+      ok: true,
+      detail: `bound ${username} → role ${roleName}`,
+    }
+  } catch (e) {
+    const msg = (e as Error).message
+    // idempotent: already bound
+    if (/409|already|exist/i.test(msg)) {
+      return { ok: true, detail: `already bound ${username} → ${roleName}` }
+    }
+    return { ok: false, detail: msg.slice(0, 200) }
+  }
+}
+
+/**
+ * Resolve which Warpgate roles grant a named target.
+ * Uses target.allow_roles when present; otherwise empty (caller uses SoT).
+ */
+export async function rolesForWarpgateTarget(
+  targetName: string,
+): Promise<{ targetFound: boolean; roles: string[]; detail: string }> {
+  if (!configured()) {
+    return {
+      targetFound: false,
+      roles: [],
+      detail: 'Warpgate admin not configured',
+    }
+  }
+  try {
+    const targets = await listWarpgateTargets()
+    const t = targets.find((x) => x.name === targetName)
+    if (!t) {
+      return {
+        targetFound: false,
+        roles: [],
+        detail: `target ${targetName} not in Warpgate (apply gateways first)`,
+      }
+    }
+    const roles: string[] = []
+    const raw = t.allow_roles
+    if (Array.isArray(raw)) {
+      for (const r of raw) {
+        if (typeof r === 'string') roles.push(r)
+        else if (r && typeof r === 'object' && 'name' in r) {
+          const n = (r as { name?: string }).name
+          if (n) roles.push(n)
+        }
+      }
+    }
+    // Some WG versions expose roles via nested endpoint
+    if (roles.length === 0 && t.id) {
+      try {
+        const nested = await api<Array<{ name?: string; id?: string }>>(
+          'GET',
+          `/@warpgate/admin/api/targets/${t.id}/roles`,
+        )
+        if (Array.isArray(nested)) {
+          for (const r of nested) {
+            if (r?.name) roles.push(r.name)
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return {
+      targetFound: true,
+      roles: Array.from(new Set(roles)),
+      detail: roles.length
+        ? `roles from WG: ${roles.join(',')}`
+        : 'target found; no roles on object — use SoT roles',
+    }
+  } catch (e) {
+    return {
+      targetFound: false,
+      roles: [],
+      detail: (e as Error).message.slice(0, 200),
+    }
+  }
+}
+
 /**
  * Best-effort remove of a Warpgate user by username (offboarding).
  * API shape varies by WG version — try list + delete by id.
@@ -402,18 +572,8 @@ export async function deleteWarpgateUserByName(
   username: string,
 ): Promise<{ ok: boolean; detail: string }> {
   try {
-    const users = await api<Array<{ id: string; username?: string; name?: string }>>(
-      'GET',
-      '/@warpgate/admin/api/users',
-    )
-    const list = Array.isArray(users) ? users : []
-    const found = list.find(
-      (u) =>
-        u.username === username ||
-        u.name === username ||
-        (u as { credentials?: { username?: string } }).credentials
-          ?.username === username,
-    )
+    const list = await listWarpgateUsers()
+    const found = findUser(list, username)
     if (!found?.id) {
       return { ok: true, detail: 'user not found (already gone)' }
     }
