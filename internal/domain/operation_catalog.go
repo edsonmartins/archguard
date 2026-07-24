@@ -86,6 +86,9 @@ var operationExemptActions = map[Action]string{
 	ActionAuthStuffing:          "alerta emitido pelo sistema (credential stuffing), não invocado",
 	ActionPrivilegedGrantExpire: "expiração emitida pelo job de limpeza (T-012), não invocada",
 	ActionMembershipSuspend:     "suspensão emitida pelo sincronismo de diretório ao refletir uma desativação (pacote 009), não invocada como operação de API",
+	ActionDirectorySync:         "evento emitido por uma execução de sincronismo de diretório (pacote 009), não invocada como operação de API",
+	ActionFederatedLogin:        "entrada federada (SAML/OIDC): autenticação de base, gated pelo próprio fluxo de federação, não pelo middleware de operação",
+	ActionLegacyChannelAccess:   "acesso por canal legado (RADIUS): evento de borda sinalizado como legado, jamais uma operação privilegiada (L3 é bloqueado, T-015)",
 	ActionDelegationEscalation:  "sinal emitido pelo sistema quando uma delegação tenta escalar, não invocado",
 	ActionRefreshReuse:          "evento de segurança emitido na detecção de reuso de refresh, não invocado",
 }

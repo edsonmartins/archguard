@@ -15,7 +15,7 @@
 - [x] **T-013** Garantir que step-up L3 nunca seja satisfeito por `acr` de terceiro.
 - [x] **T-014** Desabilitar LDAP/RADIUS embutidos por padrão e restringir escopo.
 - [x] **T-015** Bloquear operações L3 originadas de canais legados.
-- [ ] **T-016** Auditar todos os eventos de sincronismo, federação e canal legado.
+- [x] **T-016** Auditar todos os eventos de sincronismo, federação e canal legado.
 - [ ] **T-017** Ferramenta de importação com estado `enrollment_required`.
 - [ ] **T-018** Relatório de conflito de deduplicação e fluxo de fusão assistida.
 - [ ] **T-019** Teste: desativação no diretório suspende o membership em uma execução.

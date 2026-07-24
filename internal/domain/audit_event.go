@@ -101,6 +101,12 @@ const (
 	// security event emitted by the token endpoint on detection, not an invoked
 	// operation.
 	ActionRefreshReuse Action = "token.refresh.reuse"
+	// Directory sync / federation / legacy-channel events (pacote 009). All are
+	// emitted by inbound flows (a sync run, a federated login, a legacy-channel
+	// access), not invoked as assurance-gated API operations.
+	ActionDirectorySync       Action = "directory.sync"
+	ActionFederatedLogin      Action = "auth.federated"
+	ActionLegacyChannelAccess Action = "legacy.channel.access"
 )
 
 // actionCatalog is the closed set of canonical actions and the assurance level
@@ -141,6 +147,9 @@ var actionCatalog = map[Action]AssuranceLevel{
 	ActionDelegationRevoke:      L2,
 	ActionDelegationEscalation:  L1,
 	ActionRefreshReuse:          L1,
+	ActionDirectorySync:         L1,
+	ActionFederatedLogin:        L1,
+	ActionLegacyChannelAccess:   L1,
 }
 
 // Valid reports whether a is a registered canonical action.
