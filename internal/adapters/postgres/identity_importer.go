@@ -46,7 +46,11 @@ func NewIdentityImporter(pool *pgxpool.Pool, custodian domain.KeyCustodian) *Ide
 // a malformed or failing record is Failed with its error. One bad record never
 // aborts the batch.
 func (i *IdentityImporter) Import(ctx context.Context, orgID uuid.UUID, batchID string, records []domain.ImportRecord) (domain.ImportReport, error) {
-	report := domain.ImportReport{BatchID: batchID}
+	// Dedup conflicts are detected up front and NEVER auto-resolved (RFC-0002 §6):
+	// a conflicted e-mail is reported for human review, not imported.
+	conflicts := domain.DetectImportConflicts(records)
+	conflicted := domain.ConflictedEmails(conflicts)
+	report := domain.ImportReport{BatchID: batchID, Conflicts: conflicts}
 	identities := NewIdentityStore(i.pool)
 
 	for _, rec := range records {
@@ -54,6 +58,12 @@ func (i *IdentityImporter) Import(ctx context.Context, orgID uuid.UUID, batchID 
 		if err := rec.Validate(); err != nil {
 			entry.Outcome = domain.ImportFailed
 			entry.Error = err.Error()
+			report.Entries = append(report.Entries, entry)
+			continue
+		}
+		if conflicted[domain.NormalizeEmail(rec.Email)] {
+			entry.Outcome = domain.ImportConflicted
+			entry.Error = "conflito de deduplicação — aguardando revisão humana (sem fusão automática)"
 			report.Entries = append(report.Entries, entry)
 			continue
 		}
