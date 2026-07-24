@@ -22,7 +22,7 @@
 - [ ] **T-020** Implementar arquivamento de partição por retenção e restauração auditada.
 - [x] **T-021** Implementar exportação estruturada para direitos do titular (escopo por tenant).
 - [ ] **T-022** Runbook: DR do cofre, rotação, incidente e notificação (ANPD/titulares).
-- [ ] **T-023** Teste: eliminação de titular mantém a cadeia de auditoria verificável.
+- [x] **T-023** Teste: eliminação de titular mantém a cadeia de auditoria verificável.
 - [x] **T-024** Teste: exportação de titular não vaza dados de outra organização.
 - [ ] **T-025** Documentação de apoio ao RIPD do cliente (papéis controlador/operador).
 
