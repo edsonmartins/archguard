@@ -17,7 +17,7 @@
 - [ ] **T-015** Implementar cache de assinatura e modo degradado com fail-closed em L3.
 - [ ] **T-016** Health check que sinaliza custódia local como instalação não conforme.
 - [x] **T-017** Implementar classificação LGPD obrigatória em migrations + gate de CI.
-- [ ] **T-018** Implementar chaves por titular e cifragem de campos pessoais.
+- [x] **T-018** Implementar chaves por titular e cifragem de campos pessoais.
 - [ ] **T-019** Implementar crypto-shredding com confirmação L3 e auditoria.
 - [ ] **T-020** Implementar arquivamento de partição por retenção e restauração auditada.
 - [ ] **T-021** Implementar exportação estruturada para direitos do titular (escopo por tenant).

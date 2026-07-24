@@ -23,9 +23,14 @@
 package keycustodian
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"errors"
+	"fmt"
+	"sync"
 
 	"github.com/casdoor/casdoor/internal/domain"
 )
@@ -44,6 +49,13 @@ var ErrWeakDeploymentKey = errors.New("keycustodian: chave de deployment fraca (
 // not supported in production.
 type Provisional struct {
 	deploymentKey []byte
+
+	// Per-subject cipher state (T-018). subjectKeys holds each titular's AES-256
+	// key; destroyed marks crypto-shredded subjects. In production these live in
+	// the vault; here they are in-process (dev/test only).
+	mu          sync.Mutex
+	subjectKeys map[string][]byte
+	destroyed   map[string]bool
 }
 
 // NewProvisional builds a Provisional custodian from a deployment key. The key
@@ -55,7 +67,95 @@ func NewProvisional(deploymentKey []byte) (*Provisional, error) {
 	}
 	key := make([]byte, len(deploymentKey))
 	copy(key, deploymentKey)
-	return &Provisional{deploymentKey: key}, nil
+	return &Provisional{
+		deploymentKey: key,
+		subjectKeys:   map[string][]byte{},
+		destroyed:     map[string]bool{},
+	}, nil
+}
+
+// EncryptForSubject implements domain.SubjectCipher: AES-256-GCM under the
+// subject's key (created on first use), nonce prepended. A shredded subject is
+// refused (ErrSubjectKeyDestroyed) — no new personal data for an eliminated titular.
+func (p *Provisional) EncryptForSubject(subjectID string, plaintext []byte) ([]byte, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.destroyed[subjectID] {
+		return nil, domain.ErrSubjectKeyDestroyed
+	}
+	key, ok := p.subjectKeys[subjectID]
+	if !ok {
+		key = make([]byte, 32)
+		if _, err := rand.Read(key); err != nil {
+			return nil, fmt.Errorf("keycustodian: geração de chave do titular falhou: %w", err)
+		}
+		p.subjectKeys[subjectID] = key
+	}
+	gcm, err := newGCM(key)
+	if err != nil {
+		return nil, err
+	}
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err := rand.Read(nonce); err != nil {
+		return nil, fmt.Errorf("keycustodian: geração de nonce falhou: %w", err)
+	}
+	return gcm.Seal(nonce, nonce, plaintext, nil), nil
+}
+
+// DecryptForSubject implements domain.SubjectCipher. A destroyed key yields
+// ErrSubjectKeyDestroyed; an unknown subject yields ErrSubjectKeyMissing.
+func (p *Provisional) DecryptForSubject(subjectID string, ciphertext []byte) ([]byte, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.destroyed[subjectID] {
+		return nil, domain.ErrSubjectKeyDestroyed
+	}
+	key, ok := p.subjectKeys[subjectID]
+	if !ok {
+		return nil, domain.ErrSubjectKeyMissing
+	}
+	gcm, err := newGCM(key)
+	if err != nil {
+		return nil, err
+	}
+	if len(ciphertext) < gcm.NonceSize() {
+		return nil, errors.New("keycustodian: ciphertext curto demais")
+	}
+	nonce, ct := ciphertext[:gcm.NonceSize()], ciphertext[gcm.NonceSize():]
+	pt, err := gcm.Open(nil, nonce, ct, nil)
+	if err != nil {
+		return nil, fmt.Errorf("keycustodian: decifragem do titular falhou: %w", err)
+	}
+	return pt, nil
+}
+
+// DestroySubjectKey implements domain.SubjectCipher: it zeroes and removes the
+// subject's key and tombstones the subject. Idempotent. After this, every field
+// encrypted under it is irrecoverable (crypto-shredding, ADR-0014).
+func (p *Provisional) DestroySubjectKey(subjectID string) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if key, ok := p.subjectKeys[subjectID]; ok {
+		for i := range key {
+			key[i] = 0
+		}
+		delete(p.subjectKeys, subjectID)
+	}
+	p.destroyed[subjectID] = true
+	return nil
+}
+
+// newGCM builds an AES-256-GCM AEAD from a 32-byte key.
+func newGCM(key []byte) (cipher.AEAD, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, fmt.Errorf("keycustodian: cipher AES falhou: %w", err)
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, fmt.Errorf("keycustodian: GCM falhou: %w", err)
+	}
+	return gcm, nil
 }
 
 // HashEmail implements domain.KeyCustodian: it normalizes the e-mail and returns
@@ -71,5 +171,8 @@ func (p *Provisional) HashEmail(email string) ([]byte, error) {
 	return mac.Sum(nil), nil
 }
 
-// compile-time check that Provisional satisfies the port.
-var _ domain.KeyCustodian = (*Provisional)(nil)
+// compile-time checks that Provisional satisfies the ports.
+var (
+	_ domain.KeyCustodian  = (*Provisional)(nil)
+	_ domain.SubjectCipher = (*Provisional)(nil)
+)
