@@ -68,6 +68,25 @@ provisórios estão marcados **não suportados em produção** e o `/health` já
 | `GlobalAuthorizer` (007) | `ProfileAuthorizer` (só perfil Dev) | OpenFGA PDP (ou o avaliador Go + política real) |
 | `PolicyDecisionPoint` | avaliador Go sobre `authz_tuple` | idem ou `OpenFGA` atrás do mesmo porto |
 
+### 3.1 Endurecimento obrigatório: chave built-in de token (INV-7)
+
+O fork herdou do Casdoor o par default `object/token_jwt_key.{key,pem}` (chave
+privada RSA **committada** — placeholder de dev conhecido publicamente, não um
+segredo vazado). O `object/init.go:initBuiltInCert()` a semeia no cert `cert-built-in`
+e `SealCerts()` a move para o keystore no boot; `CertPrivateKeyPEM` (`object/
+deployment.go`) resolve do keystore quando o cert é `keystore:<id>`, senão devolve a
+chave crua. Em **produção**, o ADR-0017 já cobre isso (keystore/cofre; perfil dev não
+conforme; L3 negado em dev).
+
+**Pendente (fazer no devops, com boot verificável):** um plano de PAM **NÃO** deve
+versionar chave privada default alguma (INV-7). Trocar o seed por **geração no boot**
+(chave nova por deployment, selada no keystore/cofre — nunca persistida no repo) e
+**remover** `object/token_jwt_key.key`/`.pem` do versionamento (`.gitignore`),
+mantendo `readTokenFromFile()` a retornar vazio quando ausente e o dev obtendo a chave
+do keystore. Requer ensaio de boot (assina/verifica token) — por isso não foi feito no
+repo principal sem DB/keystore. Enquanto não feito: **override obrigatório do cert
+default em qualquer instalação não-dev**.
+
 ---
 
 ## 4. Cola de boot por pacote (o que ligar no `main.go`/roteador Beego)
