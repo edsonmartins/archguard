@@ -8,7 +8,7 @@
 - [x] **T-005** Implementar outbox transacional para mutações relevantes.
 - [x] **T-006** Implementar publisher idempotente de tuplas.
 - [x] **T-007** Implementar projeção de memberships, grupos e concessões em tuplas.
-- [ ] **T-008** Implementar reconciliação periódica com política assimétrica (restringe:
+- [x] **T-008** Implementar reconciliação periódica com política assimétrica (restringe:
       automático; amplia: revisão humana).
 - [ ] **T-009** Implementar bootstrap/replay completo do store a partir do banco.
 - [ ] **T-010** Integrar decisão de abertura de sessão privilegiada (sem cache).
