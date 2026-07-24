@@ -114,6 +114,53 @@ func (p *PostgresPDP) ListObjects(ctx context.Context, req domain.ListObjectsReq
 	return out, nil
 }
 
+// ReviewAsset lists every membership of the asset's tenant with effective access
+// to it, and the origin of each (direct/inherited/by-grant) — the access-review
+// campaign query (T-014 / spec "Campanha de revisão"). It loads the tenant graph
+// fresh, enumerates the membership candidates present in it, and classifies each
+// via domain.ReviewAssetAccess. Fail-closed: a load error surfaces as
+// ErrPDPUnavailable, never a silently short review.
+func (p *PostgresPDP) ReviewAsset(ctx context.Context, assetRef string) ([]domain.AccessReviewEntry, error) {
+	org, ok := domain.RefOrg(assetRef)
+	if !ok {
+		return nil, fmt.Errorf("pdp: ativo sem tenant %q", assetRef)
+	}
+	graph, err := p.loadTenantGraph(ctx, org)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", domain.ErrPDPUnavailable, err)
+	}
+	candidates, err := p.membershipCandidates(ctx, org)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", domain.ErrPDPUnavailable, err)
+	}
+	return domain.ReviewAssetAccess(graph, assetRef, candidates, domain.CheckContext{})
+}
+
+// membershipCandidates returns the distinct membership refs that appear as a
+// subject anywhere in the tenant's graph — the population a review evaluates.
+func (p *PostgresPDP) membershipCandidates(ctx context.Context, org string) ([]string, error) {
+	var out []string
+	err := WithTx(ctx, p.db, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT DISTINCT tuple_user FROM authz_tuple
+			WHERE organization_id = $1 AND tuple_user LIKE $2`,
+			org, "org:"+org+"/"+string(domain.TypeMembership)+":%")
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var u string
+			if err := rows.Scan(&u); err != nil {
+				return err
+			}
+			out = append(out, u)
+		}
+		return rows.Err()
+	})
+	return out, err
+}
+
 // Write applies tuple updates to the store idempotently (the port surface the
 // publisher/bootstrap use). Each tuple is validated (INV-5) before it is applied.
 func (p *PostgresPDP) Write(ctx context.Context, updates []domain.TupleUpdate) error {

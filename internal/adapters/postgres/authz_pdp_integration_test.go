@@ -136,6 +136,42 @@ func TestPostgresPDPCrossTenantDenied(t *testing.T) {
 	}
 }
 
+// Campanha de revisão: lista os memberships com acesso efetivo ao ativo e a
+// origem de cada um (spec "Campanha de revisão", T-014).
+func TestPostgresPDPReviewAsset(t *testing.T) {
+	pool := setupTenantPool(t)
+	ctx := context.Background()
+	org := uuid.New()
+	assetID, groupID := uuid.New(), uuid.New()
+	assetRef := domain.Qualify(org, domain.TypeAsset, assetID.String())
+	direct := domain.Qualify(org, domain.TypeMembership, uuid.New().String())
+	viaGroup := uuid.New()
+	viaGroupRef := domain.Qualify(org, domain.TypeMembership, viaGroup.String())
+	groupUserset := domain.QualifyUserset(org, domain.TypeGroup, groupID.String(), domain.RelMember)
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), "DELETE FROM authz_tuple WHERE organization_id = $1", org.String())
+		_, _ = pool.Exec(context.Background(), "DELETE FROM authz_tuple_outbox WHERE organization_id = $1", org.String())
+	})
+
+	directRole, _ := domain.ProjectRoleAssignment(assetRef, domain.RelOperator, direct, true)
+	groupRole, _ := domain.ProjectRoleAssignment(assetRef, domain.RelOperator, groupUserset, true)
+	projectAndPublish(t, pool, []domain.TupleUpdate{
+		directRole, groupRole, domain.ProjectGroupMembership(org, groupID, viaGroup, true),
+	})
+
+	entries, err := NewPostgresPDP(pool).ReviewAsset(ctx, assetRef)
+	if err != nil {
+		t.Fatalf("ReviewAsset: %v", err)
+	}
+	subjects := map[string]bool{}
+	for _, e := range entries {
+		subjects[e.Subject] = true
+	}
+	if !subjects[direct] || !subjects[viaGroupRef] {
+		t.Fatalf("revisão deveria incluir o membership direto e o via grupo: %+v", entries)
+	}
+}
+
 // SEM cache: um delete publicado é refletido na próxima decisão.
 func TestPostgresPDPNoCache(t *testing.T) {
 	pool := setupTenantPool(t)
