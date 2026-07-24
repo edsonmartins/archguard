@@ -3,7 +3,8 @@
 - [x] **T-001** Definir a interface `PolicyDecisionPoint` no domínio (sem tipos de SDK).
 - [x] **T-002** Escrever o modelo de autorização (tipos, relações, herança, condições).
 - [x] **T-003** Implementar qualificação de objetos por tenant no identificador.
-- [ ] **T-004** Modelar `asset` e `asset_group` com hierarquia no ArchGuard.
+- [x] **T-004** Modelar `asset` e `asset_group` com hierarquia no ArchGuard.
+      (Domínio puro; persistência/importação diferidas ao M4 — questões abertas RFC-0004 §9.)
 - [ ] **T-005** Implementar outbox transacional para mutações relevantes.
 - [ ] **T-006** Implementar publisher idempotente de tuplas.
 - [ ] **T-007** Implementar projeção de memberships, grupos e concessões em tuplas.
