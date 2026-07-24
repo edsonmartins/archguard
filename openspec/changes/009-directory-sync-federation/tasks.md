@@ -16,7 +16,7 @@
 - [x] **T-014** Desabilitar LDAP/RADIUS embutidos por padrão e restringir escopo.
 - [x] **T-015** Bloquear operações L3 originadas de canais legados.
 - [x] **T-016** Auditar todos os eventos de sincronismo, federação e canal legado.
-- [ ] **T-017** Ferramenta de importação com estado `enrollment_required`.
+- [x] **T-017** Ferramenta de importação com estado `enrollment_required`.
 - [ ] **T-018** Relatório de conflito de deduplicação e fluxo de fusão assistida.
 - [ ] **T-019** Teste: desativação no diretório suspende o membership em uma execução.
 - [ ] **T-020** Teste: JIT com e-mail conhecido não cria segunda identidade.
