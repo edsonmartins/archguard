@@ -11,7 +11,7 @@
 - [ ] **T-009** Exportação de cópia da auditoria para Loki (marcada como cópia).
 - [ ] **T-010** Integrar `KeyCustodian` real com o cofre (JWKS).
 - [ ] **T-011** Integrar assinatura de selagem via transit engine.
-- [ ] **T-012** Migrar segredos de client OAuth e credenciais de conector para o cofre.
+- [x] **T-012** Migrar segredos de client OAuth e credenciais de conector para o cofre.
 - [ ] **T-013** Implementar rotação de JWKS com sobreposição.
 - [ ] **T-014** Implementar rotação de chave de selagem com validade por `key_id`.
 - [ ] **T-015** Implementar cache de assinatura e modo degradado com fail-closed em L3.
