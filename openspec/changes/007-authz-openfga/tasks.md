@@ -20,7 +20,7 @@
 - [x] **T-016** Teste de travessia: nenhuma relação concede acesso a objeto de outro tenant.
 - [x] **T-017** Teste de reconciliação com divergência injetada.
 - [x] **T-018** Teste: PDP indisponível ⇒ AuthN funciona, decisões privilegiadas negadas.
-- [ ] **T-019** Métricas de latência de decisão e de divergência de reconciliação.
+- [x] **T-019** Métricas de latência de decisão e de divergência de reconciliação.
 - [ ] **T-020** Documentar a fronteira Casbin × OpenFGA e o checklist de PR.
 
 ## Gate de verificação
