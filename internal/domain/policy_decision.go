@@ -93,9 +93,20 @@ const (
 func (o TupleOp) Valid() bool { return o == TupleWrite || o == TupleDelete }
 
 // TupleUpdate is a single idempotent mutation the publisher applies to the store.
+// A conditioned tuple (a grant projected as has_active_grant) carries a non-nil
+// Condition; the resolver reads it back as a GraphSubject.Window so the concession
+// EXPIRES IN THE GRAPH, not merely in the application (RFC-0004 §3).
 type TupleUpdate struct {
-	Op    TupleOp
-	Tuple RelationTuple
+	Op        TupleOp
+	Tuple     RelationTuple
+	Condition *TupleCondition
+}
+
+// TupleCondition is the condition attached to a projected tuple. For a grant it is
+// the valid_window condition with the grant's [NotBefore, ExpiresAt) window.
+type TupleCondition struct {
+	Name   string
+	Window ValidityWindow
 }
 
 // TupleFilter selects tuples for Read. Empty fields are wildcards; at least one
