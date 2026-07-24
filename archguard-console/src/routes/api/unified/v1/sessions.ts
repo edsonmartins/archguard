@@ -1,10 +1,9 @@
 // POST /api/unified/v1/sessions — short-lived tunnel / launch metadata
+// Cookie (browser) or Bearer (ArchGate Connect desktop) via resolveOperatorSession.
 
 import { createFileRoute } from '@tanstack/react-router'
-import {
-  createUnifiedSession,
-  requireUnifiedSession,
-} from '@/server/unified-bff'
+import { createUnifiedSession } from '@/server/unified-bff'
+import { resolveOperatorSession } from '@/server/operator-session'
 import { logger } from '@/server/logger'
 
 function corsHeaders(request: Request): HeadersInit {
@@ -17,7 +16,8 @@ function corsHeaders(request: Request): HeadersInit {
   return {
     'Access-Control-Allow-Origin': allow === '*' ? '*' : allow,
     'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Headers':
+      'Content-Type, Authorization, X-ArchGate-User, X-ArchGate-Tenants',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   }
 }
@@ -33,7 +33,7 @@ export const Route = createFileRoute('/api/unified/v1/sessions')({
           ...corsHeaders(request),
         }
         try {
-          const session = requireUnifiedSession()
+          const session = await resolveOperatorSession(request)
           const body = (await request.json().catch(() => ({}))) as {
             connection_id?: string
             target?: string

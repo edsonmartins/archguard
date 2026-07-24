@@ -126,6 +126,9 @@ export async function createUnifiedSession(
   tunnel_url: string
   connect_data: string
   expires_in: number
+  /** In-app browser surface (Guac SSO, Oracle UI, HTTP). */
+  embed_url?: string
+  embed_mode?: 'websocket' | 'iframe'
   launch?: {
     engine: string
     target: string
@@ -157,7 +160,14 @@ export async function createUnifiedSession(
   const wgPublic =
     process.env.WARPGATE_PUBLIC_URL || 'https://wg.archgate.com.br'
 
-  if (hit.engine === 'guacamole') {
+  const proto = (hit.protocol || body.protocol || '').toLowerCase()
+  const wantsGuac =
+    hit.engine === 'guacamole' ||
+    proto === 'rdp' ||
+    proto === 'vnc' ||
+    proto === 'kubernetes' // guac when browser path
+
+  if (wantsGuac) {
     const opaque = Buffer.from(
       JSON.stringify({
         u: session.user?.name,
@@ -165,18 +175,50 @@ export async function createUnifiedSession(
         exp: Date.now() + expiresIn * 1000,
       }),
     ).toString('base64url')
+    const base = guacPublic.replace(/\/$/, '')
     logger.info(
-      { user: session.user?.name, target: hit.target },
+      { user: session.user?.name, target: hit.target, protocol: proto },
       'unified session guacamole issued',
     )
     return {
-      tunnel_url: guacPublic.replace(/\/$/, '') + '/websocket-tunnel',
+      tunnel_url: `${base}/websocket-tunnel`,
       connect_data: opaque,
       expires_in: expiresIn,
+      /** Prefer iframe SSO when guacd token not fully wired (Connect embed). */
+      embed_url: base + '/',
+      embed_mode: 'iframe' as const,
       launch: {
         engine: 'guacamole',
         target: hit.target,
-        protocol: hit.protocol,
+        protocol: hit.protocol || proto || 'rdp',
+      },
+    }
+  }
+
+  // HTTP / Oracle UI / other: in-app browser surface URL (no internal IPs).
+  if (
+    proto === 'http' ||
+    proto === 'https' ||
+    proto === 'oracle' ||
+    hit.target.toLowerCase().includes('oracle')
+  ) {
+    const consoleBase =
+      process.env.CONSOLE_PUBLIC_URL || 'https://console.archgate.com.br'
+    const embed =
+      proto === 'oracle' || hit.target.toLowerCase().includes('oracle')
+        ? `${consoleBase.replace(/\/$/, '')}/oracle`
+        : `${wgPublic.replace(/\/$/, '')}/`
+    return {
+      tunnel_url: '',
+      connect_data: '',
+      expires_in: expiresIn,
+      embed_url: embed,
+      embed_mode: 'iframe' as const,
+      launch: {
+        engine: hit.engine || 'warpgate',
+        target: hit.target,
+        protocol: hit.protocol || proto,
+        warpgate_public: wgPublic,
       },
     }
   }
