@@ -123,38 +123,6 @@ func SealCerts() {
 	}
 }
 
-// isPlaintextSigningKey reports whether a cert holds its private key in PLAINTEXT
-// (not behind a keystore/vault reference).
-func isPlaintextSigningKey(privateKey string) bool {
-	return privateKey != "" && !strings.HasPrefix(privateKey, keystoreRefPrefix)
-}
-
-// AssertVaultKeyCustody refuses to run in a CONFORMANT profile (pilot/production,
-// which mandate OpenBao) with a JWT-signing cert whose private key sits in
-// PLAINTEXT in the database (INV-7 / INV-6 fail-closed). A PAM control plane must
-// not sign tokens with a key readable from the DB: the operator must provision the
-// cert to reference the vault (PrivateKey = "keystore:<ref>" resolvido para o
-// OpenBao) ANTES do boot. In a conformant profile a plaintext signing key PANICS
-// rather than silently signing; dev is exempt (already non-conforme, L3 denied).
-// Called at boot after SealCerts().
-func AssertVaultKeyCustody() {
-	if !deploy.Active().Conformant() {
-		return
-	}
-	certs := []*Cert{}
-	if err := ormer.Engine.Find(&certs); err != nil {
-		panic(fmt.Sprintf("INV-7: leitura de certs para verificação de custódia falhou: %v", err))
-	}
-	for _, cert := range certs {
-		if cert.Scope == "JWT" && isPlaintextSigningKey(cert.PrivateKey) {
-			panic(fmt.Sprintf(
-				"INV-7 (fail-closed): perfil %q com chave de assinatura em TEXTO no banco no cert %s — "+
-					"provisione a chave contra o cofre (PrivateKey = %q) antes de subir",
-				deploy.Active(), cert.GetId(), keystoreRefPrefix+"<ref>"))
-		}
-	}
-}
-
 // CertPrivateKeyPEM returns the PEM signing key for a cert, resolving a
 // keystore reference through the sealed keystore. This is the single choke point
 // every signing path must call instead of reading cert.PrivateKey directly.

@@ -84,25 +84,19 @@ gera o par RSA-4096 no boot (chave vazia → `populateContent()`/`AddCert` gera;
 entre réplicas tolerada); `buildSpKeyStore()` (SP SAML) lê do cert built-in via
 `CertPrivateKeyPEM`. **Nenhuma chave privada default no repo.**
 
-**Custódia da chave gerada por perfil:**
-- **DEV:** `SealCerts()` move a chave para o keystore **LOCAL** (que o `/health` marca
-  **não-conforme**, T-016). L3 negado em dev.
-- **CONFORME (pilot/production, com OpenBao):** `AssertVaultKeyCustody()` (main.go, após
-  `SealCerts`) **FALHA FECHADO (INV-7/INV-6)** — o boot **recusa subir** se algum cert de
-  JWT tiver chave em **texto no banco**. Produção **não** assina com chave em texto no
-  banco: ou o cert referencia o cofre, ou não sobe.
-
-**Tarefas do devops (o boot conforme EXIGE, senão para):**
-1. **Provisionar o cert de token contra o cofre**: `admin/cert-built-in` (ou o cert de
-   assinatura em uso) deve ter `PrivateKey = keystore:<ref>` resolvível para o
-   `openbao.TransitSigner` (T-010); a assinatura passa a ser `transit/sign`, a chave
-   privada nunca no banco. Sem isso, `AssertVaultKeyCustody()` panica no boot.
-2. **Resolver `keystore:<ref>` contra o OpenBao**: hoje `CertPrivateKeyPEM` resolve a
-   referência só pelo keystore LOCAL (dev). Ligar a resolução ao cofre (transit/KV) no
-   perfil conforme.
-3. **Ensaiar boot**: emitir/verificar token OIDC e assinar/verificar SAML SP — a
-   `buildSpKeyStore()` depende do keystore aberto na requisição (falha fechada se não
-   estiver aberto; novo modo de falha a validar).
+**⚠️ O escopo é só o repositório — a custódia da chave GERADA NÃO está fechada:**
+`SealCerts()` (main.go) é **DEV-ONLY** e move a chave para o keystore **LOCAL** (que o
+próprio `/health` marca **não-conforme**, T-016). Em **PRODUÇÃO** `SealCerts()` é
+**no-op** → a chave gerada fica em **texto no banco** (INV-7 no banco **ainda em
+aberto**). O caminho de produção obrigatório (ADR-0017) é **provisionar o cert de token
+para referenciar o cofre** (`openbao.TransitSigner`, T-010) — o cert `admin/cert-built-in`
+deve ter `PrivateKey = keystore:<ref>` apontando o cofre, e a assinatura passa a ser
+`transit/sign`. **Tarefas do devops:**
+1. Provisionar o cert de token contra o cofre (transit) — sem isso, produção assina com
+   chave em texto no banco e o `/health` reporta não-conforme.
+2. **Ensaiar boot**: emitir/verificar token OIDC e assinar/verificar SAML SP — a
+   `buildSpKeyStore()` passou a depender do keystore aberto no momento da requisição
+   (falha fechada se o keystore não estiver aberto; novo modo de falha a validar).
 
 ---
 
