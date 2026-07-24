@@ -71,6 +71,11 @@ var classifiedOperations = []Operation{
 	{ID: string(ActionPrivilegedReview), Level: L2, Description: "registrar revisão pós-uso", ForbiddenUnderDelegation: true},
 	{ID: string(ActionDelegationStart), Level: L3, Description: "iniciar uma delegação", ForbiddenUnderDelegation: true},
 	{ID: string(ActionDelegationRevoke), Level: L2, Description: "revogar uma delegação", ForbiddenUnderDelegation: true},
+
+	// LGPD subject rights (pacote 010). Erasure (crypto-shredding) is irreversible,
+	// L3; export is a subject-access request, L2. Both forbidden under delegation.
+	{ID: string(ActionSubjectErasure), Level: L3, Description: "eliminar dados do titular (crypto-shredding)", ForbiddenUnderDelegation: true},
+	{ID: string(ActionSubjectExport), Level: L2, Description: "exportar dados do titular", ForbiddenUnderDelegation: true},
 }
 
 // operationExemptActions are catalogued audit verbs that are NOT assurance-gated

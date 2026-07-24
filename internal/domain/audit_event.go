@@ -107,6 +107,10 @@ const (
 	ActionDirectorySync       Action = "directory.sync"
 	ActionFederatedLogin      Action = "auth.federated"
 	ActionLegacyChannelAccess Action = "legacy.channel.access"
+	// LGPD subject-rights events (pacote 010). Erasure is the crypto-shredding of a
+	// titular's key (irreversible, L3); export serves a subject-access request.
+	ActionSubjectErasure Action = "subject.erasure"
+	ActionSubjectExport  Action = "subject.export"
 )
 
 // actionCatalog is the closed set of canonical actions and the assurance level
@@ -150,6 +154,8 @@ var actionCatalog = map[Action]AssuranceLevel{
 	ActionDirectorySync:         L1,
 	ActionFederatedLogin:        L1,
 	ActionLegacyChannelAccess:   L1,
+	ActionSubjectErasure:        L3,
+	ActionSubjectExport:         L2,
 }
 
 // Valid reports whether a is a registered canonical action.
