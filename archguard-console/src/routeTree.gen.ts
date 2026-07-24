@@ -9,62 +9,49 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthedRouteImport } from './routes/_authed'
-import { Route as CallbackRouteImport } from './routes/callback'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as TestLoginRouteImport } from './routes/test-login'
 import { Route as UnauthorizedRouteImport } from './routes/unauthorized'
-import { Route as AuthedAuditRouteImport } from './routes/_authed/audit'
-import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
-import { Route as AuthedRecycleBinRouteImport } from './routes/_authed/recycle-bin'
+import { Route as TestLoginRouteImport } from './routes/test-login'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as CallbackRouteImport } from './routes/callback'
+import { Route as AuthedRouteImport } from './routes/_authed'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedVaultRouteImport } from './routes/_authed/vault'
-import { Route as AuthedGatewaysIndexRouteImport } from './routes/_authed/gateways/index'
-import { Route as AuthedGroupsIndexRouteImport } from './routes/_authed/groups/index'
-import { Route as AuthedGroupsGroupIdRouteImport } from './routes/_authed/groups/$groupId'
-import { Route as AuthedGroupsCreateRouteImport } from './routes/_authed/groups/create'
-import { Route as AuthedIdentitiesIndexRouteImport } from './routes/_authed/identities/index'
-import { Route as AuthedIdentitiesPersonIdRouteImport } from './routes/_authed/identities/$personId'
-import { Route as AuthedIdentitiesCreateRouteImport } from './routes/_authed/identities/create'
-import { Route as AuthedIdentitiesImportRouteImport } from './routes/_authed/identities/import'
-import { Route as AuthedIntegrationsMentorsAxisRouteImport } from './routes/_authed/integrations/mentors-axis'
-import { Route as AuthedOauth2IndexRouteImport } from './routes/_authed/oauth2/index'
-import { Route as AuthedOauth2ClientIdRouteImport } from './routes/_authed/oauth2/$clientId'
-import { Route as AuthedOauth2CreateRouteImport } from './routes/_authed/oauth2/create'
-import { Route as AuthedOracleIndexRouteImport } from './routes/_authed/oracle/index'
-import { Route as AuthedPlatformIndexRouteImport } from './routes/_authed/platform/index'
-import { Route as AuthedSecretsIndexRouteImport } from './routes/_authed/secrets/index'
-import { Route as AuthedServiceAccountsIndexRouteImport } from './routes/_authed/service-accounts/index'
-import { Route as AuthedServiceAccountsAccountIdRouteImport } from './routes/_authed/service-accounts/$accountId'
-import { Route as AuthedServiceAccountsCreateRouteImport } from './routes/_authed/service-accounts/create'
-import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
+import { Route as AuthedRecycleBinRouteImport } from './routes/_authed/recycle-bin'
+import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
+import { Route as AuthedAuditRouteImport } from './routes/_authed/audit'
 import { Route as AuthedSitesIndexRouteImport } from './routes/_authed/sites/index'
-import { Route as AuthedSitesSlugRouteImport } from './routes/_authed/sites/$slug'
-import { Route as AuthedSitesCreateRouteImport } from './routes/_authed/sites/create'
+import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
+import { Route as AuthedServiceAccountsIndexRouteImport } from './routes/_authed/service-accounts/index'
+import { Route as AuthedSecretsIndexRouteImport } from './routes/_authed/secrets/index'
+import { Route as AuthedPlatformIndexRouteImport } from './routes/_authed/platform/index'
+import { Route as AuthedOracleIndexRouteImport } from './routes/_authed/oracle/index'
+import { Route as AuthedOauth2IndexRouteImport } from './routes/_authed/oauth2/index'
+import { Route as AuthedIdentitiesIndexRouteImport } from './routes/_authed/identities/index'
+import { Route as AuthedGroupsIndexRouteImport } from './routes/_authed/groups/index'
+import { Route as AuthedGatewaysIndexRouteImport } from './routes/_authed/gateways/index'
 import { Route as AuthedSitesWizardRouteImport } from './routes/_authed/sites/wizard'
-import { Route as AuthedSitesSlugEditRouteImport } from './routes/_authed/sites/$slug.edit'
-import { Route as ApiUnifiedV1ConnectionsRouteImport } from './routes/api/unified/v1/connections'
+import { Route as AuthedSitesCreateRouteImport } from './routes/_authed/sites/create'
+import { Route as AuthedSitesSlugRouteImport } from './routes/_authed/sites/$slug'
+import { Route as AuthedServiceAccountsCreateRouteImport } from './routes/_authed/service-accounts/create'
+import { Route as AuthedServiceAccountsAccountIdRouteImport } from './routes/_authed/service-accounts/$accountId'
+import { Route as AuthedOauth2CreateRouteImport } from './routes/_authed/oauth2/create'
+import { Route as AuthedOauth2ClientIdRouteImport } from './routes/_authed/oauth2/$clientId'
+import { Route as AuthedIntegrationsMentorsAxisRouteImport } from './routes/_authed/integrations/mentors-axis'
+import { Route as AuthedIdentitiesImportRouteImport } from './routes/_authed/identities/import'
+import { Route as AuthedIdentitiesCreateRouteImport } from './routes/_authed/identities/create'
+import { Route as AuthedIdentitiesPersonIdRouteImport } from './routes/_authed/identities/$personId'
+import { Route as AuthedGroupsCreateRouteImport } from './routes/_authed/groups/create'
+import { Route as AuthedGroupsGroupIdRouteImport } from './routes/_authed/groups/$groupId'
 import { Route as ApiUnifiedV1SessionsRouteImport } from './routes/api/unified/v1/sessions'
-import { Route as ApiUnifiedV1AuthCallbackRouteImport } from './routes/api/unified/v1/auth/callback'
+import { Route as ApiUnifiedV1ConnectionsRouteImport } from './routes/api/unified/v1/connections'
+import { Route as ApiLabV1GrantTargetRouteImport } from './routes/api/lab/v1/grant-target'
+import { Route as AuthedSitesSlugEditRouteImport } from './routes/_authed/sites/$slug.edit'
 import { Route as ApiUnifiedV1OperatorBootstrapRouteImport } from './routes/api/unified/v1/operator/bootstrap'
+import { Route as ApiUnifiedV1AuthCallbackRouteImport } from './routes/api/unified/v1/auth/callback'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthedRoute = AuthedRouteImport.update({
-  id: '/_authed',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CallbackRoute = CallbackRouteImport.update({
-  id: '/callback',
-  path: '/callback',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
+const UnauthorizedRoute = UnauthorizedRouteImport.update({
+  id: '/unauthorized',
+  path: '/unauthorized',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TestLoginRoute = TestLoginRouteImport.update({
@@ -72,19 +59,28 @@ const TestLoginRoute = TestLoginRouteImport.update({
   path: '/test-login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UnauthorizedRoute = UnauthorizedRouteImport.update({
-  id: '/unauthorized',
-  path: '/unauthorized',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthedAuditRoute = AuthedAuditRouteImport.update({
-  id: '/audit',
-  path: '/audit',
-  getParentRoute: () => AuthedRoute,
+const CallbackRoute = CallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AuthedDashboardRoute = AuthedDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+const AuthedRoute = AuthedRouteImport.update({
+  id: '/_authed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedVaultRoute = AuthedVaultRouteImport.update({
+  id: '/vault',
+  path: '/vault',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedRecycleBinRoute = AuthedRecycleBinRouteImport.update({
@@ -92,86 +88,24 @@ const AuthedRecycleBinRoute = AuthedRecycleBinRouteImport.update({
   path: '/recycle-bin',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedVaultRoute = AuthedVaultRouteImport.update({
-  id: '/vault',
-  path: '/vault',
+const AuthedDashboardRoute = AuthedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedGatewaysIndexRoute = AuthedGatewaysIndexRouteImport.update({
-  id: '/gateways/',
-  path: '/gateways/',
+const AuthedAuditRoute = AuthedAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedGroupsIndexRoute = AuthedGroupsIndexRouteImport.update({
-  id: '/groups/',
-  path: '/groups/',
+const AuthedSitesIndexRoute = AuthedSitesIndexRouteImport.update({
+  id: '/sites/',
+  path: '/sites/',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedGroupsGroupIdRoute = AuthedGroupsGroupIdRouteImport.update({
-  id: '/groups/$groupId',
-  path: '/groups/$groupId',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedGroupsCreateRoute = AuthedGroupsCreateRouteImport.update({
-  id: '/groups/create',
-  path: '/groups/create',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedIdentitiesIndexRoute = AuthedIdentitiesIndexRouteImport.update({
-  id: '/identities/',
-  path: '/identities/',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedIdentitiesPersonIdRoute =
-  AuthedIdentitiesPersonIdRouteImport.update({
-    id: '/identities/$personId',
-    path: '/identities/$personId',
-    getParentRoute: () => AuthedRoute,
-  } as any)
-const AuthedIdentitiesCreateRoute = AuthedIdentitiesCreateRouteImport.update({
-  id: '/identities/create',
-  path: '/identities/create',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedIdentitiesImportRoute = AuthedIdentitiesImportRouteImport.update({
-  id: '/identities/import',
-  path: '/identities/import',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedIntegrationsMentorsAxisRoute =
-  AuthedIntegrationsMentorsAxisRouteImport.update({
-    id: '/integrations/mentors-axis',
-    path: '/integrations/mentors-axis',
-    getParentRoute: () => AuthedRoute,
-  } as any)
-const AuthedOauth2IndexRoute = AuthedOauth2IndexRouteImport.update({
-  id: '/oauth2/',
-  path: '/oauth2/',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedOauth2ClientIdRoute = AuthedOauth2ClientIdRouteImport.update({
-  id: '/oauth2/$clientId',
-  path: '/oauth2/$clientId',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedOauth2CreateRoute = AuthedOauth2CreateRouteImport.update({
-  id: '/oauth2/create',
-  path: '/oauth2/create',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedOracleIndexRoute = AuthedOracleIndexRouteImport.update({
-  id: '/oracle/',
-  path: '/oracle/',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedPlatformIndexRoute = AuthedPlatformIndexRouteImport.update({
-  id: '/platform/',
-  path: '/platform/',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedSecretsIndexRoute = AuthedSecretsIndexRouteImport.update({
-  id: '/secrets/',
-  path: '/secrets/',
+const AuthedSettingsIndexRoute = AuthedSettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedServiceAccountsIndexRoute =
@@ -180,36 +114,39 @@ const AuthedServiceAccountsIndexRoute =
     path: '/service-accounts/',
     getParentRoute: () => AuthedRoute,
   } as any)
-const AuthedServiceAccountsAccountIdRoute =
-  AuthedServiceAccountsAccountIdRouteImport.update({
-    id: '/service-accounts/$accountId',
-    path: '/service-accounts/$accountId',
-    getParentRoute: () => AuthedRoute,
-  } as any)
-const AuthedServiceAccountsCreateRoute =
-  AuthedServiceAccountsCreateRouteImport.update({
-    id: '/service-accounts/create',
-    path: '/service-accounts/create',
-    getParentRoute: () => AuthedRoute,
-  } as any)
-const AuthedSettingsIndexRoute = AuthedSettingsIndexRouteImport.update({
-  id: '/settings/',
-  path: '/settings/',
+const AuthedSecretsIndexRoute = AuthedSecretsIndexRouteImport.update({
+  id: '/secrets/',
+  path: '/secrets/',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedSitesIndexRoute = AuthedSitesIndexRouteImport.update({
-  id: '/sites/',
-  path: '/sites/',
+const AuthedPlatformIndexRoute = AuthedPlatformIndexRouteImport.update({
+  id: '/platform/',
+  path: '/platform/',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedSitesSlugRoute = AuthedSitesSlugRouteImport.update({
-  id: '/sites/$slug',
-  path: '/sites/$slug',
+const AuthedOracleIndexRoute = AuthedOracleIndexRouteImport.update({
+  id: '/oracle/',
+  path: '/oracle/',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedSitesCreateRoute = AuthedSitesCreateRouteImport.update({
-  id: '/sites/create',
-  path: '/sites/create',
+const AuthedOauth2IndexRoute = AuthedOauth2IndexRouteImport.update({
+  id: '/oauth2/',
+  path: '/oauth2/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedIdentitiesIndexRoute = AuthedIdentitiesIndexRouteImport.update({
+  id: '/identities/',
+  path: '/identities/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedGroupsIndexRoute = AuthedGroupsIndexRouteImport.update({
+  id: '/groups/',
+  path: '/groups/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedGatewaysIndexRoute = AuthedGatewaysIndexRouteImport.update({
+  id: '/gateways/',
+  path: '/gateways/',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedSitesWizardRoute = AuthedSitesWizardRouteImport.update({
@@ -217,31 +154,100 @@ const AuthedSitesWizardRoute = AuthedSitesWizardRouteImport.update({
   path: '/sites/wizard',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedSitesSlugEditRoute = AuthedSitesSlugEditRouteImport.update({
-  id: '/edit',
-  path: '/edit',
-  getParentRoute: () => AuthedSitesSlugRoute,
+const AuthedSitesCreateRoute = AuthedSitesCreateRouteImport.update({
+  id: '/sites/create',
+  path: '/sites/create',
+  getParentRoute: () => AuthedRoute,
 } as any)
-const ApiUnifiedV1ConnectionsRoute = ApiUnifiedV1ConnectionsRouteImport.update({
-  id: '/api/unified/v1/connections',
-  path: '/api/unified/v1/connections',
-  getParentRoute: () => rootRouteImport,
+const AuthedSitesSlugRoute = AuthedSitesSlugRouteImport.update({
+  id: '/sites/$slug',
+  path: '/sites/$slug',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedServiceAccountsCreateRoute =
+  AuthedServiceAccountsCreateRouteImport.update({
+    id: '/service-accounts/create',
+    path: '/service-accounts/create',
+    getParentRoute: () => AuthedRoute,
+  } as any)
+const AuthedServiceAccountsAccountIdRoute =
+  AuthedServiceAccountsAccountIdRouteImport.update({
+    id: '/service-accounts/$accountId',
+    path: '/service-accounts/$accountId',
+    getParentRoute: () => AuthedRoute,
+  } as any)
+const AuthedOauth2CreateRoute = AuthedOauth2CreateRouteImport.update({
+  id: '/oauth2/create',
+  path: '/oauth2/create',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedOauth2ClientIdRoute = AuthedOauth2ClientIdRouteImport.update({
+  id: '/oauth2/$clientId',
+  path: '/oauth2/$clientId',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedIntegrationsMentorsAxisRoute =
+  AuthedIntegrationsMentorsAxisRouteImport.update({
+    id: '/integrations/mentors-axis',
+    path: '/integrations/mentors-axis',
+    getParentRoute: () => AuthedRoute,
+  } as any)
+const AuthedIdentitiesImportRoute = AuthedIdentitiesImportRouteImport.update({
+  id: '/identities/import',
+  path: '/identities/import',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedIdentitiesCreateRoute = AuthedIdentitiesCreateRouteImport.update({
+  id: '/identities/create',
+  path: '/identities/create',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedIdentitiesPersonIdRoute =
+  AuthedIdentitiesPersonIdRouteImport.update({
+    id: '/identities/$personId',
+    path: '/identities/$personId',
+    getParentRoute: () => AuthedRoute,
+  } as any)
+const AuthedGroupsCreateRoute = AuthedGroupsCreateRouteImport.update({
+  id: '/groups/create',
+  path: '/groups/create',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedGroupsGroupIdRoute = AuthedGroupsGroupIdRouteImport.update({
+  id: '/groups/$groupId',
+  path: '/groups/$groupId',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const ApiUnifiedV1SessionsRoute = ApiUnifiedV1SessionsRouteImport.update({
   id: '/api/unified/v1/sessions',
   path: '/api/unified/v1/sessions',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiUnifiedV1AuthCallbackRoute =
-  ApiUnifiedV1AuthCallbackRouteImport.update({
-    id: '/api/unified/v1/auth/callback',
-    path: '/api/unified/v1/auth/callback',
-    getParentRoute: () => rootRouteImport,
-  } as any)
+const ApiUnifiedV1ConnectionsRoute = ApiUnifiedV1ConnectionsRouteImport.update({
+  id: '/api/unified/v1/connections',
+  path: '/api/unified/v1/connections',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLabV1GrantTargetRoute = ApiLabV1GrantTargetRouteImport.update({
+  id: '/api/lab/v1/grant-target',
+  path: '/api/lab/v1/grant-target',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedSitesSlugEditRoute = AuthedSitesSlugEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => AuthedSitesSlugRoute,
+} as any)
 const ApiUnifiedV1OperatorBootstrapRoute =
   ApiUnifiedV1OperatorBootstrapRouteImport.update({
     id: '/api/unified/v1/operator/bootstrap',
     path: '/api/unified/v1/operator/bootstrap',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiUnifiedV1AuthCallbackRoute =
+  ApiUnifiedV1AuthCallbackRouteImport.update({
+    id: '/api/unified/v1/auth/callback',
+    path: '/api/unified/v1/auth/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -279,6 +285,7 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof AuthedSettingsIndexRoute
   '/sites/': typeof AuthedSitesIndexRoute
   '/sites/$slug/edit': typeof AuthedSitesSlugEditRoute
+  '/api/lab/v1/grant-target': typeof ApiLabV1GrantTargetRoute
   '/api/unified/v1/connections': typeof ApiUnifiedV1ConnectionsRoute
   '/api/unified/v1/sessions': typeof ApiUnifiedV1SessionsRoute
   '/api/unified/v1/auth/callback': typeof ApiUnifiedV1AuthCallbackRoute
@@ -318,6 +325,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthedSettingsIndexRoute
   '/sites': typeof AuthedSitesIndexRoute
   '/sites/$slug/edit': typeof AuthedSitesSlugEditRoute
+  '/api/lab/v1/grant-target': typeof ApiLabV1GrantTargetRoute
   '/api/unified/v1/connections': typeof ApiUnifiedV1ConnectionsRoute
   '/api/unified/v1/sessions': typeof ApiUnifiedV1SessionsRoute
   '/api/unified/v1/auth/callback': typeof ApiUnifiedV1AuthCallbackRoute
@@ -359,6 +367,7 @@ export interface FileRoutesById {
   '/_authed/settings/': typeof AuthedSettingsIndexRoute
   '/_authed/sites/': typeof AuthedSitesIndexRoute
   '/_authed/sites/$slug/edit': typeof AuthedSitesSlugEditRoute
+  '/api/lab/v1/grant-target': typeof ApiLabV1GrantTargetRoute
   '/api/unified/v1/connections': typeof ApiUnifiedV1ConnectionsRoute
   '/api/unified/v1/sessions': typeof ApiUnifiedV1SessionsRoute
   '/api/unified/v1/auth/callback': typeof ApiUnifiedV1AuthCallbackRoute
@@ -400,6 +409,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/sites/'
     | '/sites/$slug/edit'
+    | '/api/lab/v1/grant-target'
     | '/api/unified/v1/connections'
     | '/api/unified/v1/sessions'
     | '/api/unified/v1/auth/callback'
@@ -439,6 +449,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/sites'
     | '/sites/$slug/edit'
+    | '/api/lab/v1/grant-target'
     | '/api/unified/v1/connections'
     | '/api/unified/v1/sessions'
     | '/api/unified/v1/auth/callback'
@@ -479,6 +490,7 @@ export interface FileRouteTypes {
     | '/_authed/settings/'
     | '/_authed/sites/'
     | '/_authed/sites/$slug/edit'
+    | '/api/lab/v1/grant-target'
     | '/api/unified/v1/connections'
     | '/api/unified/v1/sessions'
     | '/api/unified/v1/auth/callback'
@@ -492,6 +504,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   TestLoginRoute: typeof TestLoginRoute
   UnauthorizedRoute: typeof UnauthorizedRoute
+  ApiLabV1GrantTargetRoute: typeof ApiLabV1GrantTargetRoute
   ApiUnifiedV1ConnectionsRoute: typeof ApiUnifiedV1ConnectionsRoute
   ApiUnifiedV1SessionsRoute: typeof ApiUnifiedV1SessionsRoute
   ApiUnifiedV1AuthCallbackRoute: typeof ApiUnifiedV1AuthCallbackRoute
@@ -500,32 +513,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authed': {
-      id: '/_authed'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AuthedRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/callback': {
-      id: '/callback'
-      path: '/callback'
-      fullPath: '/callback'
-      preLoaderRoute: typeof CallbackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
+    '/unauthorized': {
+      id: '/unauthorized'
+      path: '/unauthorized'
+      fullPath: '/unauthorized'
+      preLoaderRoute: typeof UnauthorizedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/test-login': {
@@ -535,25 +527,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TestLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/unauthorized': {
-      id: '/unauthorized'
-      path: '/unauthorized'
-      fullPath: '/unauthorized'
-      preLoaderRoute: typeof UnauthorizedRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authed/audit': {
-      id: '/_authed/audit'
-      path: '/audit'
-      fullPath: '/audit'
-      preLoaderRoute: typeof AuthedAuditRouteImport
-      parentRoute: typeof AuthedRoute
+    '/callback': {
+      id: '/callback'
+      path: '/callback'
+      fullPath: '/callback'
+      preLoaderRoute: typeof CallbackRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authed/dashboard': {
-      id: '/_authed/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AuthedDashboardRouteImport
+    '/_authed': {
+      id: '/_authed'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authed/vault': {
+      id: '/_authed/vault'
+      path: '/vault'
+      fullPath: '/vault'
+      preLoaderRoute: typeof AuthedVaultRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/recycle-bin': {
@@ -563,144 +569,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedRecycleBinRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/vault': {
-      id: '/_authed/vault'
-      path: '/vault'
-      fullPath: '/vault'
-      preLoaderRoute: typeof AuthedVaultRouteImport
+    '/_authed/dashboard': {
+      id: '/_authed/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthedDashboardRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/gateways/': {
-      id: '/_authed/gateways/'
-      path: '/gateways'
-      fullPath: '/gateways/'
-      preLoaderRoute: typeof AuthedGatewaysIndexRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/groups/': {
-      id: '/_authed/groups/'
-      path: '/groups'
-      fullPath: '/groups/'
-      preLoaderRoute: typeof AuthedGroupsIndexRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/groups/$groupId': {
-      id: '/_authed/groups/$groupId'
-      path: '/groups/$groupId'
-      fullPath: '/groups/$groupId'
-      preLoaderRoute: typeof AuthedGroupsGroupIdRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/groups/create': {
-      id: '/_authed/groups/create'
-      path: '/groups/create'
-      fullPath: '/groups/create'
-      preLoaderRoute: typeof AuthedGroupsCreateRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/identities/': {
-      id: '/_authed/identities/'
-      path: '/identities'
-      fullPath: '/identities/'
-      preLoaderRoute: typeof AuthedIdentitiesIndexRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/identities/$personId': {
-      id: '/_authed/identities/$personId'
-      path: '/identities/$personId'
-      fullPath: '/identities/$personId'
-      preLoaderRoute: typeof AuthedIdentitiesPersonIdRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/identities/create': {
-      id: '/_authed/identities/create'
-      path: '/identities/create'
-      fullPath: '/identities/create'
-      preLoaderRoute: typeof AuthedIdentitiesCreateRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/identities/import': {
-      id: '/_authed/identities/import'
-      path: '/identities/import'
-      fullPath: '/identities/import'
-      preLoaderRoute: typeof AuthedIdentitiesImportRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/integrations/mentors-axis': {
-      id: '/_authed/integrations/mentors-axis'
-      path: '/integrations/mentors-axis'
-      fullPath: '/integrations/mentors-axis'
-      preLoaderRoute: typeof AuthedIntegrationsMentorsAxisRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/oauth2/': {
-      id: '/_authed/oauth2/'
-      path: '/oauth2'
-      fullPath: '/oauth2/'
-      preLoaderRoute: typeof AuthedOauth2IndexRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/oauth2/$clientId': {
-      id: '/_authed/oauth2/$clientId'
-      path: '/oauth2/$clientId'
-      fullPath: '/oauth2/$clientId'
-      preLoaderRoute: typeof AuthedOauth2ClientIdRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/oauth2/create': {
-      id: '/_authed/oauth2/create'
-      path: '/oauth2/create'
-      fullPath: '/oauth2/create'
-      preLoaderRoute: typeof AuthedOauth2CreateRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/oracle/': {
-      id: '/_authed/oracle/'
-      path: '/oracle'
-      fullPath: '/oracle/'
-      preLoaderRoute: typeof AuthedOracleIndexRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/platform/': {
-      id: '/_authed/platform/'
-      path: '/platform'
-      fullPath: '/platform/'
-      preLoaderRoute: typeof AuthedPlatformIndexRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/secrets/': {
-      id: '/_authed/secrets/'
-      path: '/secrets'
-      fullPath: '/secrets/'
-      preLoaderRoute: typeof AuthedSecretsIndexRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/service-accounts/': {
-      id: '/_authed/service-accounts/'
-      path: '/service-accounts'
-      fullPath: '/service-accounts/'
-      preLoaderRoute: typeof AuthedServiceAccountsIndexRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/service-accounts/$accountId': {
-      id: '/_authed/service-accounts/$accountId'
-      path: '/service-accounts/$accountId'
-      fullPath: '/service-accounts/$accountId'
-      preLoaderRoute: typeof AuthedServiceAccountsAccountIdRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/service-accounts/create': {
-      id: '/_authed/service-accounts/create'
-      path: '/service-accounts/create'
-      fullPath: '/service-accounts/create'
-      preLoaderRoute: typeof AuthedServiceAccountsCreateRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/settings/': {
-      id: '/_authed/settings/'
-      path: '/settings'
-      fullPath: '/settings/'
-      preLoaderRoute: typeof AuthedSettingsIndexRouteImport
+    '/_authed/audit': {
+      id: '/_authed/audit'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof AuthedAuditRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/sites/': {
@@ -710,18 +590,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSitesIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/sites/$slug': {
-      id: '/_authed/sites/$slug'
-      path: '/sites/$slug'
-      fullPath: '/sites/$slug'
-      preLoaderRoute: typeof AuthedSitesSlugRouteImport
+    '/_authed/settings/': {
+      id: '/_authed/settings/'
+      path: '/settings'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof AuthedSettingsIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/sites/create': {
-      id: '/_authed/sites/create'
-      path: '/sites/create'
-      fullPath: '/sites/create'
-      preLoaderRoute: typeof AuthedSitesCreateRouteImport
+    '/_authed/service-accounts/': {
+      id: '/_authed/service-accounts/'
+      path: '/service-accounts'
+      fullPath: '/service-accounts/'
+      preLoaderRoute: typeof AuthedServiceAccountsIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/secrets/': {
+      id: '/_authed/secrets/'
+      path: '/secrets'
+      fullPath: '/secrets/'
+      preLoaderRoute: typeof AuthedSecretsIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/platform/': {
+      id: '/_authed/platform/'
+      path: '/platform'
+      fullPath: '/platform/'
+      preLoaderRoute: typeof AuthedPlatformIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/oracle/': {
+      id: '/_authed/oracle/'
+      path: '/oracle'
+      fullPath: '/oracle/'
+      preLoaderRoute: typeof AuthedOracleIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/oauth2/': {
+      id: '/_authed/oauth2/'
+      path: '/oauth2'
+      fullPath: '/oauth2/'
+      preLoaderRoute: typeof AuthedOauth2IndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/identities/': {
+      id: '/_authed/identities/'
+      path: '/identities'
+      fullPath: '/identities/'
+      preLoaderRoute: typeof AuthedIdentitiesIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/groups/': {
+      id: '/_authed/groups/'
+      path: '/groups'
+      fullPath: '/groups/'
+      preLoaderRoute: typeof AuthedGroupsIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/gateways/': {
+      id: '/_authed/gateways/'
+      path: '/gateways'
+      fullPath: '/gateways/'
+      preLoaderRoute: typeof AuthedGatewaysIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/sites/wizard': {
@@ -731,19 +660,89 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSitesWizardRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/sites/$slug/edit': {
-      id: '/_authed/sites/$slug/edit'
-      path: '/edit'
-      fullPath: '/sites/$slug/edit'
-      preLoaderRoute: typeof AuthedSitesSlugEditRouteImport
-      parentRoute: typeof AuthedSitesSlugRoute
+    '/_authed/sites/create': {
+      id: '/_authed/sites/create'
+      path: '/sites/create'
+      fullPath: '/sites/create'
+      preLoaderRoute: typeof AuthedSitesCreateRouteImport
+      parentRoute: typeof AuthedRoute
     }
-    '/api/unified/v1/connections': {
-      id: '/api/unified/v1/connections'
-      path: '/api/unified/v1/connections'
-      fullPath: '/api/unified/v1/connections'
-      preLoaderRoute: typeof ApiUnifiedV1ConnectionsRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_authed/sites/$slug': {
+      id: '/_authed/sites/$slug'
+      path: '/sites/$slug'
+      fullPath: '/sites/$slug'
+      preLoaderRoute: typeof AuthedSitesSlugRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/service-accounts/create': {
+      id: '/_authed/service-accounts/create'
+      path: '/service-accounts/create'
+      fullPath: '/service-accounts/create'
+      preLoaderRoute: typeof AuthedServiceAccountsCreateRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/service-accounts/$accountId': {
+      id: '/_authed/service-accounts/$accountId'
+      path: '/service-accounts/$accountId'
+      fullPath: '/service-accounts/$accountId'
+      preLoaderRoute: typeof AuthedServiceAccountsAccountIdRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/oauth2/create': {
+      id: '/_authed/oauth2/create'
+      path: '/oauth2/create'
+      fullPath: '/oauth2/create'
+      preLoaderRoute: typeof AuthedOauth2CreateRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/oauth2/$clientId': {
+      id: '/_authed/oauth2/$clientId'
+      path: '/oauth2/$clientId'
+      fullPath: '/oauth2/$clientId'
+      preLoaderRoute: typeof AuthedOauth2ClientIdRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/integrations/mentors-axis': {
+      id: '/_authed/integrations/mentors-axis'
+      path: '/integrations/mentors-axis'
+      fullPath: '/integrations/mentors-axis'
+      preLoaderRoute: typeof AuthedIntegrationsMentorsAxisRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/identities/import': {
+      id: '/_authed/identities/import'
+      path: '/identities/import'
+      fullPath: '/identities/import'
+      preLoaderRoute: typeof AuthedIdentitiesImportRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/identities/create': {
+      id: '/_authed/identities/create'
+      path: '/identities/create'
+      fullPath: '/identities/create'
+      preLoaderRoute: typeof AuthedIdentitiesCreateRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/identities/$personId': {
+      id: '/_authed/identities/$personId'
+      path: '/identities/$personId'
+      fullPath: '/identities/$personId'
+      preLoaderRoute: typeof AuthedIdentitiesPersonIdRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/groups/create': {
+      id: '/_authed/groups/create'
+      path: '/groups/create'
+      fullPath: '/groups/create'
+      preLoaderRoute: typeof AuthedGroupsCreateRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/groups/$groupId': {
+      id: '/_authed/groups/$groupId'
+      path: '/groups/$groupId'
+      fullPath: '/groups/$groupId'
+      preLoaderRoute: typeof AuthedGroupsGroupIdRouteImport
+      parentRoute: typeof AuthedRoute
     }
     '/api/unified/v1/sessions': {
       id: '/api/unified/v1/sessions'
@@ -752,18 +751,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUnifiedV1SessionsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/unified/v1/auth/callback': {
-      id: '/api/unified/v1/auth/callback'
-      path: '/api/unified/v1/auth/callback'
-      fullPath: '/api/unified/v1/auth/callback'
-      preLoaderRoute: typeof ApiUnifiedV1AuthCallbackRouteImport
+    '/api/unified/v1/connections': {
+      id: '/api/unified/v1/connections'
+      path: '/api/unified/v1/connections'
+      fullPath: '/api/unified/v1/connections'
+      preLoaderRoute: typeof ApiUnifiedV1ConnectionsRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/lab/v1/grant-target': {
+      id: '/api/lab/v1/grant-target'
+      path: '/api/lab/v1/grant-target'
+      fullPath: '/api/lab/v1/grant-target'
+      preLoaderRoute: typeof ApiLabV1GrantTargetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authed/sites/$slug/edit': {
+      id: '/_authed/sites/$slug/edit'
+      path: '/edit'
+      fullPath: '/sites/$slug/edit'
+      preLoaderRoute: typeof AuthedSitesSlugEditRouteImport
+      parentRoute: typeof AuthedSitesSlugRoute
     }
     '/api/unified/v1/operator/bootstrap': {
       id: '/api/unified/v1/operator/bootstrap'
       path: '/api/unified/v1/operator/bootstrap'
       fullPath: '/api/unified/v1/operator/bootstrap'
       preLoaderRoute: typeof ApiUnifiedV1OperatorBootstrapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/unified/v1/auth/callback': {
+      id: '/api/unified/v1/auth/callback'
+      path: '/api/unified/v1/auth/callback'
+      fullPath: '/api/unified/v1/auth/callback'
+      preLoaderRoute: typeof ApiUnifiedV1AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -851,6 +871,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   TestLoginRoute: TestLoginRoute,
   UnauthorizedRoute: UnauthorizedRoute,
+  ApiLabV1GrantTargetRoute: ApiLabV1GrantTargetRoute,
   ApiUnifiedV1ConnectionsRoute: ApiUnifiedV1ConnectionsRoute,
   ApiUnifiedV1SessionsRoute: ApiUnifiedV1SessionsRoute,
   ApiUnifiedV1AuthCallbackRoute: ApiUnifiedV1AuthCallbackRoute,
@@ -859,3 +880,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
