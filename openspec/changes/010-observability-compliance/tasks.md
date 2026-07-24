@@ -4,7 +4,7 @@
 - [ ] **T-002** Instrumentar tracing distribuído com propagação de contexto.
 - [ ] **T-003** Padronizar logs estruturados com `trace_id`.
 - [x] **T-004** Implementar filtro de redação (segredo, token, PII) em todos os sinais.
-- [ ] **T-005** Teste que falha se dado sensível aparecer em telemetria.
+- [x] **T-005** Teste que falha se dado sensível aparecer em telemetria.
 - [ ] **T-006** Definir e implementar os SLIs do RFC-0001.
 - [ ] **T-007** Versionar dashboards Grafana como artefato do produto.
 - [ ] **T-008** Implementar os alertas obrigatórios do design.
