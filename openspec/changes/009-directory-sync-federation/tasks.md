@@ -19,7 +19,7 @@
 - [x] **T-017** Ferramenta de importação com estado `enrollment_required`.
 - [x] **T-018** Relatório de conflito de deduplicação e fluxo de fusão assistida.
 - [x] **T-019** Teste: desativação no diretório suspende o membership em uma execução.
-- [ ] **T-020** Teste: JIT com e-mail conhecido não cria segunda identidade.
+- [x] **T-020** Teste: JIT com e-mail conhecido não cria segunda identidade.
 - [ ] **T-021** Teste: papel privilegiado não é concedido automaticamente por grupo de
       diretório sem mapeamento aprovado.
 
