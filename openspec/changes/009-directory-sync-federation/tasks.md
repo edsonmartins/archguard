@@ -13,7 +13,7 @@
 - [x] **T-011** Implementar federação OIDC de entrada.
 - [x] **T-012** Implementar JIT provisioning que cria membership, não identidade duplicada.
 - [x] **T-013** Garantir que step-up L3 nunca seja satisfeito por `acr` de terceiro.
-- [ ] **T-014** Desabilitar LDAP/RADIUS embutidos por padrão e restringir escopo.
+- [x] **T-014** Desabilitar LDAP/RADIUS embutidos por padrão e restringir escopo.
 - [ ] **T-015** Bloquear operações L3 originadas de canais legados.
 - [ ] **T-016** Auditar todos os eventos de sincronismo, federação e canal legado.
 - [ ] **T-017** Ferramenta de importação com estado `enrollment_required`.

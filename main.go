@@ -26,6 +26,7 @@ import (
 	"github.com/casdoor/casdoor/authz"
 	"github.com/casdoor/casdoor/conf"
 	"github.com/casdoor/casdoor/controllers"
+	"github.com/casdoor/casdoor/internal/domain"
 	"github.com/casdoor/casdoor/object"
 	"github.com/casdoor/casdoor/proxy"
 	"github.com/casdoor/casdoor/radius"
@@ -143,7 +144,14 @@ func main() {
 		panic(err)
 	}
 
-	go radius.StartRadiusServer()
+	// Legacy edge channel (RFC-0007 §6 / ADR-0019): the embedded RADIUS server is
+	// DISABLED BY DEFAULT (I-4.4). It starts only when explicitly enabled via
+	// `enableRadiusServer`; absent/empty/false leaves it off. The embedded LDAP
+	// server was removed (ADR-0019); the client LDAP/AD connector (pacote 009) is
+	// separate and unaffected.
+	if domain.NewLegacyChannelConfig(conf.GetConfigString("enableRadiusServer")).Enabled(domain.LegacyRADIUS) {
+		go radius.StartRadiusServer()
+	}
 	go object.ClearThroughputPerSecond()
 
 	// Start webhook delivery worker
