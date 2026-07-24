@@ -61,6 +61,33 @@ func (c LegacyChannelConfig) Enabled(ch LegacyChannel) bool {
 	}
 }
 
+// LegacyChannelSession describes an authentication that arrived through a legacy
+// edge channel (RADIUS). Such a channel carries NO acr and NO correlation
+// (RFC-0007 §6), so a session established through it NEVER authorizes a privileged
+// (L3) operation — the same mechanical guarantee as federation: it is never
+// phishing-resistant, and L3 requires phishing resistance. Every access through it
+// is audited and FLAGGED as legacy.
+type LegacyChannelSession struct {
+	Channel LegacyChannel
+}
+
+// ProvenAAL is AAL1: a legacy channel identifies, it does not prove an
+// ArchGuard-verified strong factor.
+func (s LegacyChannelSession) ProvenAAL() AAL { return AAL1 }
+
+// PhishingResistant is ALWAYS false — a legacy channel proves no phishing-resistant
+// factor. This is what makes L3.Satisfies(s.ProvenAAL(), s.PhishingResistant())
+// false, so an L3 operation can never originate from a legacy channel.
+func (s LegacyChannelSession) PhishingResistant() bool { return false }
+
+// AuthorizesL3 ALWAYS returns false: no legacy-channel session opens a privileged
+// operation (spec "Operação privilegiada por canal legado").
+func (s LegacyChannelSession) AuthorizesL3() bool { return false }
+
+// AuditFlag is the marker that tags every audit event of a legacy-channel access
+// as such (RFC-0007 §6). It carries the channel, never personal data (INV-7).
+func (s LegacyChannelSession) AuditFlag() string { return "legacy:" + string(s.Channel) }
+
 // parseAffirmative reports whether a config value is an explicit "yes". The default
 // (and every ambiguous value) is false — the conservative reading for a security
 // toggle that opens a legacy channel.
