@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/casdoor/casdoor/internal/domain"
 	"github.com/jackc/pgx/v5"
@@ -37,11 +38,14 @@ type TuplePublisher struct{}
 func NewTuplePublisher() *TuplePublisher { return &TuplePublisher{} }
 
 type outboxRow struct {
-	id       string
-	op       string
-	user     string
-	relation string
-	object   string
+	id        string
+	op        string
+	user      string
+	relation  string
+	object    string
+	condName  *string
+	notBefore *time.Time
+	expiresAt *time.Time
 }
 
 // Publish applies up to batch unpublished outbox rows, oldest first, and returns
@@ -52,7 +56,8 @@ func (p *TuplePublisher) Publish(ctx context.Context, db Beginner, batch int) (i
 	var rows []outboxRow
 	if err := WithTx(ctx, db, func(tx pgx.Tx) error {
 		rs, err := tx.Query(ctx, `
-			SELECT id::text, op, tuple_user, tuple_relation, tuple_object
+			SELECT id::text, op, tuple_user, tuple_relation, tuple_object,
+			       condition_name, not_before, expires_at
 			FROM authz_tuple_outbox
 			WHERE published_at IS NULL
 			ORDER BY occurred_at, id
@@ -63,7 +68,8 @@ func (p *TuplePublisher) Publish(ctx context.Context, db Beginner, batch int) (i
 		defer rs.Close()
 		for rs.Next() {
 			var r outboxRow
-			if err := rs.Scan(&r.id, &r.op, &r.user, &r.relation, &r.object); err != nil {
+			if err := rs.Scan(&r.id, &r.op, &r.user, &r.relation, &r.object,
+				&r.condName, &r.notBefore, &r.expiresAt); err != nil {
 				return err
 			}
 			rows = append(rows, r)
@@ -115,11 +121,18 @@ func applyTupleUpdate(ctx context.Context, tx pgx.Tx, r outboxRow) error {
 		if !ok {
 			return fmt.Errorf("authz_publisher: objeto sem tenant %q", r.object)
 		}
+		// A conditioned tuple (a grant) carries its window; ON CONFLICT refreshes
+		// the window so a re-granted concession updates its validity in the store.
 		_, err := tx.Exec(ctx, `
-			INSERT INTO authz_tuple (organization_id, tuple_user, tuple_relation, tuple_object)
-			VALUES ($1, $2, $3, $4)
-			ON CONFLICT (tuple_user, tuple_relation, tuple_object) DO NOTHING`,
-			org, r.user, r.relation, r.object)
+			INSERT INTO authz_tuple
+				(organization_id, tuple_user, tuple_relation, tuple_object,
+				 condition_name, not_before, expires_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			ON CONFLICT (tuple_user, tuple_relation, tuple_object)
+			DO UPDATE SET condition_name = EXCLUDED.condition_name,
+			              not_before     = EXCLUDED.not_before,
+			              expires_at     = EXCLUDED.expires_at`,
+			org, r.user, r.relation, r.object, r.condName, r.notBefore, r.expiresAt)
 		if err != nil {
 			return fmt.Errorf("authz_publisher: aplicação de write falhou: %w", err)
 		}

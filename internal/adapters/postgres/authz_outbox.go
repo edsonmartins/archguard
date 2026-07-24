@@ -17,6 +17,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/casdoor/casdoor/internal/domain"
 	"github.com/google/uuid"
@@ -60,13 +61,22 @@ func (o *AuthzOutbox) Enqueue(ctx context.Context, updates []domain.TupleUpdate)
 		if err != nil {
 			return fmt.Errorf("authz_outbox: organização inválida no objeto %q: %w", u.Tuple.Object, err)
 		}
+		var condName *string
+		var notBefore, expiresAt *time.Time
+		if u.Condition != nil {
+			condName = &u.Condition.Name
+			nb, exp := u.Condition.Window.NotBefore, u.Condition.Window.ExpiresAt
+			notBefore, expiresAt = &nb, &exp
+		}
 		const q = `
 			INSERT INTO authz_tuple_outbox
-				(id, organization_id, op, tuple_user, tuple_relation, tuple_object)
-			VALUES ($1, $2, $3, $4, $5, $6)`
+				(id, organization_id, op, tuple_user, tuple_relation, tuple_object,
+				 condition_name, not_before, expires_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 		if _, err := o.q.Exec(ctx, q,
 			uuid.New().String(), orgID.String(), string(u.Op),
-			u.Tuple.User, u.Tuple.Relation, u.Tuple.Object); err != nil {
+			u.Tuple.User, u.Tuple.Relation, u.Tuple.Object,
+			condName, notBefore, expiresAt); err != nil {
 			return fmt.Errorf("authz_outbox: enfileiramento da tupla falhou: %w", err)
 		}
 	}

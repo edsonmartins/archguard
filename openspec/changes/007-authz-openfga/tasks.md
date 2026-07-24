@@ -11,7 +11,7 @@
 - [x] **T-008** Implementar reconciliação periódica com política assimétrica (restringe:
       automático; amplia: revisão humana).
 - [x] **T-009** Implementar bootstrap/replay completo do store a partir do banco.
-- [ ] **T-010** Integrar decisão de abertura de sessão privilegiada (sem cache).
+- [x] **T-010** Integrar decisão de abertura de sessão privilegiada (sem cache).
 - [ ] **T-011** Implementar cache curto apenas para listagens.
 - [ ] **T-012** Anexar justificativa da decisão ao evento de auditoria.
 - [ ] **T-013** Implementar fail-closed com distinção entre `denied` e `error`.
