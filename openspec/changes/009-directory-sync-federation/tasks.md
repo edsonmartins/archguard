@@ -7,7 +7,7 @@
 - [x] **T-005** Implementar suspensão de membership na desativação no diretório.
 - [x] **T-006** Custodiar credenciais do conector no cofre.
 - [x] **T-007** Implementar SCIM 2.0 de entrada (usuários).
-- [ ] **T-008** Implementar SCIM 2.0 de entrada (grupos).
+- [x] **T-008** Implementar SCIM 2.0 de entrada (grupos).
 - [ ] **T-009** Integrar SCIM à deduplicação por `email_hash`.
 - [ ] **T-010** Implementar federação SAML 2.0 de entrada.
 - [ ] **T-011** Implementar federação OIDC de entrada.
