@@ -14,7 +14,7 @@
 - [x] **T-010** Integrar decisão de abertura de sessão privilegiada (sem cache).
 - [x] **T-011** Implementar cache curto apenas para listagens.
 - [x] **T-012** Anexar justificativa da decisão ao evento de auditoria.
-- [ ] **T-013** Implementar fail-closed com distinção entre `denied` e `error`.
+- [x] **T-013** Implementar fail-closed com distinção entre `denied` e `error`.
 - [ ] **T-014** Implementar consulta reversa para revisão de acesso (`listObjects`).
 - [ ] **T-015** Escrever testes declarativos do modelo (permitido/negado, herança, expiração).
 - [ ] **T-016** Teste de travessia: nenhuma relação concede acesso a objeto de outro tenant.

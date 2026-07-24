@@ -44,22 +44,21 @@ type DecisionAudit struct {
 // The result still passes through NewAuditEvent, which validates the action and
 // stamps the id — this function only assembles the content.
 func BuildDecisionAuditInput(rec DecisionAudit, dec Decision, decisionErr error) AuditEventInput {
-	outcome := Denied
+	// The outcome comes from the single fail-closed gate (T-013), so the audit
+	// record can never disagree with the effect the caller enforced.
+	_, outcome := DecisionOutcome(dec, decisionErr)
 	reason := dec.Justification
-	switch {
-	case decisionErr != nil:
-		outcome = Failed
+	switch outcome {
+	case Failed:
 		// Deliberately generic: the trail records THAT the PDP failed (and the
 		// operation was denied fail-closed), not the raw error, which could carry
 		// infrastructure detail (INV-7).
 		reason = "PDP indisponível — acesso negado (fail-closed)"
-	case dec.Allowed:
-		outcome = Allowed
+	case Allowed:
 		if reason == "" {
 			reason = "acesso permitido"
 		}
 	default:
-		outcome = Denied
 		if reason == "" {
 			reason = "acesso negado"
 		}
