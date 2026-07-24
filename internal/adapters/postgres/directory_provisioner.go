@@ -53,25 +53,48 @@ func (p *DirectoryProvisioner) ProvisionUser(ctx context.Context, orgID uuid.UUI
 	if rec.Email == "" {
 		return "", fmt.Errorf("directory_provisioner: e-mail ausente (chave de deduplicação)")
 	}
-	identities := NewIdentityStore(p.pool)
-
-	idn, err := identities.FindByEmail(ctx, p.custodian, rec.Email)
-	switch {
-	case err == nil:
-		// Known e-mail — reuse the identity, never create a second (dedup).
-	case errors.Is(err, ErrIdentityNotFound):
-		idn, err = p.createIdentity(ctx, identities, rec.Email)
-		if err != nil {
-			return "", err
-		}
-	default:
-		return "", fmt.Errorf("directory_provisioner: resolução por email_hash falhou: %w", err)
+	idn, err := p.resolveOrCreateIdentity(ctx, rec.Email)
+	if err != nil {
+		return "", err
 	}
-
 	if err := p.ensureMembership(ctx, orgID, idn.ID); err != nil {
 		return "", err
 	}
 	return idn.ID.String(), nil
+}
+
+// ProvisionFederated is the JIT path for a validated federated login (SAML/OIDC,
+// T-012 / spec "JIT provisioning com e-mail conhecido"). It resolves the identity
+// by e-mail — NEVER creating a second identity for a known e-mail — and ensures the
+// membership is ACTIVE, creating it if absent or REACTIVATING it if suspended
+// ("cria ou ativa o membership"). A revoked membership is not resurrected.
+func (p *DirectoryProvisioner) ProvisionFederated(ctx context.Context, orgID uuid.UUID, fed domain.FederatedIdentity) (string, error) {
+	if err := fed.Validate(); err != nil {
+		return "", err
+	}
+	idn, err := p.resolveOrCreateIdentity(ctx, fed.Email)
+	if err != nil {
+		return "", err
+	}
+	if err := p.ensureActiveMembership(ctx, orgID, idn.ID); err != nil {
+		return "", err
+	}
+	return idn.ID.String(), nil
+}
+
+// resolveOrCreateIdentity is the shared dedup core: resolve the identity by
+// email_hash, or create a new one carrying only the hash. Never duplicates.
+func (p *DirectoryProvisioner) resolveOrCreateIdentity(ctx context.Context, email string) (domain.Identity, error) {
+	identities := NewIdentityStore(p.pool)
+	idn, err := identities.FindByEmail(ctx, p.custodian, email)
+	switch {
+	case err == nil:
+		return idn, nil
+	case errors.Is(err, ErrIdentityNotFound):
+		return p.createIdentity(ctx, identities, email)
+	default:
+		return domain.Identity{}, fmt.Errorf("directory_provisioner: resolução por email_hash falhou: %w", err)
+	}
 }
 
 // createIdentity mints a human identity carrying only the e-mail hash (dedup key).
@@ -120,6 +143,50 @@ func (p *DirectoryProvisioner) ensureMembership(ctx context.Context, orgID, iden
 	})
 	if err != nil {
 		return fmt.Errorf("directory_provisioner: garantia de membership falhou: %w", err)
+	}
+	return nil
+}
+
+// ensureActiveMembership guarantees the identity has an ACTIVE membership in orgID
+// (the JIT semantic): absent ⇒ create; suspended ⇒ reactivate; active ⇒ no-op;
+// invited ⇒ activate; revoked ⇒ not resurrected (ErrPreviouslyRevoked).
+func (p *DirectoryProvisioner) ensureActiveMembership(ctx context.Context, orgID, identityID uuid.UUID) error {
+	scope, err := domain.NewTenantScope(orgID)
+	if err != nil {
+		return err
+	}
+	err = NewTenantRepository(p.pool, scope).WithTenantTx(ctx, func(ttx *TenantTx) error {
+		ms := NewTenantMembershipStore(ttx)
+		m, ferr := ms.FindByIdentity(ctx, identityID)
+		if errors.Is(ferr, ErrMembershipNotFound) {
+			nm, nerr := domain.NewMembership(identityID, orgID)
+			if nerr != nil {
+				return nerr
+			}
+			return ms.Create(ctx, nm)
+		}
+		if ferr != nil {
+			return ferr
+		}
+		switch m.Status {
+		case domain.MembershipActive:
+			return nil
+		case domain.MembershipSuspended:
+			if rerr := m.Resume(); rerr != nil {
+				return rerr
+			}
+			return ms.SaveReactivation(ctx, m)
+		case domain.MembershipInvited:
+			if aerr := m.Activate(); aerr != nil {
+				return aerr
+			}
+			return ms.SaveActivation(ctx, m)
+		default: // revoked (terminal)
+			return ErrPreviouslyRevoked
+		}
+	})
+	if err != nil {
+		return fmt.Errorf("directory_provisioner: garantia de membership ativo falhou: %w", err)
 	}
 	return nil
 }

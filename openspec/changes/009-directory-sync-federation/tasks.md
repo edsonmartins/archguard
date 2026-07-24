@@ -11,7 +11,7 @@
 - [x] **T-009** Integrar SCIM à deduplicação por `email_hash`.
 - [x] **T-010** Implementar federação SAML 2.0 de entrada.
 - [x] **T-011** Implementar federação OIDC de entrada.
-- [ ] **T-012** Implementar JIT provisioning que cria membership, não identidade duplicada.
+- [x] **T-012** Implementar JIT provisioning que cria membership, não identidade duplicada.
 - [ ] **T-013** Garantir que step-up L3 nunca seja satisfeito por `acr` de terceiro.
 - [ ] **T-014** Desabilitar LDAP/RADIUS embutidos por padrão e restringir escopo.
 - [ ] **T-015** Bloquear operações L3 originadas de canais legados.

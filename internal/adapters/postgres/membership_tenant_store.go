@@ -170,6 +170,67 @@ func (s *TenantMembershipStore) SaveRevocation(ctx context.Context, m domain.Mem
 	return nil
 }
 
+// FindByIdentity returns the identity's membership in the store's tenant, or
+// ErrMembershipNotFound. There is at most one (identity, organization) pair.
+func (s *TenantMembershipStore) FindByIdentity(ctx context.Context, identityID uuid.UUID) (domain.Membership, error) {
+	const q = `
+		SELECT id::text, identity_id::text, organization_id::text, status,
+		       invited_by::text, activated_at, created_at, updated_at
+		FROM membership
+		WHERE identity_id = $1 AND organization_id = $2`
+	row := s.ttx.tx.QueryRow(ctx, q, identityID.String(), s.ttx.scope.OrganizationID().String())
+
+	var m domain.Membership
+	var idText, idnText, orgText, status string
+	var invitedByText *string
+	err := row.Scan(&idText, &idnText, &orgText, &status,
+		&invitedByText, &m.ActivatedAt, &m.CreatedAt, &m.UpdatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Membership{}, ErrMembershipNotFound
+	}
+	if err != nil {
+		return domain.Membership{}, fmt.Errorf("postgres: leitura de membership por identidade falhou: %w", err)
+	}
+	if m.ID, err = uuid.Parse(idText); err != nil {
+		return domain.Membership{}, fmt.Errorf("postgres: id de membership inválido %q: %w", idText, err)
+	}
+	if m.IdentityID, err = uuid.Parse(idnText); err != nil {
+		return domain.Membership{}, fmt.Errorf("postgres: identity_id inválido %q: %w", idnText, err)
+	}
+	if m.OrganizationID, err = uuid.Parse(orgText); err != nil {
+		return domain.Membership{}, fmt.Errorf("postgres: organization_id inválido %q: %w", orgText, err)
+	}
+	if m.InvitedBy, err = parseOptionalUUID("invited_by", invitedByText); err != nil {
+		return domain.Membership{}, err
+	}
+	m.Status = domain.MembershipStatus(status)
+	return m, nil
+}
+
+// SaveReactivation persists a membership resume (domain.Membership.Resume already
+// ran, suspended → active). The UPDATE only matches a SUSPENDED row, so it is
+// idempotent and never resurrects a revoked membership.
+func (s *TenantMembershipStore) SaveReactivation(ctx context.Context, m domain.Membership) error {
+	scope := s.ttx.scope.OrganizationID()
+	if m.OrganizationID != scope {
+		return fmt.Errorf("%w: alvo %s, escopo %s", ErrCrossTenantWrite, m.OrganizationID, scope)
+	}
+	const q = `
+		UPDATE membership
+		SET status = $3, updated_at = now()
+		WHERE id = $1 AND organization_id = $2 AND status = $4`
+	tag, err := s.ttx.tx.Exec(ctx, q,
+		m.ID.String(), scope.String(),
+		string(domain.MembershipActive), string(domain.MembershipSuspended))
+	if err != nil {
+		return fmt.Errorf("postgres: reativação de membership falhou: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrMembershipNotFound
+	}
+	return nil
+}
+
 // SaveSuspension persists a membership suspension (domain.Membership.Suspend
 // already ran). The UPDATE only matches an ACTIVE row, so it is idempotent and
 // safe: a revoked membership stays revoked and a concurrently-changed one is not
