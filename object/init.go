@@ -261,11 +261,20 @@ func initBuiltInCert() {
 		return
 	}
 
-	// A chave é GERADA no boot (uma vez, por deployment), NUNCA lida de um arquivo
-	// committado (INV-7): com Certificate/PrivateKey vazios, populateContent()/
-	// AddCert gera um par RSA-4096 fresco. SealCerts() (main.go) então move a chave
-	// privada para o keystore/cofre (ADR-0017). Nenhuma chave privada default vive
-	// no repositório — o placeholder de dev herdado do upstream foi removido.
+	// A chave é GERADA no boot (uma vez), NUNCA lida de um arquivo committado — o
+	// placeholder de dev herdado do upstream foi removido: nenhuma chave privada
+	// default vive no REPOSITÓRIO (INV-7 no repo).
+	//
+	// ATENÇÃO — custódia da chave gerada depende do perfil:
+	//   * DEV: SealCerts() (main.go) move a chave gerada para o keystore LOCAL
+	//     selado (NÃO o cofre) e troca a coluna por uma referência keystore:. A
+	//     custódia local é NÃO-CONFORME (pacote 010, T-016).
+	//   * PRODUÇÃO: SealCerts() é no-op. A chave gerada fica em TEXTO no banco a
+	//     menos que o operador provisione o cert de token referenciando o COFRE
+	//     (openbao transit, pacote 010 T-010) — caminho EXIGIDO pelo ADR-0017; o
+	//     /health reporta não-conforme caso contrário.
+	// Ou seja, esta geração é um BOOTSTRAP de dev; a custódia de produção é
+	// provisionamento contra o cofre (não automática).
 	cert = &Cert{
 		Owner:           "admin",
 		Name:            "cert-built-in",
@@ -278,8 +287,14 @@ func initBuiltInCert() {
 		ExpireInYears:   20,
 		// Certificate/PrivateKey deixados VAZIOS de propósito -> gerados no boot.
 	}
-	_, err = AddCert(cert)
-	if err != nil {
+	if _, err = AddCert(cert); err != nil {
+		// Corrida entre réplicas contra um banco vazio: as duas veem cert==nil e
+		// ambas geram uma chave DIFERENTE e tentam inserir. A perdedora não deve
+		// entrar em pânico nem usar sua chave divergente — reconsulta e adota a
+		// chave da vencedora (uma única chave de assinatura, consistente).
+		if existing, gerr := getCert("admin", "cert-built-in"); gerr == nil && existing != nil {
+			return
+		}
 		panic(err)
 	}
 }
