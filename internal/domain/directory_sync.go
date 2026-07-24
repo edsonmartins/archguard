@@ -59,3 +59,12 @@ func ApplyAttributeMapping(mapping []AttributeMapping, raw map[string]string) ma
 func MappedEmail(attrs map[string]string) string {
 	return attrs["email"]
 }
+
+// RequiresSuspension reports whether a synced entry's state demands SUSPENDING the
+// corresponding membership: the directory deactivated it (Active=false) and the
+// membership is still active. It never signals deletion — a deactivation suspends,
+// preserving the history (spec "Desprovisionamento reflete o diretório"). An
+// already-suspended/revoked membership needs no action (idempotent).
+func (r DirectorySyncRecord) RequiresSuspension(current MembershipStatus) bool {
+	return !r.Active && current == MembershipActive
+}

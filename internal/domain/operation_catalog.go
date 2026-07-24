@@ -85,6 +85,7 @@ var operationExemptActions = map[Action]string{
 	ActionAuthLockout:           "evento emitido pelo sistema (bloqueio progressivo), não invocado",
 	ActionAuthStuffing:          "alerta emitido pelo sistema (credential stuffing), não invocado",
 	ActionPrivilegedGrantExpire: "expiração emitida pelo job de limpeza (T-012), não invocada",
+	ActionMembershipSuspend:     "suspensão emitida pelo sincronismo de diretório ao refletir uma desativação (pacote 009), não invocada como operação de API",
 	ActionDelegationEscalation:  "sinal emitido pelo sistema quando uma delegação tenta escalar, não invocado",
 	ActionRefreshReuse:          "evento de segurança emitido na detecção de reuso de refresh, não invocado",
 }

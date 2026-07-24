@@ -63,6 +63,7 @@ const (
 	ActionMembershipInvite      Action = "membership.invite"
 	ActionMembershipAccept      Action = "membership.accept"
 	ActionMembershipRevoke      Action = "membership.revoke"
+	ActionMembershipSuspend     Action = "membership.suspend"
 	ActionIdentitySuspend       Action = "identity.suspend"
 	ActionIdentityDeprovision   Action = "identity.deprovision"
 	ActionPrivilegedSessionOpen Action = "privileged.session.open"
@@ -114,6 +115,7 @@ var actionCatalog = map[Action]AssuranceLevel{
 	ActionMembershipInvite:      L2,
 	ActionMembershipAccept:      L1,
 	ActionMembershipRevoke:      L2,
+	ActionMembershipSuspend:     L2,
 	ActionIdentitySuspend:       L2,
 	ActionIdentityDeprovision:   L3,
 	ActionPrivilegedSessionOpen: L3,
