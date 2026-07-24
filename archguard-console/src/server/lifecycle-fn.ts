@@ -1,4 +1,7 @@
 // W-C2 — provision + grant person access (orchestration + Warpgate live + evidence)
+//
+// Warpgate/sites are loaded via dynamic import inside handlers so the client
+// Vite graph never pulls node:https / better-sqlite3 (see docker build).
 
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
@@ -11,12 +14,6 @@ import {
 import { logger } from './logger'
 import { integrationFetch } from './http-integration-client'
 import { ensureKanidmGroup } from './kanidm-admin'
-import { listSites } from './sites'
-import {
-  bindWarpgateUserRole,
-  rolesForWarpgateTarget,
-  warpgateConfigured,
-} from './warpgate-proxy'
 
 const ORCH_URL = (
   process.env.ORCHESTRATION_URL ||
@@ -223,6 +220,7 @@ export async function resolveGrantRoles(
     }
   }
 
+  const { rolesForWarpgateTarget } = await import('./warpgate-proxy')
   const fromWg = await rolesForWarpgateTarget(target)
   if (fromWg.roles.length > 0) {
     return { roles: fromWg.roles, detail: fromWg.detail }
@@ -230,6 +228,7 @@ export async function resolveGrantRoles(
 
   // SoT: site inventory (works even if WG target.allow_roles empty)
   try {
+    const { listSites } = await import('./sites')
     const sites = await listSites()
     for (const site of sites) {
       const hit = site.targets?.find((x) => x.nome === target)
@@ -287,6 +286,10 @@ export const grantPersonTargetFn = createServerFn({ method: 'POST' })
     const steps: LifecycleStep[] = []
 
     // 1) Live Warpgate path (real grant even when orch is mock)
+    const {
+      warpgateConfigured,
+      bindWarpgateUserRole,
+    } = await import('./warpgate-proxy')
     if (warpgateConfigured()) {
       const resolved = await resolveGrantRoles(data.target, data.role)
       steps.push({
