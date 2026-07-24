@@ -56,13 +56,24 @@ const NODE_BUILTIN_STUB =
   'export const basename = (p) => p;' +
   'export const extname = () => "";' +
   'export const normalize = (p) => p;' +
-  // node:fs / node:fs/promises
+  // node:fs / node:fs/promises (sync + async names used by db.ts / pg / sqlite)
   'export const mkdirSync = _serverOnly;' +
   'export const readFileSync = _serverOnly;' +
   'export const writeFileSync = _serverOnly;' +
+  'export const unlinkSync = _serverOnly;' +
+  'export const statSync = _serverOnly;' +
+  'export const existsSync = _serverOnly;' +
+  'export const readdirSync = _serverOnly;' +
   'export const readFile = _serverOnly;' +
   'export const writeFile = _serverOnly;' +
+  'export const unlink = _serverOnly;' +
   'export const stat = _serverOnly;' +
+  'export const mkdir = _serverOnly;' +
+  // node:https / node:http (warpgate-proxy)
+  'export const request = _serverOnly;' +
+  'export const get = _serverOnly;' +
+  'export const createServer = _serverOnly;' +
+  'export const Agent = class {};' +
   // node:url
   'export const fileURLToPath = (u) => String(u);' +
   'export const URL = globalThis.URL;' +
@@ -78,6 +89,12 @@ const NODE_BUILTINS_TO_STUB = new Set([
   'node:path',
   'node:url',
   'node:http',
+  'node:https',
+  'node:net',
+  'node:tls',
+  'node:dns',
+  'node:util',
+  'node:events',
 ])
 
 function stubServerOnlyForClient(): Plugin {
