@@ -17,6 +17,7 @@ package domain
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -100,7 +101,62 @@ var (
 	ErrCredentialRefRequired = errors.New("directory_connector: referência de credencial no cofre obrigatória")
 	// ErrInvalidMapping is returned when a mapping entry is incomplete.
 	ErrInvalidMapping = errors.New("directory_connector: mapeamento inválido")
+	// ErrScopeFilterTooBroad is returned when the scope filter matches the whole
+	// subtree (a match-all), which defeats the mandatory scoping (RFC-0007 §5.1).
+	ErrScopeFilterTooBroad = errors.New("directory_connector: filtro de escopo abrangente demais (equivale a sincronizar toda a árvore)")
+	// ErrScopeFilterMalformed is returned when the scope filter is not a
+	// well-formed LDAP filter (unbalanced parentheses).
+	ErrScopeFilterMalformed = errors.New("directory_connector: filtro de escopo mal-formado")
 )
+
+// ValidateScopeFilter enforces that a connector's scope is DELIBERATE and BOUNDED
+// (RFC-0007 §5.1 / spec "Escopo não definido"). It rejects: an empty filter; a
+// match-all filter ("(objectClass=*)", "*", …), which is "the whole tree" in
+// disguise; and a filter with unbalanced parentheses, which the directory would
+// misinterpret. It does not attempt full LDAP-filter parsing — only the config-time
+// guards that keep an operator from accidentally syncing everything.
+func ValidateScopeFilter(filter string) error {
+	trimmed := strings.TrimSpace(filter)
+	if trimmed == "" {
+		return ErrScopeFilterRequired
+	}
+	if isMatchAllFilter(trimmed) {
+		return ErrScopeFilterTooBroad
+	}
+	if !balancedParens(trimmed) {
+		return ErrScopeFilterMalformed
+	}
+	return nil
+}
+
+// isMatchAllFilter reports whether the filter matches every entry in the subtree.
+func isMatchAllFilter(filter string) bool {
+	normalized := strings.ToLower(strings.ReplaceAll(filter, " ", ""))
+	switch normalized {
+	case "*", "(*)", "objectclass=*", "(objectclass=*)":
+		return true
+	default:
+		return false
+	}
+}
+
+// balancedParens reports whether parentheses are balanced and never close before
+// they open — a cheap well-formedness check for an LDAP filter.
+func balancedParens(filter string) bool {
+	depth := 0
+	for _, r := range filter {
+		switch r {
+		case '(':
+			depth++
+		case ')':
+			depth--
+			if depth < 0 {
+				return false
+			}
+		}
+	}
+	return depth == 0
+}
 
 // NewDirectoryConnector builds a validated connector (UUIDv7 id), starting
 // DISABLED with mapping version 1. A missing scope filter or credential reference
@@ -115,8 +171,8 @@ func NewDirectoryConnector(organizationID uuid.UUID, kind DirectoryKind, name, s
 	if name == "" {
 		return DirectoryConnector{}, fmt.Errorf("%w: nome", ErrInvalidConnector)
 	}
-	if scopeFilter == "" {
-		return DirectoryConnector{}, ErrScopeFilterRequired
+	if err := ValidateScopeFilter(scopeFilter); err != nil {
+		return DirectoryConnector{}, err
 	}
 	if credentialRef == "" {
 		return DirectoryConnector{}, ErrCredentialRefRequired
