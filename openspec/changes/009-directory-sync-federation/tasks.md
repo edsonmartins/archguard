@@ -1,7 +1,7 @@
 # Tasks — 009 · Sincronismo e federação de entrada
 
 - [x] **T-001** Modelar `directory_connector` por organização com mapeamento versionado.
-- [ ] **T-002** Implementar conector LDAP/AD com sincronização incremental.
+- [x] **T-002** Implementar conector LDAP/AD com sincronização incremental.
 - [ ] **T-003** Exigir filtro de escopo obrigatório na configuração do conector.
 - [ ] **T-004** Implementar mapeamento de atributos e grupos com validação.
 - [ ] **T-005** Implementar suspensão de membership na desativação no diretório.
