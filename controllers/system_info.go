@@ -16,8 +16,9 @@ package controllers
 
 import (
 	"errors"
-	"github.com/casdoor/casdoor/internal/deploy"
 
+	"github.com/casdoor/casdoor/internal/deploy"
+	"github.com/casdoor/casdoor/internal/domain"
 	"github.com/casdoor/casdoor/util"
 	"github.com/go-git/go-git/v5"
 )
@@ -73,14 +74,19 @@ func (c *ApiController) GetVersionInfo() {
 // @router /health [get]
 func (c *ApiController) Health() {
 	profile := deploy.Active()
-	compliance := "conformant"
-	if !profile.Conformant() {
-		compliance = "non_conformant"
+	// Compliance is CUSTODY-based (pacote 010, T-016): local key custody is never
+	// production-conformant, even outside the dev profile — the private material
+	// must live in the vault (ADR-0012). The health check flags it unmistakably.
+	custody := domain.CustodyVault
+	if profile.KeyCustodian() != "openbao" {
+		custody = domain.CustodyLocal
 	}
-	c.ResponseOk(map[string]string{
-		"status":       "ok",
-		"profile":      string(profile),
-		"keyCustodian": profile.KeyCustodian(),
-		"compliance":   compliance,
+	report := domain.ComplianceReport{Custody: custody, ProfileConformant: profile.Conformant()}
+	c.ResponseOk(map[string]any{
+		"status":            "ok",
+		"profile":           string(profile),
+		"keyCustodian":      profile.KeyCustodian(),
+		"compliance":        report.Status(),
+		"nonConformReasons": report.Reasons(),
 	})
 }

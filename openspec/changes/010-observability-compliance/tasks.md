@@ -15,7 +15,7 @@
 - [x] **T-013** Implementar rotação de JWKS com sobreposição.
 - [x] **T-014** Implementar rotação de chave de selagem com validade por `key_id`.
 - [x] **T-015** Implementar cache de assinatura e modo degradado com fail-closed em L3.
-- [ ] **T-016** Health check que sinaliza custódia local como instalação não conforme.
+- [x] **T-016** Health check que sinaliza custódia local como instalação não conforme.
 - [x] **T-017** Implementar classificação LGPD obrigatória em migrations + gate de CI.
 - [x] **T-018** Implementar chaves por titular e cifragem de campos pessoais.
 - [x] **T-019** Implementar crypto-shredding com confirmação L3 e auditoria.
