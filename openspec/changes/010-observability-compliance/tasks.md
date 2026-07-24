@@ -12,7 +12,7 @@
 - [x] **T-010** Integrar `KeyCustodian` real com o cofre (JWKS).
 - [x] **T-011** Integrar assinatura de selagem via transit engine.
 - [x] **T-012** Migrar segredos de client OAuth e credenciais de conector para o cofre.
-- [ ] **T-013** Implementar rotação de JWKS com sobreposição.
+- [x] **T-013** Implementar rotação de JWKS com sobreposição.
 - [ ] **T-014** Implementar rotação de chave de selagem com validade por `key_id`.
 - [ ] **T-015** Implementar cache de assinatura e modo degradado com fail-closed em L3.
 - [ ] **T-016** Health check que sinaliza custódia local como instalação não conforme.
