@@ -17,7 +17,7 @@
 - [x] **T-013** Implementar fail-closed com distinção entre `denied` e `error`.
 - [x] **T-014** Implementar consulta reversa para revisão de acesso (`listObjects`).
 - [x] **T-015** Escrever testes declarativos do modelo (permitido/negado, herança, expiração).
-- [ ] **T-016** Teste de travessia: nenhuma relação concede acesso a objeto de outro tenant.
+- [x] **T-016** Teste de travessia: nenhuma relação concede acesso a objeto de outro tenant.
 - [ ] **T-017** Teste de reconciliação com divergência injetada.
 - [ ] **T-018** Teste: PDP indisponível ⇒ AuthN funciona, decisões privilegiadas negadas.
 - [ ] **T-019** Métricas de latência de decisão e de divergência de reconciliação.
