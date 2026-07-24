@@ -107,6 +107,9 @@ var (
 	// ErrScopeFilterMalformed is returned when the scope filter is not a
 	// well-formed LDAP filter (unbalanced parentheses).
 	ErrScopeFilterMalformed = errors.New("directory_connector: filtro de escopo mal-formado")
+	// ErrEmailMappingRequired is returned when a connector is asked to sync without
+	// a mapping that yields an e-mail — dedup by email_hash would be impossible.
+	ErrEmailMappingRequired = errors.New("directory_connector: mapeamento de e-mail obrigatório para sincronizar (chave de deduplicação)")
 )
 
 // ValidateScopeFilter enforces that a connector's scope is DELIBERATE and BOUNDED
@@ -197,22 +200,50 @@ func NewDirectoryConnector(organizationID uuid.UUID, kind DirectoryKind, name, s
 	}, nil
 }
 
-// validate checks that every mapping entry is complete.
+// validate checks structural integrity of the mapping: every entry complete, and
+// no duplicate directory attribute, target attribute, or directory group — a
+// duplicate is an ambiguous mapping that would make sync non-deterministic (spec
+// "mapeamentos ambíguos de grupo" is a named risk).
 func (m ConnectorMapping) validate() error {
 	if m.Version < 1 {
 		return fmt.Errorf("%w: versão deve ser >= 1", ErrInvalidMapping)
 	}
+	dirAttrs, targetAttrs := map[string]bool{}, map[string]bool{}
 	for _, a := range m.Attributes {
 		if a.DirectoryAttr == "" || a.ArchGuardAttr == "" {
 			return fmt.Errorf("%w: atributo com lado vazio", ErrInvalidMapping)
 		}
+		if dirAttrs[a.DirectoryAttr] {
+			return fmt.Errorf("%w: atributo de diretório %q mapeado mais de uma vez", ErrInvalidMapping, a.DirectoryAttr)
+		}
+		if targetAttrs[a.ArchGuardAttr] {
+			return fmt.Errorf("%w: atributo ArchGuard %q recebe mais de um mapeamento", ErrInvalidMapping, a.ArchGuardAttr)
+		}
+		dirAttrs[a.DirectoryAttr] = true
+		targetAttrs[a.ArchGuardAttr] = true
 	}
+	dirGroups := map[string]bool{}
 	for _, g := range m.Groups {
 		if g.DirectoryGroup == "" || g.TargetGroup == "" {
 			return fmt.Errorf("%w: grupo com lado vazio", ErrInvalidMapping)
 		}
+		if dirGroups[g.DirectoryGroup] {
+			return fmt.Errorf("%w: grupo de diretório %q mapeado mais de uma vez", ErrInvalidMapping, g.DirectoryGroup)
+		}
+		dirGroups[g.DirectoryGroup] = true
 	}
 	return nil
+}
+
+// MapsEmail reports whether the mapping produces the ArchGuard "email" attribute —
+// the dedup key (email_hash, RFC-0002 §6).
+func (m ConnectorMapping) MapsEmail() bool {
+	for _, a := range m.Attributes {
+		if a.ArchGuardAttr == "email" {
+			return true
+		}
+	}
+	return false
 }
 
 // ReviseMapping replaces the mapping with a new version (current + 1), validating
@@ -226,8 +257,31 @@ func (c *DirectoryConnector) ReviseMapping(attrs []AttributeMapping, groups []Gr
 	return nil
 }
 
-// Enable/Disable toggle whether sync runs for this connector.
-func (c *DirectoryConnector) Enable()  { c.Enabled = true }
+// ValidateForSync checks the connector is ready to run a sync: the mapping is
+// structurally valid AND yields an e-mail (the dedup key). A connector may be
+// created and revised with an incomplete mapping, but it cannot SYNC without one.
+func (c DirectoryConnector) ValidateForSync() error {
+	if err := c.Mapping.validate(); err != nil {
+		return err
+	}
+	if !c.Mapping.MapsEmail() {
+		return ErrEmailMappingRequired
+	}
+	return nil
+}
+
+// Enable turns sync on, but only when the connector is sync-ready
+// (ValidateForSync) — a connector with no e-mail mapping cannot be enabled, so an
+// enabled connector always dedups correctly. Disable turns it off unconditionally.
+func (c *DirectoryConnector) Enable() error {
+	if err := c.ValidateForSync(); err != nil {
+		return err
+	}
+	c.Enabled = true
+	return nil
+}
+
+// Disable turns sync off.
 func (c *DirectoryConnector) Disable() { c.Enabled = false }
 
 // ApprovedGroupTarget returns the target group a directory group maps to, and
