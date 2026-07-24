@@ -66,3 +66,16 @@ func TestDetectPublicExposureIsLocalSafe(t *testing.T) {
 		t.Error("domínio público não é local")
 	}
 }
+
+// A guarda de custódia distingue chave em texto plano de referência ao cofre.
+func TestIsPlaintextSigningKey(t *testing.T) {
+	if !isPlaintextSigningKey("-----BEGIN PRIVATE KEY-----\nMII...\n-----END PRIVATE KEY-----\n") {
+		t.Error("uma chave PEM crua deveria ser texto plano")
+	}
+	if isPlaintextSigningKey(keystoreRefPrefix + "admin/cert-built-in") {
+		t.Error("uma referência keystore: NÃO é texto plano (custodiada)")
+	}
+	if isPlaintextSigningKey("") {
+		t.Error("chave vazia não é texto plano")
+	}
+}

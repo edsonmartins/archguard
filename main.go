@@ -82,6 +82,10 @@ func main() {
 	object.InitUserManager()
 	object.InitFromFile()
 	object.SealCerts()
+	// Fail-closed (INV-7/INV-6): um perfil conforme (pilot/production, com OpenBao)
+	// NÃO sobe com chave de assinatura de token em TEXTO no banco — a custódia deve
+	// referenciar o cofre. Em dev (não-conforme, L3 negado) não é imposto.
+	object.AssertVaultKeyCustody()
 	object.InitCleanupTokens()
 	object.InitCleanupDeviceAuthMap()
 
