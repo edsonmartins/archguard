@@ -98,6 +98,19 @@ func (s *IdentityStore) FindByEmail(ctx context.Context, custodian domain.KeyCus
 	return s.FindByEmailHash(ctx, hash)
 }
 
+// FindBySubject returns the identity by its opaque subject (pseudonym), or
+// ErrIdentityNotFound — the entry point for a subject-rights request, which
+// identifies a person by pseudonym, never by e-mail.
+func (s *IdentityStore) FindBySubject(ctx context.Context, subject string) (domain.Identity, error) {
+	const q = `
+		SELECT id::text, subject, type, status,
+		       primary_email_enc, email_hash, display_name_enc,
+		       created_at, updated_at
+		FROM identity
+		WHERE subject = $1`
+	return scanIdentity(s.db.QueryRow(ctx, q, subject))
+}
+
 // Get returns the identity by id, or ErrIdentityNotFound.
 func (s *IdentityStore) Get(ctx context.Context, id uuid.UUID) (domain.Identity, error) {
 	const q = `

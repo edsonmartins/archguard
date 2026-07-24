@@ -20,7 +20,7 @@
 - [x] **T-018** Implementar chaves por titular e cifragem de campos pessoais.
 - [x] **T-019** Implementar crypto-shredding com confirmação L3 e auditoria.
 - [ ] **T-020** Implementar arquivamento de partição por retenção e restauração auditada.
-- [ ] **T-021** Implementar exportação estruturada para direitos do titular (escopo por tenant).
+- [x] **T-021** Implementar exportação estruturada para direitos do titular (escopo por tenant).
 - [ ] **T-022** Runbook: DR do cofre, rotação, incidente e notificação (ANPD/titulares).
 - [ ] **T-023** Teste: eliminação de titular mantém a cadeia de auditoria verificável.
 - [ ] **T-024** Teste: exportação de titular não vaza dados de outra organização.
