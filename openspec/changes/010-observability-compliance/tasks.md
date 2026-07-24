@@ -16,7 +16,7 @@
 - [ ] **T-014** Implementar rotação de chave de selagem com validade por `key_id`.
 - [ ] **T-015** Implementar cache de assinatura e modo degradado com fail-closed em L3.
 - [ ] **T-016** Health check que sinaliza custódia local como instalação não conforme.
-- [ ] **T-017** Implementar classificação LGPD obrigatória em migrations + gate de CI.
+- [x] **T-017** Implementar classificação LGPD obrigatória em migrations + gate de CI.
 - [ ] **T-018** Implementar chaves por titular e cifragem de campos pessoais.
 - [ ] **T-019** Implementar crypto-shredding com confirmação L3 e auditoria.
 - [ ] **T-020** Implementar arquivamento de partição por retenção e restauração auditada.
