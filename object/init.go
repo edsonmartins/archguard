@@ -17,7 +17,6 @@ package object
 import (
 	"encoding/gob"
 	"fmt"
-	"os"
 
 	"github.com/casdoor/casdoor/conf"
 	"github.com/casdoor/casdoor/util"
@@ -252,22 +251,7 @@ func initBuiltInApplication() {
 	}
 }
 
-func readTokenFromFile() (string, string) {
-	pemPath := "./object/token_jwt_key.pem"
-	keyPath := "./object/token_jwt_key.key"
-	pem, err := os.ReadFile(pemPath)
-	if err != nil {
-		return "", ""
-	}
-	key, err := os.ReadFile(keyPath)
-	if err != nil {
-		return "", ""
-	}
-	return string(pem), string(key)
-}
-
 func initBuiltInCert() {
-	tokenJwtCertificate, tokenJwtPrivateKey := readTokenFromFile()
 	cert, err := getCert("admin", "cert-built-in")
 	if err != nil {
 		panic(err)
@@ -277,6 +261,11 @@ func initBuiltInCert() {
 		return
 	}
 
+	// A chave é GERADA no boot (uma vez, por deployment), NUNCA lida de um arquivo
+	// committado (INV-7): com Certificate/PrivateKey vazios, populateContent()/
+	// AddCert gera um par RSA-4096 fresco. SealCerts() (main.go) então move a chave
+	// privada para o keystore/cofre (ADR-0017). Nenhuma chave privada default vive
+	// no repositório — o placeholder de dev herdado do upstream foi removido.
 	cert = &Cert{
 		Owner:           "admin",
 		Name:            "cert-built-in",
@@ -287,8 +276,7 @@ func initBuiltInCert() {
 		CryptoAlgorithm: "RS256",
 		BitSize:         4096,
 		ExpireInYears:   20,
-		Certificate:     tokenJwtCertificate,
-		PrivateKey:      tokenJwtPrivateKey,
+		// Certificate/PrivateKey deixados VAZIOS de propósito -> gerados no boot.
 	}
 	_, err = AddCert(cert)
 	if err != nil {

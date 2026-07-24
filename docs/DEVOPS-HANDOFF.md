@@ -78,14 +78,19 @@ deployment.go`) resolve do keystore quando o cert é `keystore:<id>`, senão dev
 chave crua. Em **produção**, o ADR-0017 já cobre isso (keystore/cofre; perfil dev não
 conforme; L3 negado em dev).
 
-**Pendente (fazer no devops, com boot verificável):** um plano de PAM **NÃO** deve
-versionar chave privada default alguma (INV-7). Trocar o seed por **geração no boot**
-(chave nova por deployment, selada no keystore/cofre — nunca persistida no repo) e
-**remover** `object/token_jwt_key.key`/`.pem` do versionamento (`.gitignore`),
-mantendo `readTokenFromFile()` a retornar vazio quando ausente e o dev obtendo a chave
-do keystore. Requer ensaio de boot (assina/verifica token) — por isso não foi feito no
-repo principal sem DB/keystore. Enquanto não feito: **override obrigatório do cert
-default em qualquer instalação não-dev**.
+**Feito no repo principal** (commit da correção do code-review): o par
+`object/token_jwt_key.{key,pem}` foi **removido do versionamento** e ignorado
+(`.gitignore`); `initBuiltInCert()` gera o par RSA-4096 no boot (Certificate/
+PrivateKey vazios → `populateContent()`/`AddCert` gera) e `SealCerts()` move a
+privada para o keystore/cofre (ADR-0017); `buildSpKeyStore()` (SP SAML) lê do cert
+built-in via `CertPrivateKeyPEM` em vez do arquivo. **Nenhuma chave privada default
+no repo.**
+
+**Pendente no devops (verificação de boot):** compila (`go build ./...` verde), mas o
+caminho de assinatura só se verifica com DB + keystore rodando — **ensaiar boot**
+(emitir/verificar token OIDC e assinar/verificar SAML SP) na subida do ambiente. Em
+produção, o cert built-in deve referenciar o keystore/cofre (perfil `production`,
+ADR-0017); em dev, a chave gerada é selada no keystore local.
 
 ---
 

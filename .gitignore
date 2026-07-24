@@ -49,3 +49,7 @@ web/cypress/screenshots/
 # Keystore selado do perfil dev (runtime, contém chaves cifradas)
 /conf/keystore.sealed
 /conf/keystore.sealed.tmp
+
+# Chave privada de token NUNCA versionada (INV-7); gerada no boot + selada no cofre (ADR-0017)
+object/token_jwt_key.key
+object/token_jwt_key.pem

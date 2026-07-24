@@ -157,7 +157,21 @@ func buildSp(provider *Provider, samlResponse string, host string) (*saml2.SAMLS
 }
 
 func buildSpKeyStore() (dsig.X509KeyStore, error) {
-	keyPair, err := tls.LoadX509KeyPair("object/token_jwt_key.pem", "object/token_jwt_key.key")
+	// A chave de assinatura do SP SAML vem do cert built-in (cuja chave privada é
+	// custodiada no keystore/cofre, ADR-0017), NUNCA de um arquivo de chave
+	// committado (INV-7). Um deployment novo gera a chave do cert no init.
+	cert, err := getCert("admin", "cert-built-in")
+	if err != nil {
+		return nil, err
+	}
+	if cert == nil {
+		return nil, fmt.Errorf("buildSpKeyStore: cert built-in não inicializado")
+	}
+	keyPEM, err := CertPrivateKeyPEM(cert)
+	if err != nil {
+		return nil, err
+	}
+	keyPair, err := tls.X509KeyPair([]byte(cert.Certificate), []byte(keyPEM))
 	if err != nil {
 		return nil, err
 	}
