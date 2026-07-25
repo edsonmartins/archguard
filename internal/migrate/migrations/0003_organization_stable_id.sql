@@ -19,4 +19,11 @@ ALTER TABLE IF EXISTS organization
 
 -- UNIQUE é pré-requisito para a FK de `membership.organization_id` (0004) e para
 -- a chave de RLS. Índice único (não PK: a PK legada composta permanece intacta).
-CREATE UNIQUE INDEX IF NOT EXISTS organization_id_key ON organization (id);
+--
+-- Nome com sufixo `_pkey` DE PROPÓSITO: `organization` é tabela gerenciada pelo
+-- XORM (Sync2 em CreateTables, roda a CADA boot). O Sync2 DROPA todo índice do DB
+-- que não esteja no struct Casdoor — e o dialect postgres do XORM só PULA índices
+-- terminados em `_pkey` (dialects/postgres.go GetIndexes). Como este índice é sobre
+-- uma coluna que a migração adicionou e o struct não conhece, o `_pkey` é o que o
+-- faz sobreviver ao Sync2 no restart (senão o boot panica ao tentar dropá-lo).
+CREATE UNIQUE INDEX IF NOT EXISTS organization_id_pkey ON organization (id);

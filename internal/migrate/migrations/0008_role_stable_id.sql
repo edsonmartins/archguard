@@ -11,4 +11,7 @@
 ALTER TABLE IF EXISTS role
     ADD COLUMN IF NOT EXISTS id uuid NOT NULL DEFAULT gen_random_uuid();
 
-CREATE UNIQUE INDEX IF NOT EXISTS role_id_key ON role (id);
+-- Sufixo `_pkey` DE PROPÓSITO: `role` é tabela gerenciada pelo XORM (Sync2 a cada
+-- boot), que dropa índices do DB ausentes no struct e só PULA os terminados em
+-- `_pkey`. Ver a nota detalhada em 0003_organization_stable_id.sql.
+CREATE UNIQUE INDEX IF NOT EXISTS role_id_pkey ON role (id);
