@@ -20,6 +20,7 @@ import (
 	"github.com/casdoor/casdoor/internal/domain"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // MembershipReader lists an identity's memberships across every tenant — a
@@ -48,6 +49,42 @@ func (r *MembershipReader) ListByIdentity(ctx context.Context, identityID uuid.U
 		ms, err := NewMembershipStore(tx).ListByIdentity(ctx, identityID)
 		if err != nil {
 			return err
+		}
+		out = ms
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// TenantMembershipLister lists the memberships of one tenant (the caller's active
+// org) — the org roster the console's identity screen shows. Tenant-scoped through
+// WithTenantTx (RLS SET LOCAL + explicit predicate), so it only ever returns the
+// requested tenant's rows.
+type TenantMembershipLister struct {
+	pool *pgxpool.Pool
+}
+
+// NewTenantMembershipLister builds the lister over the runtime pool.
+func NewTenantMembershipLister(pool *pgxpool.Pool) *TenantMembershipLister {
+	return &TenantMembershipLister{pool: pool}
+}
+
+// ListInTenant returns every membership in the given organization. The caller must
+// pass the session's active tenant — never an arbitrary org — so a caller cannot
+// list another tenant's roster; the tenant scope and RLS enforce it regardless.
+func (r *TenantMembershipLister) ListInTenant(ctx context.Context, orgID uuid.UUID) ([]domain.Membership, error) {
+	scope, err := domain.NewTenantScope(orgID)
+	if err != nil {
+		return nil, err
+	}
+	var out []domain.Membership
+	err = NewTenantRepository(r.pool, scope).WithTenantTx(ctx, func(ttx *TenantTx) error {
+		ms, lerr := NewTenantMembershipStore(ttx).ListInTenant(ctx)
+		if lerr != nil {
+			return lerr
 		}
 		out = ms
 		return nil

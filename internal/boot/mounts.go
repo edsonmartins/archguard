@@ -46,6 +46,9 @@ func MountCapabilities() error {
 	if err := mountTenants(p, f); err != nil {
 		return fmt.Errorf("montar tenants: %w", err)
 	}
+	if err := mountMemberships(p, f); err != nil {
+		return fmt.Errorf("montar memberships: %w", err)
+	}
 	if err := mountAuditVerify(p, f); err != nil {
 		return fmt.Errorf("montar audit-verify: %w", err)
 	}
@@ -87,6 +90,24 @@ func mountTenants(p *Pipeline, f *Factory) error {
 	global := postgres.NewGlobalRepository(f.Pool(), globalaccess.NewProfileAuthorizer(), globalaccess.NewMemoryAuditor())
 	handler := apihttp.NewTenantsHandler(postgres.NewMembershipReader(global))
 	RegisterAPIHandler("/tenants", p.Require(opID, handler))
+	return nil
+}
+
+// mountMemberships mounts GET /api/v1/memberships (pacote 011, T-008 — roster do
+// tenant). É uma operação de ADMINISTRAÇÃO: L1 de garantia (chamador autenticado)
+// mais o gate de admin (RequireAdmin) — a autorização de console-CRUD. O escopo de
+// tenant é o da sessão (o handler lê a org ativa da sessão, nunca do request).
+func mountMemberships(p *Pipeline, f *Factory) error {
+	const opID = "memberships.list"
+	if err := p.RegisterOperation(domain.Operation{
+		ID:          opID,
+		Level:       domain.L1,
+		Description: "listar os membros do tenant ativo (administração)",
+	}); err != nil {
+		return err
+	}
+	handler := apihttp.NewMembershipsHandler(postgres.NewTenantMembershipLister(f.Pool()))
+	RegisterAPIHandler("/memberships", p.Require(opID, apihttp.RequireAdmin(handler)))
 	return nil
 }
 

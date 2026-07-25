@@ -146,6 +146,52 @@ func (s *TenantMembershipStore) Get(ctx context.Context, membershipID uuid.UUID)
 	return m, nil
 }
 
+// ListInTenant returns every membership in the store's tenant (the active org),
+// ordered by creation. Explicitly predicated on the tenant (Barreira 1) on top of
+// the WithTenantTx RLS scope (Barreira 2) — INV-5.
+func (s *TenantMembershipStore) ListInTenant(ctx context.Context) ([]domain.Membership, error) {
+	const q = `
+		SELECT id::text, identity_id::text, organization_id::text, status,
+		       invited_by::text, activated_at, created_at, updated_at
+		FROM membership
+		WHERE organization_id = $1
+		ORDER BY created_at`
+	rows, err := s.ttx.tx.Query(ctx, q, s.ttx.scope.OrganizationID().String())
+	if err != nil {
+		return nil, fmt.Errorf("postgres: listagem de memberships falhou: %w", err)
+	}
+	defer rows.Close()
+
+	var out []domain.Membership
+	for rows.Next() {
+		var m domain.Membership
+		var idText, idnText, orgText, status string
+		var invitedByText *string
+		if err := rows.Scan(&idText, &idnText, &orgText, &status,
+			&invitedByText, &m.ActivatedAt, &m.CreatedAt, &m.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("postgres: leitura de membership falhou: %w", err)
+		}
+		if m.ID, err = uuid.Parse(idText); err != nil {
+			return nil, fmt.Errorf("postgres: id de membership inválido %q: %w", idText, err)
+		}
+		if m.IdentityID, err = uuid.Parse(idnText); err != nil {
+			return nil, fmt.Errorf("postgres: identity_id inválido %q: %w", idnText, err)
+		}
+		if m.OrganizationID, err = uuid.Parse(orgText); err != nil {
+			return nil, fmt.Errorf("postgres: organization_id inválido %q: %w", orgText, err)
+		}
+		if m.InvitedBy, err = parseOptionalUUID("invited_by", invitedByText); err != nil {
+			return nil, err
+		}
+		m.Status = domain.MembershipStatus(status)
+		out = append(out, m)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("postgres: iteração de memberships falhou: %w", err)
+	}
+	return out, nil
+}
+
 // SaveRevocation persists a membership revocation (domain.Membership.Revoke
 // already ran — terminal, R4). Idempotent: re-revoking keeps the original
 // revoked_at. The row stays for the audit trail; the caller cascades to the

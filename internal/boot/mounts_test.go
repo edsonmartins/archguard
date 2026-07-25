@@ -92,6 +92,29 @@ func TestMountTenantsIsMountedAndFailsClosed(t *testing.T) {
 	}
 }
 
+// TestMountMembershipsIsMountedAndAdminGated: /memberships is reachable (not 404)
+// but an unauthenticated, non-admin request never returns 200 (assurance + admin
+// gate both fail closed).
+func TestMountMembershipsIsMountedAndAdminGated(t *testing.T) {
+	resetMux()
+	InitAPIMux()
+	InitPipeline(nil)
+	InitFactory(deploy.Dev, nil, nil)
+	if err := MountCapabilities(); err != nil {
+		t.Fatalf("MountCapabilities: %v", err)
+	}
+
+	rr := httptest.NewRecorder()
+	APIHandler().ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/memberships", nil))
+
+	if rr.Code == http.StatusNotFound {
+		t.Fatalf("/memberships should be MOUNTED (got 404)")
+	}
+	if rr.Code == http.StatusOK {
+		t.Fatalf("/memberships must not return 200 without an authenticated admin session")
+	}
+}
+
 // TestMountCapabilitiesRequiresInit fails closed when the pipeline/factory are not
 // initialized, rather than mounting an unguarded surface.
 func TestMountCapabilitiesRequiresInit(t *testing.T) {
