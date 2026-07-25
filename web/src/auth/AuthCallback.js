@@ -69,7 +69,7 @@ class AuthCallback extends React.Component {
     const handleCasLogin = (res) => {
       let msg = "Logged in successfully.";
       if (casService === "") {
-        msg += "Now you can visit apps protected by Casdoor.";
+        msg += "Now you can visit apps protected by ArchGuard.";
       }
       Setting.showMessage("success", msg);
 

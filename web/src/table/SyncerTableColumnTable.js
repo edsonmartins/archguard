@@ -91,7 +91,7 @@ class SyncerTableColumnTable extends React.Component {
         },
       },
       {
-        title: i18next.t("syncer:Casdoor column"),
+        title: i18next.t("syncer:ArchGuard column"),
         dataIndex: "casdoorName",
         key: "casdoorName",
         render: (text, record, index) => {

@@ -16,9 +16,7 @@ package object
 
 import (
 	"encoding/gob"
-	"fmt"
 
-	"github.com/casdoor/casdoor/conf"
 	"github.com/casdoor/casdoor/util"
 	"github.com/go-webauthn/webauthn/webauthn"
 )
@@ -126,12 +124,12 @@ func initBuiltInOrganization() bool {
 		Name:               "built-in",
 		CreatedTime:        util.GetCurrentTime(),
 		DisplayName:        "Built-in Organization",
-		WebsiteUrl:         "https://example.com",
-		Favicon:            fmt.Sprintf("%s/img/casbin/favicon.ico", conf.GetConfigString("staticBaseUrl")),
+		WebsiteUrl:         "https://integrall.tech",
+		Favicon:            "/favicon.png",
 		PasswordType:       "bcrypt",
 		PasswordOptions:    []string{"AtLeast6"},
 		CountryCodes:       []string{"US", "ES", "FR", "DE", "GB", "CN", "JP", "KR", "VN", "ID", "SG", "IN"},
-		DefaultAvatar:      fmt.Sprintf("%s/img/casbin.svg", conf.GetConfigString("staticBaseUrl")),
+		DefaultAvatar:      "/img/archguard-icon.png",
 		UserTypes:          []string{},
 		Tags:               []string{},
 		Languages:          []string{"en", "es", "fr", "de", "ja", "zh", "vi", "pt", "tr", "pl", "uk"},
@@ -168,7 +166,7 @@ func initBuiltInUser() {
 		Type:              "normal-user",
 		Password:          "123",
 		DisplayName:       "Admin",
-		Avatar:            fmt.Sprintf("%s/img/casbin.svg", conf.GetConfigString("staticBaseUrl")),
+		Avatar:            "/img/archguard-icon.png",
 		Email:             "admin@example.com",
 		Phone:             "12345678910",
 		CountryCode:       "US",
@@ -210,7 +208,7 @@ func initBuiltInApplication() {
 		Category:       "Default",
 		Type:           "All",
 		Scopes:         []*ScopeItem{},
-		Logo:           fmt.Sprintf("%s/img/archguard-logo.png", conf.GetConfigString("staticBaseUrl")),
+		Logo:           "/img/archguard-logo.png",
 		HomepageUrl:    "https://integrall.tech",
 		Organization:   "built-in",
 		Cert:           "cert-built-in",

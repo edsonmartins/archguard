@@ -35,7 +35,8 @@ export const ThemeDefault = {
 export const CustomFooter = null;
 
 // Blank or null to hide Ai Assistant button
-export let AiAssistantUrl = "https://ai.casbin.com";
+// ArchGuard: assistente de IA externo do Casbin desabilitado.
+export let AiAssistantUrl = "";
 
 // Maximum number of navbar items before switching from flat to grouped menu
 export let MaxItemsForFlatMenu = 7;

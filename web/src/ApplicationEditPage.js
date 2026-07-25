@@ -127,11 +127,11 @@ const sideTemplate = `<style>
   }
 </style>
 <div class="left-model">
-  <span class="side-logo"> <img src="${Setting.StaticBaseUrl}/img/casdoor-logo_1185x256.png" alt="Casdoor" style="width: 120px">
+  <span class="side-logo"> <img src="/img/archguard-logo.png" alt="ArchGuard" style="width: 120px">
     <span>SSO</span>
   </span>
   <div class="img">
-    <img src="${Setting.StaticBaseUrl}/img/casbin.svg" alt="Casdoor"/>
+    <img src="/img/archguard-icon.png" alt="ArchGuard"/>
   </div>
 </div>
 `;

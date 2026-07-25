@@ -115,7 +115,7 @@ func SendVerificationCodeToEmail(organization *Organization, user *User, provide
 	//	code = organization.MasterVerificationCode
 	// }
 
-	// "You have requested a verification code at Casdoor. Here is your code: %s, please enter in 5 minutes."
+	// "You have requested a verification code at ArchGuard. Here is your code: %s, please enter in 5 minutes."
 	content := strings.Replace(provider.Content, "%s", code, 1)
 
 	if method == "forget" {

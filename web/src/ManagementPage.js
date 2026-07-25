@@ -620,7 +620,7 @@ function ManagementPage(props) {
   };
 
   const siderWidth = 256;
-  const siderCollapsedWidth = 80;
+  const siderCollapsedWidth = 60;
   const showSider = !Setting.isMobile() && !props.requiredEnableMfa;
   const contentMarginLeft = showSider ? (siderCollapsed ? siderCollapsedWidth : siderWidth) : 0;
 
@@ -647,7 +647,7 @@ function ManagementPage(props) {
           }}
         >
           <div style={{
-            height: 52,
+            height: 64,
             flexShrink: 0,
             display: "flex",
             alignItems: "center",
@@ -660,9 +660,9 @@ function ManagementPage(props) {
                 src={siderCollapsed ? (organization?.favicon || siderLogo || props.logo) : (siderLogo ?? props.logo)}
                 alt="logo"
                 style={{
-                  height: siderCollapsed ? 28 : 40,
-                  width: siderCollapsed ? 28 : undefined,
-                  maxWidth: siderCollapsed ? 28 : 160,
+                  height: siderCollapsed ? 44 : 52,
+                  width: siderCollapsed ? 44 : undefined,
+                  maxWidth: siderCollapsed ? 44 : 210,
                   objectFit: "contain",
                   borderRadius: siderCollapsed ? 4 : 0,
                   transition: "max-width 0.2s, height 0.2s, width 0.2s",

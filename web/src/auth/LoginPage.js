@@ -521,7 +521,7 @@ class LoginPage extends React.Component {
           let msg = "Logged in successfully. ";
           if (casParams.service === "") {
             // If service was not specified, Casdoor must display a message notifying the client that it has successfully initiated a single sign-on session.
-            msg += "Now you can visit apps protected by Casdoor.";
+            msg += "Now you can visit apps protected by ArchGuard.";
           }
           Setting.showMessage("success", msg);
 
