@@ -70,6 +70,27 @@ func MountCapabilities() error {
 	if err := mountAuditVerify(p, f); err != nil {
 		return fmt.Errorf("montar audit-verify: %w", err)
 	}
+	if err := mountAuditTimeline(p, f); err != nil {
+		return fmt.Errorf("montar audit-timeline: %w", err)
+	}
+	return nil
+}
+
+// mountAuditTimeline mounts GET /api/v1/audit/timeline (pacote 011, T-012 — visão de
+// auditoria). Admin read (L1 + RequireAdmin): the caller's tenant's recent audit
+// events, newest first. Read-only over the append-only trail. Now that the trail is
+// written (membership.revoke), it has events to show.
+func mountAuditTimeline(p *Pipeline, f *Factory) error {
+	const opID = "audit.timeline.read"
+	if err := p.RegisterOperation(domain.Operation{
+		ID:          opID,
+		Level:       domain.L1,
+		Description: "ler a linha do tempo de auditoria do tenant (administração)",
+	}); err != nil {
+		return err
+	}
+	handler := apihttp.NewAuditTimelineHandler(postgres.NewTenantAuditReader(f.Pool()))
+	RegisterAPIHandler("/audit/timeline", p.Require(opID, apihttp.RequireAdmin(handler)))
 	return nil
 }
 
