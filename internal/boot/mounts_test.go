@@ -203,6 +203,28 @@ func TestMountFactorEnrollmentIsMountedAndFailsClosed(t *testing.T) {
 	}
 }
 
+// TestMountStepUpIsMountedAndFailsClosed: /stepup/totp is reachable (not 404) but
+// requires a resolved session — an unbound request never returns 200 (RequireSession).
+func TestMountStepUpIsMountedAndFailsClosed(t *testing.T) {
+	resetMux()
+	InitAPIMux()
+	InitPipeline(nil)
+	InitFactory(deploy.Dev, nil, openTempKeystore(t))
+	if err := MountCapabilities(); err != nil {
+		t.Fatalf("MountCapabilities: %v", err)
+	}
+
+	rr := httptest.NewRecorder()
+	APIHandler().ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/stepup/totp", nil))
+
+	if rr.Code == http.StatusNotFound {
+		t.Fatalf("/stepup/totp should be MOUNTED (got 404)")
+	}
+	if rr.Code == http.StatusOK {
+		t.Fatalf("step-up must not return 200 without a resolved session")
+	}
+}
+
 // TestMountCapabilitiesRequiresInit fails closed when the pipeline/factory are not
 // initialized, rather than mounting an unguarded surface.
 func TestMountCapabilitiesRequiresInit(t *testing.T) {

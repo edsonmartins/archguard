@@ -61,6 +61,9 @@ func MountCapabilities() error {
 	if err := mountFactorEnrollment(p, f); err != nil {
 		return fmt.Errorf("montar factor-enrollment: %w", err)
 	}
+	if err := mountStepUp(p, f); err != nil {
+		return fmt.Errorf("montar step-up: %w", err)
+	}
 	if err := mountAuditVerify(p, f); err != nil {
 		return fmt.Errorf("montar audit-verify: %w", err)
 	}
@@ -120,6 +123,22 @@ func mountMemberships(p *Pipeline, f *Factory) error {
 	}
 	handler := apihttp.NewMembershipsHandler(postgres.NewTenantMembershipLister(f.Pool()))
 	RegisterAPIHandler("/memberships", p.Require(opID, apihttp.RequireAdmin(handler)))
+	return nil
+}
+
+// mountStepUp mounts POST /api/v1/stepup/totp (pacote 011, T-007/005 — cerimônia de
+// step-up TOTP → L2). auth.stepup is EXEMPT from operation classification
+// (operation_catalog): it is how the level is raised, so it is gated by its own
+// factor proof, not by the middleware. It uses RequireSession (resolve the session,
+// no level gate), not Require. Fail-closed where the vault is unavailable.
+func mountStepUp(p *Pipeline, f *Factory) error {
+	stepUp, err := newTOTPStepUp(f)
+	if err != nil {
+		RegisterAPIHandler("/stepup/totp", p.RequireSession(unavailableHandler("step-up indisponível: cofre de segredos não ligado")))
+		return nil
+	}
+	handler := apihttp.NewStepUpHandler(stepUp)
+	RegisterAPIHandler("/stepup/totp", p.RequireSession(http.HandlerFunc(handler.TOTP)))
 	return nil
 }
 

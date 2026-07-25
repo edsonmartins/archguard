@@ -77,6 +77,13 @@ func (p *Pipeline) Require(operationID string, next http.Handler) http.Handler {
 	return p.mw.Require(operationID, next)
 }
 
+// RequireSession wraps a handler for an exempt ceremony (step-up): it resolves and
+// injects the session and denies without one, but enforces no operation level. Use
+// only for operations the catalog exempts from classification.
+func (p *Pipeline) RequireSession(next http.Handler) http.Handler {
+	return p.mw.RequireSession(next)
+}
+
 // The active pipeline is a boot singleton, built once (InitPipeline) and consulted
 // by the mount tasks to register operations and wrap handlers.
 var (

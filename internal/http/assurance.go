@@ -78,6 +78,23 @@ func NewAssuranceMiddleware(guard *domain.AssuranceGuard, resolve SessionResolve
 	return &AssuranceMiddleware{guard: guard, resolve: resolve, floor: floor, now: time.Now}
 }
 
+// RequireSession resolves and injects the session, denying if absent, WITHOUT
+// enforcing an operation level. It is for exempt ceremonies — notably step-up —
+// that are gated by their own flow, not by the middleware (operation_catalog.go:
+// auth.stepup). Gating step-up on an assurance level would be circular: step-up is
+// how the level is RAISED. The ceremony's own factor proof is the control; here we
+// only guarantee a real session is present and inject it for the handler.
+func (m *AssuranceMiddleware) RequireSession(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		session, ok := m.resolve.Session(r)
+		if !ok || session == nil {
+			writeError(w, http.StatusUnauthorized, "sessão não resolvida")
+			return
+		}
+		next.ServeHTTP(w, r.WithContext(withSession(r.Context(), session)))
+	})
+}
+
 // Require wraps next so it runs ONLY if the request's session satisfies
 // operationID's classified level. On an insufficient-assurance denial it answers
 // 401 with an RFC 9470 step-up challenge (acr_values naming the required acr) so
