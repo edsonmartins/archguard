@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -26,6 +27,7 @@ import (
 	"github.com/casdoor/casdoor/authz"
 	"github.com/casdoor/casdoor/conf"
 	"github.com/casdoor/casdoor/controllers"
+	"github.com/casdoor/casdoor/internal/boot"
 	"github.com/casdoor/casdoor/internal/domain"
 	"github.com/casdoor/casdoor/object"
 	"github.com/casdoor/casdoor/proxy"
@@ -73,6 +75,14 @@ func main() {
 		fmt.Printf("Data exported successfully to %s\n", exportPath)
 		return
 	}
+
+	// Runtime pgx pool for the ArchGuard composition root (pacote 011, T-001).
+	// Opened after migrations (the schema must exist) and closed on shutdown.
+	// Fatal on failure: the composition root cannot serve without its database.
+	if err := boot.InitPool(context.Background(), conf.GetConfigDataSourceName()); err != nil {
+		panic(err)
+	}
+	defer boot.ClosePool()
 
 	object.InitDefaultStorageProvider()
 	object.InitLogProviders()
