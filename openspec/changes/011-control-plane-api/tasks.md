@@ -12,7 +12,7 @@
   contexto, injetado pelo bridge a partir da sessão do framework), composição de
   `BridgingResolver`/`OrgResolver`/`AssuranceMiddleware` e um helper de wrap para os handlers de
   domínio (T-005+). Testado contra o seam; fail-closed sem vínculo.
-- [ ] **T-004b** Bridge login→sessão: no sucesso do login herdado, chamar `EstablishSession`
+- [x] **T-004b** Bridge login→sessão: no sucesso do login herdado, chamar `EstablishSession`
   (mapeando usuário Casdoor→`domain.Identity` e resultado do login→AAL/fatores, ADR-0010) e gravar
   o vínculo na sessão do framework. Ativa o `/api/v1` de domínio. Mini-design apresentado antes de
   codar (toca INV-1 e fluxo de auth).

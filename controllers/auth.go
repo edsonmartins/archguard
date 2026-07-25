@@ -106,6 +106,7 @@ func (c *ApiController) HandleLoggedIn(application *object.Application, user *ob
 
 	if form.Type == ResponseTypeLogin {
 		c.SetSessionUsername(userId)
+		c.bridgeDomainSession(user)
 		util.LogInfo(c.Ctx, "API: [%s] signed in", userId)
 		resp = &Response{Status: "ok", Msg: "", Data: userId, Data3: user.NeedUpdatePassword}
 	} else if form.Type == ResponseTypeCode {
