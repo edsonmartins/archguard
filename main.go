@@ -90,6 +90,18 @@ func main() {
 	// conformant: fail-closed until OpenBao). The dev keystore is nil outside dev.
 	boot.InitFactory(deploy.Active(), boot.Pool(), object.DevKeystore())
 
+	// Seed the built-in admin's domain identity + membership (pacote 011, T-004b)
+	// so the console works for the inherited admin. Runs only where custody is
+	// available (dev); conformant profiles skip it until OpenBao is wired. Idempotent
+	// and dedup-respecting; a failure in dev is fatal (the console needs the admin).
+	if custodian, cerr := boot.ActiveFactory().KeyCustodian(); cerr == nil {
+		if serr := boot.SeedBuiltInAdmin(context.Background(), boot.Pool(), custodian, "built-in", "admin@example.com"); serr != nil {
+			panic(fmt.Sprintf("seed do admin de domínio (T-004b) falhou: %v", serr))
+		}
+	} else {
+		fmt.Printf("ArchGuard: custódia indisponível no perfil ativo — admin de domínio não semeado (%v)\n", cerr)
+	}
+
 	// Control-plane API mux (pacote 011, T-003). Built before capability handlers
 	// are registered (T-005+); the Beego bridge delegates /api/v1/* to it.
 	boot.InitAPIMux()
