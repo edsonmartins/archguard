@@ -21,6 +21,7 @@ import (
 
 	"github.com/casdoor/casdoor/internal/boot"
 	"github.com/casdoor/casdoor/internal/domain"
+	apihttp "github.com/casdoor/casdoor/internal/http"
 	"github.com/casdoor/casdoor/object"
 	"github.com/casdoor/casdoor/util"
 	"github.com/google/uuid"
@@ -60,6 +61,10 @@ func (c *RootController) HandleControlPlane() {
 			}
 		}
 	}
+	// Carry the caller's legacy admin status into the request so admin-scoped
+	// handlers can gate on it (the console-CRUD authorization; the PDP authorizes
+	// asset/PAM operations separately). Non-admin ⇒ false ⇒ admin handlers 403.
+	req = req.WithContext(apihttp.WithAdmin(req.Context(), c.IsAdmin()))
 
 	req.URL.Path = strings.TrimPrefix(req.URL.Path, boot.APIBasePath)
 	handler.ServeHTTP(c.Ctx.ResponseWriter, req)
