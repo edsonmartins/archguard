@@ -36,8 +36,13 @@ import (
 // authorization (tenant scoping and assurance level L1/L2/L3) is applied by the
 // mounted handlers themselves (T-004+), not here. Both a missing session and a
 // not-yet-mounted API fail closed (401 / 503), never open access.
+//
+// The version probe (/api/v1/version) is the ONE public exception: it is a
+// liveness/version check (health checks, uptime monitors, the generated client's
+// compatibility assertion) that carries no data and needs no session.
 func (c *RootController) HandleControlPlane() {
-	if c.GetSessionUsername() == "" {
+	isPublicProbe := c.Ctx.Request.URL.Path == boot.APIBasePath+"/version"
+	if !isPublicProbe && c.GetSessionUsername() == "" {
 		c.Ctx.ResponseWriter.WriteHeader(http.StatusUnauthorized)
 		return
 	}
