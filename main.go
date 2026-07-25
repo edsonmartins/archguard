@@ -28,6 +28,7 @@ import (
 	"github.com/casdoor/casdoor/conf"
 	"github.com/casdoor/casdoor/controllers"
 	"github.com/casdoor/casdoor/internal/boot"
+	"github.com/casdoor/casdoor/internal/deploy"
 	"github.com/casdoor/casdoor/internal/domain"
 	"github.com/casdoor/casdoor/object"
 	"github.com/casdoor/casdoor/proxy"
@@ -83,6 +84,11 @@ func main() {
 		panic(err)
 	}
 	defer boot.ClosePool()
+
+	// Adapter factory (pacote 011, T-002/T-004b): selects adapters by deployment
+	// profile and vends the key custodian (dev: keystore-backed provisional;
+	// conformant: fail-closed until OpenBao). The dev keystore is nil outside dev.
+	boot.InitFactory(deploy.Active(), boot.Pool(), object.DevKeystore())
 
 	// Control-plane API mux (pacote 011, T-003). Built before capability handlers
 	// are registered (T-005+); the Beego bridge delegates /api/v1/* to it.

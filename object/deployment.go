@@ -94,6 +94,14 @@ func InitKeystore() {
 	devKeystore = ks
 }
 
+// DevKeystore returns the open dev sealed keystore, or nil outside the dev
+// profile (where it is never opened). The composition root (internal/boot) uses
+// it as the material store for the dev key custodian; exposing it here avoids
+// boot importing this legacy package.
+func DevKeystore() *keystore.SealedKeystore {
+	return devKeystore
+}
+
 // SealCerts moves signing private keys out of the database and into the sealed
 // keystore for the dev profile (I-4.3: the database holds a reference, not the
 // key). Idempotent: certs already referenced are skipped. No-op outside dev.
