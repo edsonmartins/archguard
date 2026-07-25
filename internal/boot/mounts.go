@@ -64,6 +64,9 @@ func MountCapabilities() error {
 	if err := mountStepUp(p, f); err != nil {
 		return fmt.Errorf("montar step-up: %w", err)
 	}
+	if err := mountMembershipRevoke(p, f); err != nil {
+		return fmt.Errorf("montar membership-revoke: %w", err)
+	}
 	if err := mountAuditVerify(p, f); err != nil {
 		return fmt.Errorf("montar audit-verify: %w", err)
 	}
@@ -123,6 +126,26 @@ func mountMemberships(p *Pipeline, f *Factory) error {
 	}
 	handler := apihttp.NewMembershipsHandler(postgres.NewTenantMembershipLister(f.Pool()))
 	RegisterAPIHandler("/memberships", p.Require(opID, apihttp.RequireAdmin(handler)))
+	return nil
+}
+
+// mountMembershipRevoke mounts POST /api/v1/memberships/revoke (pacote 011, T-008 —
+// primeira escrita L2). Classified L2 (membership.revoke, audit_event.go): it
+// requires an AAL2 session, so a password-only admin must step up first — the full
+// chain (challenge → step-up → retry). Plus the admin gate. The mutation revokes
+// the membership, ends the member's tenant sessions and writes a membership.revoke
+// event to the immutable trail, atomically (I-5.4).
+func mountMembershipRevoke(p *Pipeline, f *Factory) error {
+	const opID = "membership.revoke"
+	if err := p.RegisterOperation(domain.Operation{
+		ID:          opID,
+		Level:       domain.L2,
+		Description: "revogar um membership do tenant (administração)",
+	}); err != nil {
+		return err
+	}
+	handler := apihttp.NewMembershipRevokeHandler(newMembershipRevoker(f))
+	RegisterAPIHandler("/memberships/revoke", p.Require(opID, apihttp.RequireAdmin(handler)))
 	return nil
 }
 

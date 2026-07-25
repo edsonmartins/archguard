@@ -225,6 +225,29 @@ func TestMountStepUpIsMountedAndFailsClosed(t *testing.T) {
 	}
 }
 
+// TestMountMembershipRevokeIsMountedAndL2Gated: the L2 write is reachable (not 404)
+// but an unauthenticated (and un-stepped-up) request never returns 200 — assurance
+// (L2) and the admin gate both fail closed.
+func TestMountMembershipRevokeIsMountedAndL2Gated(t *testing.T) {
+	resetMux()
+	InitAPIMux()
+	InitPipeline(nil)
+	InitFactory(deploy.Dev, nil, nil)
+	if err := MountCapabilities(); err != nil {
+		t.Fatalf("MountCapabilities: %v", err)
+	}
+
+	rr := httptest.NewRecorder()
+	APIHandler().ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/memberships/revoke", nil))
+
+	if rr.Code == http.StatusNotFound {
+		t.Fatalf("/memberships/revoke should be MOUNTED (got 404)")
+	}
+	if rr.Code == http.StatusOK {
+		t.Fatalf("L2 write must not return 200 without an authenticated, stepped-up admin session")
+	}
+}
+
 // TestMountCapabilitiesRequiresInit fails closed when the pipeline/factory are not
 // initialized, rather than mounting an unguarded surface.
 func TestMountCapabilitiesRequiresInit(t *testing.T) {
