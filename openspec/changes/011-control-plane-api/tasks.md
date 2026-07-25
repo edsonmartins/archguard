@@ -8,8 +8,14 @@
   exige backend real e **recusa servir** a capacidade se indisponível (INV-6/INV-7).
 - [x] **T-003** Controller-ponte Beego→net/http montando `/api/v1/*` pelo padrão SCIM (auth +
   trim de prefixo + `ServeHTTP`).
-- [ ] **T-004** Seam `LegacyBinding` (adapter Beego lê identidade+sessão da sessão do framework)
-  + fiação de `SessionResolver`/`OrgResolver` reais e do `AssuranceMiddleware` no pipeline.
+- [x] **T-004** Fiação do pipeline: adapter `LegacyBinding` (lê o vínculo identidade+sessão do
+  contexto, injetado pelo bridge a partir da sessão do framework), composição de
+  `BridgingResolver`/`OrgResolver`/`AssuranceMiddleware` e um helper de wrap para os handlers de
+  domínio (T-005+). Testado contra o seam; fail-closed sem vínculo.
+- [ ] **T-004b** Bridge login→sessão: no sucesso do login herdado, chamar `EstablishSession`
+  (mapeando usuário Casdoor→`domain.Identity` e resultado do login→AAL/fatores, ADR-0010) e gravar
+  o vínculo na sessão do framework. Ativa o `/api/v1` de domínio. Mini-design apresentado antes de
+  codar (toca INV-1 e fluxo de auth).
 
 ## Montar o que já existe
 

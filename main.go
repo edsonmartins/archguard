@@ -88,6 +88,11 @@ func main() {
 	// are registered (T-005+); the Beego bridge delegates /api/v1/* to it.
 	boot.InitAPIMux()
 
+	// Assurance pipeline (pacote 011, T-004): resolves the session and enforces
+	// operation classification (INV-8) for the mounted domain handlers. Fail-closed
+	// until the login bridge (T-004b) establishes sessions.
+	boot.InitPipeline(boot.Pool())
+
 	object.InitDefaultStorageProvider()
 	object.InitLogProviders()
 	object.InitLdapAutoSynchronizer()
