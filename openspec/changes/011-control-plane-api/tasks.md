@@ -4,7 +4,7 @@
 
 - [x] **T-001** Pool pgx de runtime no boot (`postgres.NewPool` após `RunMigrations`), com posse
   e `Close` no shutdown.
-- [ ] **T-002** Factory de adapters por perfil de implantação: dev = local/provisional; conforme
+- [x] **T-002** Factory de adapters por perfil de implantação: dev = local/provisional; conforme
   exige backend real e **recusa servir** a capacidade se indisponível (INV-6/INV-7).
 - [ ] **T-003** Controller-ponte Beego→net/http montando `/api/v1/*` pelo padrão SCIM (auth +
   trim de prefixo + `ServeHTTP`).
