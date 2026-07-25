@@ -111,6 +111,12 @@ func main() {
 	// until the login bridge (T-004b) establishes sessions.
 	boot.InitPipeline(boot.Pool())
 
+	// Mount the control-plane capability handlers onto /api/v1 (pacote 011, T-005+),
+	// each wrapped by the assurance pipeline and classified (INV-8).
+	if err := boot.MountCapabilities(); err != nil {
+		panic(fmt.Sprintf("montagem das capacidades do control plane (pacote 011) falhou: %v", err))
+	}
+
 	object.InitDefaultStorageProvider()
 	object.InitLogProviders()
 	object.InitLdapAutoSynchronizer()

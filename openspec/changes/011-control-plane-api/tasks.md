@@ -19,7 +19,7 @@
 
 ## Montar o que já existe
 
-- [ ] **T-005** Montar audit-verify (`AuditVerifier` → handler) sob `/api/v1`, classificado L3.
+- [x] **T-005** Montar audit-verify (`AuditVerifier` → handler) sob `/api/v1`, classificado L3.
 - [ ] **T-006** Compor as portas OIDC (`AuthCodeIssuer`/`AuthCodeGrant`/`RefreshGrant`/
   `EndSession` dos stores + `oidc.Signer`) e montar `OIDCServer.Handler()`.
 - [ ] **T-007** Montar SCIM Users/Groups (`DirectoryProvisioner` → handlers) sob a API versionada.

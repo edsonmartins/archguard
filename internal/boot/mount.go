@@ -15,6 +15,7 @@
 package boot
 
 import (
+	"encoding/json"
 	"net/http"
 	"sync"
 )
@@ -65,6 +66,17 @@ func APIHandler() http.Handler {
 		return nil
 	}
 	return apiMux
+}
+
+// unavailableHandler serves 503 with a fixed message. Capability mounts use it to
+// fail closed for a backend that is not wired in the active profile (never open,
+// never a dev backend in production).
+func unavailableHandler(msg string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": msg})
+	})
 }
 
 // handleVersion is the built-in liveness/version probe of the control-plane API.
