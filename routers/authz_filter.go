@@ -304,6 +304,14 @@ func getImpersonateUser(ctx *context.Context, subOwner, subName, username string
 }
 
 func ApiFilter(ctx *context.Context) {
+	// ArchGuard control-plane API (pacote 011): /api/v1 autentica e autoriza a si
+	// mesmo no pipeline do composition root (sessão, nível de garantia INV-8, escopo
+	// de tenant, gates de admin/PDP). Ele BYPASSA o ApiFilter Casbin legado, que o
+	// rejeitaria como objeto desconhecido — a auth NÃO é removida, muda de camada.
+	if strings.HasPrefix(ctx.Request.URL.Path, "/api/v1/") {
+		return
+	}
+
 	subOwner, subName := getSubject(ctx)
 	// stash current user info into request context for controllers
 	username := ""
