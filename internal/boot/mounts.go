@@ -55,6 +55,9 @@ func MountCapabilities() error {
 	if err := mountGrants(p, f); err != nil {
 		return fmt.Errorf("montar grants: %w", err)
 	}
+	if err := mountAccessReview(p, f); err != nil {
+		return fmt.Errorf("montar access-review: %w", err)
+	}
 	if err := mountAuditVerify(p, f); err != nil {
 		return fmt.Errorf("montar audit-verify: %w", err)
 	}
@@ -114,6 +117,29 @@ func mountMemberships(p *Pipeline, f *Factory) error {
 	}
 	handler := apihttp.NewMembershipsHandler(postgres.NewTenantMembershipLister(f.Pool()))
 	RegisterAPIHandler("/memberships", p.Require(opID, apihttp.RequireAdmin(handler)))
+	return nil
+}
+
+// mountAccessReview mounts GET /api/v1/access/effective (pacote 011, T-013/020 —
+// revisão de acesso). Wires the PostgresPDP (pacote 007) into the composition root
+// and lets the console query effective privileged access. Admin-gated (L1 + admin).
+//
+// The PDP reads the authz_tuple projection; that projection is still empty in
+// runtime (the grant→tuple wiring — outbox/publisher — and the asset model are
+// pending, RFC-0004 §9/M4), so it correctly DENIES today (fail-closed). As the
+// projection is activated, this endpoint lights up with real decisions — the PDP
+// itself is now wired and fail-closed.
+func mountAccessReview(p *Pipeline, f *Factory) error {
+	const opID = "access.review"
+	if err := p.RegisterOperation(domain.Operation{
+		ID:          opID,
+		Level:       domain.L1,
+		Description: "revisão de acesso efetivo (PDP) — administração",
+	}); err != nil {
+		return err
+	}
+	handler := apihttp.NewAccessHandler(postgres.NewPostgresPDP(f.Pool()))
+	RegisterAPIHandler("/access/effective", p.Require(opID, apihttp.RequireAdmin(handler)))
 	return nil
 }
 

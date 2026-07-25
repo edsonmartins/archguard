@@ -159,6 +159,28 @@ func TestMountGrantsIsMountedAndAdminGated(t *testing.T) {
 	}
 }
 
+// TestMountAccessReviewIsMountedAndAdminGated: /access/effective is reachable
+// (not 404) but admin-gated — an unauthenticated request never returns 200.
+func TestMountAccessReviewIsMountedAndAdminGated(t *testing.T) {
+	resetMux()
+	InitAPIMux()
+	InitPipeline(nil)
+	InitFactory(deploy.Dev, nil, nil)
+	if err := MountCapabilities(); err != nil {
+		t.Fatalf("MountCapabilities: %v", err)
+	}
+
+	rr := httptest.NewRecorder()
+	APIHandler().ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/access/effective?membership=x&asset=y", nil))
+
+	if rr.Code == http.StatusNotFound {
+		t.Fatalf("/access/effective should be MOUNTED (got 404)")
+	}
+	if rr.Code == http.StatusOK {
+		t.Fatalf("/access/effective must not return 200 without an authenticated admin session")
+	}
+}
+
 // TestMountCapabilitiesRequiresInit fails closed when the pipeline/factory are not
 // initialized, rather than mounting an unguarded surface.
 func TestMountCapabilitiesRequiresInit(t *testing.T) {
