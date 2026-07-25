@@ -126,12 +126,7 @@ func InitAPI() {
 	web.Router("/api/delete-resource", &controllers.ApiController{}, "POST:DeleteResource")
 	web.Router("/api/upload-resource", &controllers.ApiController{}, "POST:UploadResource")
 
-	web.Router("/api/update-agent", &controllers.ApiController{}, "POST:UpdateAgent")
-	web.Router("/api/add-agent", &controllers.ApiController{}, "POST:AddAgent")
-	web.Router("/api/delete-agent", &controllers.ApiController{}, "POST:DeleteAgent")
-
 	web.Router("/api/scan", &controllers.ApiController{}, "GET:Scan")
-	web.Router("/api/sync-mcp-tool", &controllers.ApiController{}, "POST:SyncMcpTool")
 
 	web.Router("/api/get-entries", &controllers.ApiController{}, "GET:GetEntries")
 	web.Router("/api/get-entry", &controllers.ApiController{}, "GET:GetEntry")
