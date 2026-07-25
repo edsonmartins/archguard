@@ -39,9 +39,29 @@ func MountCapabilities() error {
 		return fmt.Errorf("boot: factory não inicializada; chame InitFactory antes de MountCapabilities")
 	}
 
+	if err := mountSession(p); err != nil {
+		return fmt.Errorf("montar session: %w", err)
+	}
 	if err := mountAuditVerify(p, f); err != nil {
 		return fmt.Errorf("montar audit-verify: %w", err)
 	}
+	return nil
+}
+
+// mountSession mounts GET /api/v1/session (pacote 011, T-008 — contexto da sessão
+// do chamador). Classified L1: any authenticated caller may read its own context.
+// The pipeline still denies an unauthenticated request (no session ⇒ deny), so the
+// handler only runs for a resolved session.
+func mountSession(p *Pipeline) error {
+	const opID = "session.read"
+	if err := p.RegisterOperation(domain.Operation{
+		ID:          opID,
+		Level:       domain.L1,
+		Description: "leitura do contexto da própria sessão",
+	}); err != nil {
+		return err
+	}
+	RegisterAPIHandler("/session", p.Require(opID, apihttp.NewSessionContextHandler()))
 	return nil
 }
 

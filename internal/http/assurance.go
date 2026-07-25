@@ -41,6 +41,23 @@ type TenantFloor interface {
 	RequiredAAL(ctx context.Context, organizationID uuid.UUID) (domain.AAL, error)
 }
 
+// sessionCtxKey is the private context key under which the assurance middleware
+// injects the resolved session for downstream handlers.
+type sessionCtxKey struct{}
+
+// withSession returns a context carrying the resolved auth session.
+func withSession(ctx context.Context, s *domain.AuthSession) context.Context {
+	return context.WithValue(ctx, sessionCtxKey{}, s)
+}
+
+// SessionFromContext returns the auth session the assurance middleware injected on
+// the authorized path, or (nil, false) when absent. Console handlers read the
+// caller's identity and active tenant from it.
+func SessionFromContext(ctx context.Context) (*domain.AuthSession, bool) {
+	s, ok := ctx.Value(sessionCtxKey{}).(*domain.AuthSession)
+	return s, ok && s != nil
+}
+
 // AssuranceMiddleware enforces operation classification (INV-8 / ADR-0010) on
 // HTTP handlers. It is thin (CLAUDE.md §6): it resolves the session, asks the
 // domain guard, and on denial emits a step-up CHALLENGE that names the acr the
@@ -89,7 +106,10 @@ func (m *AssuranceMiddleware) Require(operationID string, next http.Handler) htt
 
 		err := m.guard.Authorize(operationID, session, floor, m.now())
 		if err == nil {
-			next.ServeHTTP(w, r)
+			// Inject the resolved session so the handler can read the caller's
+			// context without resolving it again. Only reached on the authorized
+			// path, so the session is present and valid.
+			next.ServeHTTP(w, r.WithContext(withSession(r.Context(), session)))
 			return
 		}
 
