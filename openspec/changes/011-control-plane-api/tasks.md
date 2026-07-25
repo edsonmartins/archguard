@@ -6,7 +6,7 @@
   e `Close` no shutdown.
 - [x] **T-002** Factory de adapters por perfil de implantação: dev = local/provisional; conforme
   exige backend real e **recusa servir** a capacidade se indisponível (INV-6/INV-7).
-- [ ] **T-003** Controller-ponte Beego→net/http montando `/api/v1/*` pelo padrão SCIM (auth +
+- [x] **T-003** Controller-ponte Beego→net/http montando `/api/v1/*` pelo padrão SCIM (auth +
   trim de prefixo + `ServeHTTP`).
 - [ ] **T-004** Seam `LegacyBinding` (adapter Beego lê identidade+sessão da sessão do framework)
   + fiação de `SessionResolver`/`OrgResolver` reais e do `AssuranceMiddleware` no pipeline.

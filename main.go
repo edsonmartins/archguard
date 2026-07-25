@@ -84,6 +84,10 @@ func main() {
 	}
 	defer boot.ClosePool()
 
+	// Control-plane API mux (pacote 011, T-003). Built before capability handlers
+	// are registered (T-005+); the Beego bridge delegates /api/v1/* to it.
+	boot.InitAPIMux()
+
 	object.InitDefaultStorageProvider()
 	object.InitLogProviders()
 	object.InitLdapAutoSynchronizer()

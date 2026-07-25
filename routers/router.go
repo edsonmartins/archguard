@@ -349,4 +349,9 @@ func InitAPI() {
 
 	web.Router("/scim/*", &controllers.RootController{}, "*:HandleScim")
 
+	// ArchGuard control-plane API (pacote 011): the versioned public surface the
+	// console consumes. The wildcard route bridges to the composition root's mux;
+	// handlers are registered at boot (main.go → boot.RegisterAPIHandler).
+	web.Router("/api/v1/*", &controllers.RootController{}, "*:HandleControlPlane")
+
 }
