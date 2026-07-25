@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/beego/beego/v2/server/web"
@@ -27,6 +28,7 @@ import (
 	"github.com/casdoor/casdoor/authz"
 	"github.com/casdoor/casdoor/conf"
 	"github.com/casdoor/casdoor/controllers"
+	"github.com/casdoor/casdoor/internal/adapters/openbao"
 	"github.com/casdoor/casdoor/internal/boot"
 	"github.com/casdoor/casdoor/internal/deploy"
 	"github.com/casdoor/casdoor/internal/domain"
@@ -85,10 +87,18 @@ func main() {
 	}
 	defer boot.ClosePool()
 
-	// Adapter factory (pacote 011, T-002/T-004b): selects adapters by deployment
-	// profile and vends the key custodian (dev: keystore-backed provisional;
-	// conformant: fail-closed until OpenBao). The dev keystore is nil outside dev.
-	boot.InitFactory(deploy.Active(), boot.Pool(), object.DevKeystore())
+	// Adapter factory (pacote 011): selects adapters by deployment profile and vends
+	// the key custodian / secret store. Dev uses the keystore-backed provisional;
+	// a CONFORMANT profile uses OpenBao (ADR-0012), configured via VAULT_ADDR +
+	// VAULT_TOKEN (the token is a secret — env only, never app.conf). A conformant
+	// profile without a vault stays fail-closed on custody.
+	var vaultClient *openbao.Client
+	if deploy.Active().Conformant() {
+		if addr, token := os.Getenv("VAULT_ADDR"), os.Getenv("VAULT_TOKEN"); addr != "" && token != "" {
+			vaultClient = openbao.New(addr, token)
+		}
+	}
+	boot.InitFactory(deploy.Active(), boot.Pool(), object.DevKeystore(), vaultClient)
 
 	// Seed the built-in admin's domain identity + membership (pacote 011, T-004b)
 	// so the console works for the inherited admin. Runs only where custody is

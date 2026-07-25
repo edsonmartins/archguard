@@ -21,11 +21,12 @@ import (
 	"testing"
 
 	"github.com/casdoor/casdoor/internal/adapters/keystore"
+	"github.com/casdoor/casdoor/internal/adapters/openbao"
 	"github.com/casdoor/casdoor/internal/deploy"
 )
 
 func TestFactoryProfileAndPool(t *testing.T) {
-	f := NewFactory(deploy.Dev, nil, nil)
+	f := NewFactory(deploy.Dev, nil, nil, nil)
 	if f.Profile() != deploy.Dev {
 		t.Fatalf("Profile() = %v, want %v", f.Profile(), deploy.Dev)
 	}
@@ -35,7 +36,7 @@ func TestFactoryProfileAndPool(t *testing.T) {
 }
 
 func TestCustodyAvailableInDev(t *testing.T) {
-	f := NewFactory(deploy.Dev, nil, nil)
+	f := NewFactory(deploy.Dev, nil, nil, nil)
 	if !f.CustodyAvailable() {
 		t.Fatalf("dev profile should have custody available (local/provisional)")
 	}
@@ -49,7 +50,7 @@ func TestCustodyAvailableInDev(t *testing.T) {
 // custody. Covers spec scenario "Adapter de desenvolvimento em perfil conforme".
 func TestCustodyFailsClosedInConformant(t *testing.T) {
 	for _, p := range []deploy.Profile{deploy.Pilot, deploy.Production} {
-		f := NewFactory(p, nil, nil)
+		f := NewFactory(p, nil, nil, nil)
 		if f.CustodyAvailable() {
 			t.Fatalf("profile %v must NOT report custody available (OpenBao not wired)", p)
 		}
@@ -63,8 +64,24 @@ func TestCustodyFailsClosedInConformant(t *testing.T) {
 	}
 }
 
+// TestCustodyConformantWithVault: a conformant profile WITH an OpenBao client has
+// custody available and vends the OpenBao-backed custodian + secret store (built
+// without calling the vault — the remote call happens on use).
+func TestCustodyConformantWithVault(t *testing.T) {
+	f := NewFactory(deploy.Production, nil, nil, openbao.New("http://vault:8200", "tok"))
+	if !f.CustodyAvailable() {
+		t.Fatalf("conformant with a vault should report custody available")
+	}
+	if cust, err := f.KeyCustodian(); err != nil || cust == nil {
+		t.Fatalf("conformant+vault KeyCustodian: cust=%v err=%v", cust, err)
+	}
+	if ss, err := f.SecretStore(); err != nil || ss == nil {
+		t.Fatalf("conformant+vault SecretStore: ss=%v err=%v", ss, err)
+	}
+}
+
 func TestKeyCustodianDevWithoutKeystoreFailsClosed(t *testing.T) {
-	f := NewFactory(deploy.Dev, nil, nil) // no keystore
+	f := NewFactory(deploy.Dev, nil, nil, nil) // no keystore
 	if _, err := f.KeyCustodian(); err == nil {
 		t.Fatalf("KeyCustodian in dev without a keystore should error, not build a keyless custodian")
 	}
@@ -72,7 +89,7 @@ func TestKeyCustodianDevWithoutKeystoreFailsClosed(t *testing.T) {
 
 func TestKeyCustodianDevBuildsFromKeystore(t *testing.T) {
 	ks := openTempKeystore(t)
-	f := NewFactory(deploy.Dev, nil, ks)
+	f := NewFactory(deploy.Dev, nil, ks, nil)
 
 	cust, err := f.KeyCustodian()
 	if err != nil {

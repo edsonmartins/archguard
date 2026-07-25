@@ -30,7 +30,7 @@ func TestMountAuditVerifyIsMountedAndFailsClosed(t *testing.T) {
 	resetMux()
 	InitAPIMux()
 	InitPipeline(nil)
-	InitFactory(deploy.Dev, nil, nil)
+	InitFactory(deploy.Dev, nil, nil, nil)
 
 	if err := MountCapabilities(); err != nil {
 		t.Fatalf("MountCapabilities: %v", err)
@@ -54,7 +54,7 @@ func TestMountSessionIsMountedAndFailsClosed(t *testing.T) {
 	resetMux()
 	InitAPIMux()
 	InitPipeline(nil)
-	InitFactory(deploy.Dev, nil, nil)
+	InitFactory(deploy.Dev, nil, nil, nil)
 	if err := MountCapabilities(); err != nil {
 		t.Fatalf("MountCapabilities: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestMountTenantsIsMountedAndFailsClosed(t *testing.T) {
 	resetMux()
 	InitAPIMux()
 	InitPipeline(nil)
-	InitFactory(deploy.Dev, nil, nil)
+	InitFactory(deploy.Dev, nil, nil, nil)
 	if err := MountCapabilities(); err != nil {
 		t.Fatalf("MountCapabilities: %v", err)
 	}
@@ -99,7 +99,7 @@ func TestMountMembershipsIsMountedAndAdminGated(t *testing.T) {
 	resetMux()
 	InitAPIMux()
 	InitPipeline(nil)
-	InitFactory(deploy.Dev, nil, nil)
+	InitFactory(deploy.Dev, nil, nil, nil)
 	if err := MountCapabilities(); err != nil {
 		t.Fatalf("MountCapabilities: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestMountHealthIsMountedAndAdminGated(t *testing.T) {
 	resetMux()
 	InitAPIMux()
 	InitPipeline(nil)
-	InitFactory(deploy.Dev, nil, nil)
+	InitFactory(deploy.Dev, nil, nil, nil)
 	if err := MountCapabilities(); err != nil {
 		t.Fatalf("MountCapabilities: %v", err)
 	}
@@ -143,7 +143,7 @@ func TestMountGrantsIsMountedAndAdminGated(t *testing.T) {
 	resetMux()
 	InitAPIMux()
 	InitPipeline(nil)
-	InitFactory(deploy.Dev, nil, nil)
+	InitFactory(deploy.Dev, nil, nil, nil)
 	if err := MountCapabilities(); err != nil {
 		t.Fatalf("MountCapabilities: %v", err)
 	}
@@ -165,7 +165,7 @@ func TestMountAccessReviewIsMountedAndAdminGated(t *testing.T) {
 	resetMux()
 	InitAPIMux()
 	InitPipeline(nil)
-	InitFactory(deploy.Dev, nil, nil)
+	InitFactory(deploy.Dev, nil, nil, nil)
 	if err := MountCapabilities(); err != nil {
 		t.Fatalf("MountCapabilities: %v", err)
 	}
@@ -187,7 +187,7 @@ func TestMountFactorEnrollmentIsMountedAndFailsClosed(t *testing.T) {
 	resetMux()
 	InitAPIMux()
 	InitPipeline(nil)
-	InitFactory(deploy.Dev, nil, openTempKeystore(t))
+	InitFactory(deploy.Dev, nil, openTempKeystore(t), nil)
 	if err := MountCapabilities(); err != nil {
 		t.Fatalf("MountCapabilities: %v", err)
 	}
@@ -209,7 +209,7 @@ func TestMountStepUpIsMountedAndFailsClosed(t *testing.T) {
 	resetMux()
 	InitAPIMux()
 	InitPipeline(nil)
-	InitFactory(deploy.Dev, nil, openTempKeystore(t))
+	InitFactory(deploy.Dev, nil, openTempKeystore(t), nil)
 	if err := MountCapabilities(); err != nil {
 		t.Fatalf("MountCapabilities: %v", err)
 	}
@@ -232,7 +232,7 @@ func TestMountMembershipRevokeIsMountedAndL2Gated(t *testing.T) {
 	resetMux()
 	InitAPIMux()
 	InitPipeline(nil)
-	InitFactory(deploy.Dev, nil, nil)
+	InitFactory(deploy.Dev, nil, nil, nil)
 	if err := MountCapabilities(); err != nil {
 		t.Fatalf("MountCapabilities: %v", err)
 	}
@@ -254,7 +254,7 @@ func TestMountAuditTimelineIsMountedAndAdminGated(t *testing.T) {
 	resetMux()
 	InitAPIMux()
 	InitPipeline(nil)
-	InitFactory(deploy.Dev, nil, nil)
+	InitFactory(deploy.Dev, nil, nil, nil)
 	if err := MountCapabilities(); err != nil {
 		t.Fatalf("MountCapabilities: %v", err)
 	}

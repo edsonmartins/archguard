@@ -23,16 +23,25 @@ import (
 
 	"github.com/casdoor/casdoor/internal/adapters/keycustodian"
 	"github.com/casdoor/casdoor/internal/adapters/keystore"
+	"github.com/casdoor/casdoor/internal/adapters/openbao"
 	"github.com/casdoor/casdoor/internal/adapters/secretstore"
 	"github.com/casdoor/casdoor/internal/deploy"
 	"github.com/casdoor/casdoor/internal/domain"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// custodyKeyName is the sealed-keystore entry under which the dev key custodian's
-// deployment key lives. Generated once and reused so email_hash stays stable
-// across restarts (dedup depends on a stable HMAC key).
-const custodyKeyName = "archguard-custody-deployment-key"
+const (
+	// custodyKeyName is the sealed-keystore entry under which the DEV key
+	// custodian's deployment key lives. Generated once and reused so email_hash
+	// stays stable across restarts (dedup depends on a stable HMAC key).
+	custodyKeyName = "archguard-custody-deployment-key"
+
+	// Conformant custody lives in OpenBao (ADR-0012). These are the mount paths and
+	// the e-mail-hash transit key the factory uses for pilot/production.
+	vaultTransitMount = "transit"
+	vaultKVMount      = "secret"
+	vaultEmailHashKey = "archguard-email-hash"
+)
 
 // Factory is the single place where the deployment profile decides which adapter
 // backs each capability — the selection that was previously dispersed across the
@@ -54,6 +63,7 @@ type Factory struct {
 	profile  deploy.Profile
 	pool     *pgxpool.Pool
 	keystore *keystore.SealedKeystore // dev key material store; nil outside dev
+	vault    *openbao.Client          // conformant custody backend; nil if not configured
 
 	custodyOnce sync.Once
 	custody     domain.KeyCustodian
@@ -64,10 +74,11 @@ type Factory struct {
 	secretErr   error
 }
 
-// NewFactory builds a Factory for the active deployment profile, runtime pool and
-// (dev only) sealed keystore. The keystore may be nil outside dev.
-func NewFactory(profile deploy.Profile, pool *pgxpool.Pool, ks *keystore.SealedKeystore) *Factory {
-	return &Factory{profile: profile, pool: pool, keystore: ks}
+// NewFactory builds a Factory for the active deployment profile, runtime pool,
+// (dev only) sealed keystore and (conformant only) OpenBao client. The keystore is
+// nil outside dev; the vault is nil unless OpenBao is configured.
+func NewFactory(profile deploy.Profile, pool *pgxpool.Pool, ks *keystore.SealedKeystore, vault *openbao.Client) *Factory {
+	return &Factory{profile: profile, pool: pool, keystore: ks, vault: vault}
 }
 
 // Pool returns the runtime pool the composition root passes to the stores. It is
@@ -88,9 +99,9 @@ var ErrCustodyBackendUnavailable = errors.New(
 
 // CustodyAvailable reports whether the composition root can serve custody-
 // dependent capabilities under the active profile. Dev uses the local/provisional
-// custodian, so it is available; conformant profiles require OpenBao, which is not
-// wired yet, so they are not.
-func (f *Factory) CustodyAvailable() bool { return f.profile.IsDev() }
+// custodian; a conformant profile uses OpenBao, available only when a vault client
+// is configured. A conformant profile WITHOUT a vault has no custody (fail-closed).
+func (f *Factory) CustodyAvailable() bool { return f.profile.IsDev() || f.vault != nil }
 
 // RequireCustody returns nil when custody is available under the active profile,
 // or ErrCustodyBackendUnavailable otherwise. Custody-dependent code calls this
@@ -109,12 +120,17 @@ func (f *Factory) RequireCustody() error {
 // (and thus dedup) is stable across restarts. The Provisional custodian is a
 // development stand-in, never production (ADR-0012).
 //
-// Conformant: ErrCustodyBackendUnavailable — the OpenBao-backed custodian is not
-// wired here; the caller must refuse the custody-dependent operation (fail-closed).
+// Conformant: an OpenBao transit HMAC custodian (the deployment key never leaves
+// the vault). Without a configured vault, ErrCustodyBackendUnavailable — the caller
+// must refuse the custody-dependent operation (fail-closed, never dev custody).
 func (f *Factory) KeyCustodian() (domain.KeyCustodian, error) {
 	f.custodyOnce.Do(func() {
 		if !f.profile.IsDev() {
-			f.custodyErr = ErrCustodyBackendUnavailable
+			if f.vault == nil {
+				f.custodyErr = ErrCustodyBackendUnavailable
+				return
+			}
+			f.custody = openbao.NewTransitCustodian(f.vault, vaultTransitMount, vaultEmailHashKey)
 			return
 		}
 		if f.keystore == nil {
@@ -143,7 +159,11 @@ func (f *Factory) KeyCustodian() (domain.KeyCustodian, error) {
 func (f *Factory) SecretStore() (domain.SecretStore, error) {
 	f.secretOnce.Do(func() {
 		if !f.profile.IsDev() {
-			f.secretErr = ErrCustodyBackendUnavailable
+			if f.vault == nil {
+				f.secretErr = ErrCustodyBackendUnavailable
+				return
+			}
+			f.secretStore = openbao.NewKVSecretStore(f.vault, vaultKVMount)
 			return
 		}
 		if f.keystore == nil {
@@ -189,10 +209,10 @@ var (
 
 // InitFactory builds the adapter factory for the active profile and stores it.
 // Must run at boot after InitPool.
-func InitFactory(profile deploy.Profile, pool *pgxpool.Pool, ks *keystore.SealedKeystore) {
+func InitFactory(profile deploy.Profile, pool *pgxpool.Pool, ks *keystore.SealedKeystore, vault *openbao.Client) {
 	factoryMu.Lock()
 	defer factoryMu.Unlock()
-	activeFactory = NewFactory(profile, pool, ks)
+	activeFactory = NewFactory(profile, pool, ks, vault)
 }
 
 // ActiveFactory returns the boot factory, or nil if InitFactory has not run.

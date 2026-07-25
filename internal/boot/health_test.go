@@ -26,7 +26,7 @@ import (
 // (never faked ok), and dev custody is ok. No database needed.
 func TestHealthCheckerReportsHonestState(t *testing.T) {
 	deploy.SetActive(deploy.Dev)
-	h := healthChecker{pool: nil, factory: NewFactory(deploy.Dev, nil, nil)}
+	h := healthChecker{pool: nil, factory: NewFactory(deploy.Dev, nil, nil, nil)}
 
 	subs := h.CheckHealth(context.Background())
 	byName := map[string]apihttp.Subsystem{}
