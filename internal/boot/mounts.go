@@ -49,6 +49,9 @@ func MountCapabilities() error {
 	if err := mountMemberships(p, f); err != nil {
 		return fmt.Errorf("montar memberships: %w", err)
 	}
+	if err := mountHealth(p, f); err != nil {
+		return fmt.Errorf("montar health: %w", err)
+	}
 	if err := mountAuditVerify(p, f); err != nil {
 		return fmt.Errorf("montar audit-verify: %w", err)
 	}
@@ -108,6 +111,24 @@ func mountMemberships(p *Pipeline, f *Factory) error {
 	}
 	handler := apihttp.NewMembershipsHandler(postgres.NewTenantMembershipLister(f.Pool()))
 	RegisterAPIHandler("/memberships", p.Require(opID, apihttp.RequireAdmin(handler)))
+	return nil
+}
+
+// mountHealth mounts GET /api/v1/health (pacote 011, T-014 — saúde dos subsistemas).
+// Admin-gated operational view (L1 + RequireAdmin). Reports the honest state of the
+// subsystems the composition root can observe; as PDP/audit are wired, their probes
+// join the report.
+func mountHealth(p *Pipeline, f *Factory) error {
+	const opID = "health.read"
+	if err := p.RegisterOperation(domain.Operation{
+		ID:          opID,
+		Level:       domain.L1,
+		Description: "saúde dos subsistemas (administração)",
+	}); err != nil {
+		return err
+	}
+	handler := apihttp.NewHealthHandler(healthChecker{pool: f.Pool(), factory: f})
+	RegisterAPIHandler("/health", p.Require(opID, apihttp.RequireAdmin(handler)))
 	return nil
 }
 
