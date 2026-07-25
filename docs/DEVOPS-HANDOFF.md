@@ -10,6 +10,30 @@ fechar o bloco de observabilidade/compliance operacional.
 > produção substitui pela implementação real. Nada no domínio precisa mudar — o
 > handoff é DI (injeção de dependência) + infraestrutura.
 
+## Atualização 2026-07-25 — pacote 011 (composition root NO REPO PRINCIPAL)
+
+Parte grande do que este handoff previa para o devops **já foi feita no repo
+principal** pelo **pacote 011 (Control Plane API)**. O *composition root* deixou de
+ser tarefa do devops:
+
+- **Feito no repo principal (`internal/boot/**` + `controllers/control_plane.go`):**
+  pool pgx de runtime; **factory de adapters por perfil** (dev = provisional/keystore;
+  conforme = **fail-closed** até OpenBao); ponte Beego→net/http em **`/api/v1`**;
+  **pipeline de garantia** (INV-8) + **gate de admin** + **PDP (007) ligado**; bridge
+  **login→sessão** + **seed do admin**; **step-up TOTP → L2** (enrollment + elevação);
+  e **13 endpoints** de console (session, tenants, memberships, memberships/revoke,
+  grants, access/effective, audit/timeline, audit/verify, health, factors/totp/*,
+  stepup/totp). A trilha de auditoria **escreve** (membership.revoke) e **lê**
+  (audit/timeline).
+- **O que o devops (`archguard-devops`) provê agora** (escopo estreitado a INFRA +
+  CONFIG): subir a stack (Swarm/Traefik/PostgreSQL/**OpenBao**/**OpenFGA**/OTel);
+  `deploymentProfile=production` + DSN + endpoint do OpenBao + exportador OTLP;
+  **provisionar o cert de token contra o cofre** (§3.1); a **projeção grant→tuple**
+  (outbox/publisher/OpenFGA) e o **sealer** da trilha (Ed25519); imagem assinada
+  não-root; smoke test. Em perfil conforme, as capacidades de custódia
+  (KeyCustodian, SecretStore, signer) **recusam fechado** até o OpenBao estar ligado —
+  é aí que o devops entra.
+
 ---
 
 ## 1. Estado do repositório principal (pacotes 001–010)

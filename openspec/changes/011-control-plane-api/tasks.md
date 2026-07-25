@@ -46,7 +46,7 @@
 - [ ] **T-017** Suíte de invariantes estendida à camada montada: endpoint sem tenant nega
   (INV-5), fail-closed em dependência crítica (INV-6, incl. teste dedicado que falta), garantia
   por operação (INV-8).
-- [ ] **T-018** Atualizar `docs/DEVOPS-HANDOFF.md` e `docs/upstream/DIVERGENCE.md`: composition
+- [x] **T-018** Atualizar `docs/DEVOPS-HANDOFF.md` e `docs/upstream/DIVERGENCE.md`: composition
   root migrou para o repo principal; devops mantém só infra/endpoint.
 
 ## Gate de verificação
