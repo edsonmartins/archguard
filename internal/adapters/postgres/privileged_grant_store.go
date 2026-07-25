@@ -163,6 +163,34 @@ func (s *PrivilegedGrantStore) ListActiveExpired(ctx context.Context, now time.T
 	return out, rows.Err()
 }
 
+// ListActive returns the tenant's currently-active privileged grants — the data
+// the console's grants screen shows. Tenant-scoped (explicit predicate + RLS via
+// WithTenantTx, INV-5). Unlike ListActiveExpired it does not filter by expiry; the
+// caller decides what to do with grants whose window has lapsed but not yet expired.
+func (s *PrivilegedGrantStore) ListActive(ctx context.Context) ([]domain.PrivilegedGrant, error) {
+	const q = `
+		SELECT id::text, organization_id::text, subject_membership_id::text,
+		       target_type, target_id, target_scope, origin, status, required_approvals,
+		       not_before, expires_at, justification, incident_ref
+		FROM privileged_grant
+		WHERE organization_id = $1 AND status = 'active'
+		ORDER BY not_before`
+	rows, err := s.ttx.tx.Query(ctx, q, s.ttx.scope.OrganizationID().String())
+	if err != nil {
+		return nil, fmt.Errorf("postgres: listagem de concessões ativas falhou: %w", err)
+	}
+	defer rows.Close()
+	var out []domain.PrivilegedGrant
+	for rows.Next() {
+		g, err := scanGrant(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, g)
+	}
+	return out, rows.Err()
+}
+
 // scanGrant reads one privileged_grant row (see the shared column order).
 func scanGrant(row pgx.Row) (domain.PrivilegedGrant, error) {
 	var g domain.PrivilegedGrant

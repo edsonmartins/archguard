@@ -137,6 +137,28 @@ func TestMountHealthIsMountedAndAdminGated(t *testing.T) {
 	}
 }
 
+// TestMountGrantsIsMountedAndAdminGated: /grants is reachable (not 404) but
+// admin-gated — an unauthenticated request never returns 200.
+func TestMountGrantsIsMountedAndAdminGated(t *testing.T) {
+	resetMux()
+	InitAPIMux()
+	InitPipeline(nil)
+	InitFactory(deploy.Dev, nil, nil)
+	if err := MountCapabilities(); err != nil {
+		t.Fatalf("MountCapabilities: %v", err)
+	}
+
+	rr := httptest.NewRecorder()
+	APIHandler().ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/grants", nil))
+
+	if rr.Code == http.StatusNotFound {
+		t.Fatalf("/grants should be MOUNTED (got 404)")
+	}
+	if rr.Code == http.StatusOK {
+		t.Fatalf("/grants must not return 200 without an authenticated admin session")
+	}
+}
+
 // TestMountCapabilitiesRequiresInit fails closed when the pipeline/factory are not
 // initialized, rather than mounting an unguarded surface.
 func TestMountCapabilitiesRequiresInit(t *testing.T) {

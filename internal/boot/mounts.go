@@ -52,6 +52,9 @@ func MountCapabilities() error {
 	if err := mountHealth(p, f); err != nil {
 		return fmt.Errorf("montar health: %w", err)
 	}
+	if err := mountGrants(p, f); err != nil {
+		return fmt.Errorf("montar grants: %w", err)
+	}
 	if err := mountAuditVerify(p, f); err != nil {
 		return fmt.Errorf("montar audit-verify: %w", err)
 	}
@@ -111,6 +114,24 @@ func mountMemberships(p *Pipeline, f *Factory) error {
 	}
 	handler := apihttp.NewMembershipsHandler(postgres.NewTenantMembershipLister(f.Pool()))
 	RegisterAPIHandler("/memberships", p.Require(opID, apihttp.RequireAdmin(handler)))
+	return nil
+}
+
+// mountGrants mounts GET /api/v1/grants (pacote 011, T-013 — concessões vigentes).
+// Administration view: L1 + RequireAdmin. Lists the active privileged grants of the
+// session's tenant (no PDP — listing needs only the grant store; the PDP decides
+// session opening, not this read). The target asset is an opaque ref (no catalog).
+func mountGrants(p *Pipeline, f *Factory) error {
+	const opID = "grants.list"
+	if err := p.RegisterOperation(domain.Operation{
+		ID:          opID,
+		Level:       domain.L1,
+		Description: "listar as concessões privilegiadas vigentes do tenant (administração)",
+	}); err != nil {
+		return err
+	}
+	handler := apihttp.NewGrantsHandler(postgres.NewTenantGrantLister(f.Pool()))
+	RegisterAPIHandler("/grants", p.Require(opID, apihttp.RequireAdmin(handler)))
 	return nil
 }
 
