@@ -304,171 +304,178 @@ func (a *Ormer) close() {
 	finalizer(a)
 }
 
+// createTable sincroniza o esquema das tabelas legadas do Casdoor. Usa Sync (ADITIVO:
+// cria tabela/coluna/índice que falta) em vez de Sync2 (DESTRUTIVO: dropa índices do
+// DB ausentes no struct). Motivo: as migrations do ArchGuard (internal/migrate)
+// adicionam colunas/índices (id estável, chaves de RLS) às tabelas gerenciadas pelo
+// XORM; o Sync2 tentaria dropar esses índices a CADA boot e panicava no restart
+// (nome de DROP reconstruído incorreto). Sync não dropa — o boot fica restart-safe.
+// A evolução destrutiva de esquema é responsabilidade das migrations, não do Sync.
 func (a *Ormer) createTable() {
 	showSql := conf.GetConfigBool("showSql")
 	a.Engine.ShowSQL(showSql)
 
-	err := a.Engine.Sync2(new(Organization))
+	err := a.Engine.Sync(new(Organization))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Group))
+	err = a.Engine.Sync(new(Group))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(User))
+	err = a.Engine.Sync(new(User))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Invitation))
+	err = a.Engine.Sync(new(Invitation))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Application))
+	err = a.Engine.Sync(new(Application))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Provider))
+	err = a.Engine.Sync(new(Provider))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Resource))
+	err = a.Engine.Sync(new(Resource))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Cert))
+	err = a.Engine.Sync(new(Cert))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Key))
+	err = a.Engine.Sync(new(Key))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Role))
+	err = a.Engine.Sync(new(Role))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Permission))
+	err = a.Engine.Sync(new(Permission))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Model))
+	err = a.Engine.Sync(new(Model))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Adapter))
+	err = a.Engine.Sync(new(Adapter))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Enforcer))
+	err = a.Engine.Sync(new(Enforcer))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Session))
+	err = a.Engine.Sync(new(Session))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Token))
+	err = a.Engine.Sync(new(Token))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Transaction))
+	err = a.Engine.Sync(new(Transaction))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Coupon))
+	err = a.Engine.Sync(new(Coupon))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(CouponUsage))
+	err = a.Engine.Sync(new(CouponUsage))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Syncer))
+	err = a.Engine.Sync(new(Syncer))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Record))
+	err = a.Engine.Sync(new(Record))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Webhook))
+	err = a.Engine.Sync(new(Webhook))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(WebhookEvent))
+	err = a.Engine.Sync(new(WebhookEvent))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(VerificationRecord))
+	err = a.Engine.Sync(new(VerificationRecord))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Ldap))
+	err = a.Engine.Sync(new(Ldap))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(RadiusAccounting))
+	err = a.Engine.Sync(new(RadiusAccounting))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(xormadapter.CasbinRule))
+	err = a.Engine.Sync(new(xormadapter.CasbinRule))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Form))
+	err = a.Engine.Sync(new(Form))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Ticket))
+	err = a.Engine.Sync(new(Ticket))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Entry))
+	err = a.Engine.Sync(new(Entry))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Site))
+	err = a.Engine.Sync(new(Site))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(Rule))
+	err = a.Engine.Sync(new(Rule))
 	if err != nil {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(ThirdPartyLink))
+	err = a.Engine.Sync(new(ThirdPartyLink))
 	if err != nil {
 		panic(err)
 	}
