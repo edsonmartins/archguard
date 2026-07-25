@@ -100,6 +100,15 @@ func main() {
 	}
 	boot.InitFactory(deploy.Active(), boot.Pool(), object.DevKeystore(), vaultClient)
 
+	// In a conformant profile, install the OpenBao KV as the signing-key custody
+	// store so SealCerts vaults the token key and CertPrivateKeyPEM resolves it from
+	// the vault (INV-7) — never plaintext in the DB. Dev keeps the local keystore.
+	if deploy.Active().Conformant() {
+		if ss, serr := boot.ActiveFactory().SecretStore(); serr == nil {
+			object.SetVaultSecretStore(ss)
+		}
+	}
+
 	// Seed the built-in admin's domain identity + membership (pacote 011, T-004b)
 	// so the console works for the inherited admin. Runs only where custody is
 	// available (dev); conformant profiles skip it until OpenBao is wired. Idempotent
