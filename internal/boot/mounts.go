@@ -58,6 +58,9 @@ func MountCapabilities() error {
 	if err := mountAccessReview(p, f); err != nil {
 		return fmt.Errorf("montar access-review: %w", err)
 	}
+	if err := mountFactorEnrollment(p, f); err != nil {
+		return fmt.Errorf("montar factor-enrollment: %w", err)
+	}
 	if err := mountAuditVerify(p, f); err != nil {
 		return fmt.Errorf("montar audit-verify: %w", err)
 	}
@@ -117,6 +120,35 @@ func mountMemberships(p *Pipeline, f *Factory) error {
 	}
 	handler := apihttp.NewMembershipsHandler(postgres.NewTenantMembershipLister(f.Pool()))
 	RegisterAPIHandler("/memberships", p.Require(opID, apihttp.RequireAdmin(handler)))
+	return nil
+}
+
+// mountFactorEnrollment mounts POST /api/v1/factors/totp/{begin,verify} (pacote
+// 011, T-008/005 — inscrição de fator). Classified L1 and AllowedDuringEnrollment:
+// a caller with only a password must be able to enroll a strong factor (the
+// prerequisite for step-up), even under the mandatory-enrollment block. Fail-closed
+// where the vault is unavailable (conformant without OpenBao).
+func mountFactorEnrollment(p *Pipeline, f *Factory) error {
+	const opID = "factors.totp.enroll"
+	if err := p.RegisterOperation(domain.Operation{
+		ID:                      opID,
+		Level:                   domain.L1,
+		Description:             "inscrição de fator TOTP",
+		AllowedDuringEnrollment: true,
+	}); err != nil {
+		return err
+	}
+
+	enroller, err := newTOTPEnroller(f)
+	if err != nil {
+		unavailable := unavailableHandler("inscrição de fator indisponível: cofre de segredos não ligado no perfil ativo")
+		RegisterAPIHandler("/factors/totp/begin", p.Require(opID, unavailable))
+		RegisterAPIHandler("/factors/totp/verify", p.Require(opID, unavailable))
+		return nil
+	}
+	handler := apihttp.NewFactorsHandler(enroller)
+	RegisterAPIHandler("/factors/totp/begin", p.Require(opID, http.HandlerFunc(handler.BeginTOTP)))
+	RegisterAPIHandler("/factors/totp/verify", p.Require(opID, http.HandlerFunc(handler.FinishTOTP)))
 	return nil
 }
 

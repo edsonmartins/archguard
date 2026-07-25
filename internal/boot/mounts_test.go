@@ -181,6 +181,28 @@ func TestMountAccessReviewIsMountedAndAdminGated(t *testing.T) {
 	}
 }
 
+// TestMountFactorEnrollmentIsMountedAndFailsClosed: the enrollment endpoints are
+// reachable (not 404) but require a session — an unbound request never returns 200.
+func TestMountFactorEnrollmentIsMountedAndFailsClosed(t *testing.T) {
+	resetMux()
+	InitAPIMux()
+	InitPipeline(nil)
+	InitFactory(deploy.Dev, nil, openTempKeystore(t))
+	if err := MountCapabilities(); err != nil {
+		t.Fatalf("MountCapabilities: %v", err)
+	}
+
+	rr := httptest.NewRecorder()
+	APIHandler().ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/factors/totp/begin", nil))
+
+	if rr.Code == http.StatusNotFound {
+		t.Fatalf("/factors/totp/begin should be MOUNTED (got 404)")
+	}
+	if rr.Code == http.StatusOK {
+		t.Fatalf("factor enrollment must not return 200 without an authenticated session")
+	}
+}
+
 // TestMountCapabilitiesRequiresInit fails closed when the pipeline/factory are not
 // initialized, rather than mounting an unguarded surface.
 func TestMountCapabilitiesRequiresInit(t *testing.T) {

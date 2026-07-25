@@ -23,6 +23,7 @@ import (
 
 	"github.com/casdoor/casdoor/internal/adapters/keycustodian"
 	"github.com/casdoor/casdoor/internal/adapters/keystore"
+	"github.com/casdoor/casdoor/internal/adapters/secretstore"
 	"github.com/casdoor/casdoor/internal/deploy"
 	"github.com/casdoor/casdoor/internal/domain"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -57,6 +58,10 @@ type Factory struct {
 	custodyOnce sync.Once
 	custody     domain.KeyCustodian
 	custodyErr  error
+
+	secretOnce  sync.Once
+	secretStore domain.SecretStore
+	secretErr   error
 }
 
 // NewFactory builds a Factory for the active deployment profile, runtime pool and
@@ -129,6 +134,25 @@ func (f *Factory) KeyCustodian() (domain.KeyCustodian, error) {
 		f.custody = cust
 	})
 	return f.custody, f.custodyErr
+}
+
+// SecretStore returns the reversible-secret vault for the active profile, built
+// once. Dev: a Provisional store backed by the sealed keystore (custodies TOTP
+// seeds, INV-7). Conformant: ErrCustodyBackendUnavailable — OpenBao is not wired
+// here; the caller must refuse the secret-dependent operation (fail-closed).
+func (f *Factory) SecretStore() (domain.SecretStore, error) {
+	f.secretOnce.Do(func() {
+		if !f.profile.IsDev() {
+			f.secretErr = ErrCustodyBackendUnavailable
+			return
+		}
+		if f.keystore == nil {
+			f.secretErr = fmt.Errorf("boot: keystore de dev não aberto; não é possível abrir o secret store")
+			return
+		}
+		f.secretStore = secretstore.NewProvisional(f.keystore)
+	})
+	return f.secretStore, f.secretErr
 }
 
 // devCustodyKey returns the 256-bit dev custody deployment key, generating and
