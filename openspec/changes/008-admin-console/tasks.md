@@ -40,8 +40,13 @@
         (namer `OrgDisplayNamer`, fallback ao UUID). i18n en+pt. Ponte de login já ligada
         (auth.go→bridgeDomainSession→BridgeLogin), então o admin logado resolve o `/api/v1`.
         Build local + VPS + testes verdes.
-- [ ] **T-005** Interceptor global de step-up: captura garantia insuficiente, apresenta desafio
-      WebAuthn e **retoma a operação** preservando o estado do formulário; cancelar mantém o form.
+- [x] **T-005** Interceptor global de step-up: no `cpRequest` (ControlPlaneBackend), um 401 RFC 9470
+      (`WWW-Authenticate: insufficient_user_authentication`) chama um handler registrado por
+      `web/src/common/StepUpModal.js` (montado no App), que conduz o desafio TOTP (`/stepup/totp`) e,
+      no sucesso, **repete a operação original uma vez** — o formulário do chamador é preservado (ele
+      só aguarda a promessa); cancelar rejeita e mantém o form. Distingue step-up de 401 de sessão
+      ausente; nunca recursa no próprio `/stepup/totp`. Fator: TOTP (o exposto no `/api/v1`); WebAuthn
+      é refinamento posterior. i18n en+pt. Build local + contrato verdes.
 
 ## Telas críticas de PAM (o que o herdado não tem)
 - [ ] **T-006** Concessões vigentes (privileged grants) com contagem regressiva e revogação.

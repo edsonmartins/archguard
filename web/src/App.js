@@ -24,6 +24,7 @@ import {AiDots} from "./common/Loading";
 import {Route, Switch, withRouter} from "react-router-dom";
 import CustomGithubCorner from "./common/CustomGithubCorner";
 import CustomHead from "./basic/CustomHead";
+import StepUpModal from "./common/StepUpModal";
 import * as Conf from "./Conf";
 import {shadcnDarkThemeComponents, shadcnDarkThemeToken, shadcnThemeComponents, shadcnThemeToken} from "./shadcnTheme";
 
@@ -603,6 +604,7 @@ class App extends Component {
           <StyleProvider hashPriority="high" transformers={[legacyLogicalPropertiesTransformer]}>
             <Layout id="parent-area">
               <CustomHead id="page" headerHtml={this.state.application?.pageHtml} />
+              <StepUpModal />
               <Content style={{display: "flex", justifyContent: "center"}}>
                 {
                   this.isEntryPages() ?

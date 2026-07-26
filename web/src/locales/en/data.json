@@ -369,6 +369,11 @@
     "Width": "Width"
   },
   "general": {
+    "Invalid code": "Invalid code",
+    "Step-up completed": "Step-up completed",
+    "Additional confirmation required": "Additional confirmation required",
+    "This operation requires a stronger factor": "This operation requires a stronger factor. Enter your authenticator code.",
+    "Authenticator code": "Authenticator code",
     "Tenant": "Tenant",
     "Tenant switched": "Tenant switched",
     "Step-up required to switch tenant": "Step-up required to switch tenant",

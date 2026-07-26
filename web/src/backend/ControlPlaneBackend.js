@@ -25,6 +25,29 @@ import * as Setting from "../Setting";
 
 const BASE = "/api/v1";
 
+// Interceptor global de step-up (pacote 008, T-005). Uma operação que exige garantia
+// maior responde 401 RFC 9470 (`WWW-Authenticate: insufficient_user_authentication`);
+// o `cpRequest` chama este handler (registrado por <StepUpModal/>), que conduz o
+// desafio (TOTP) e resolve `true` no sucesso — a operação ORIGINAL é então repetida,
+// preservando o estado (o chamador só aguarda a promessa). `false` = cancelado.
+let stepUpHandler = null;
+
+/**
+ * Registra (ou limpa com null) o handler de step-up: `() => Promise<boolean>`.
+ * @param {null | (() => Promise<boolean>)} fn
+ */
+export function setStepUpHandler(fn) {
+  stepUpHandler = fn;
+}
+
+// isStepUpChallenge distingue o 401 de garantia insuficiente (RFC 9470) de um 401 de
+// sessão ausente/credencial — só o primeiro dispara o interceptor.
+function isStepUpChallenge(res, parsed) {
+  const wa = res.headers.get("WWW-Authenticate") || "";
+  const err = (parsed && (parsed.error || "")) || "";
+  return wa.includes("insufficient_user_authentication") || err.includes("insufficient_user_authentication");
+}
+
 /**
  * Erro de chamada ao plano de controle. `status` distingue negação (403) de falha (5xx).
  */
@@ -47,7 +70,7 @@ export class ControlPlaneError extends Error {
  * @param {{query?: Record<string, string|number|undefined>, body?: unknown}} [opts]
  * @returns {Promise<any>}
  */
-export async function cpRequest(method, path, opts = {}) {
+export async function cpRequest(method, path, opts = {}, _retried = false) {
   const {query, body} = opts;
   let url = `${Setting.ServerUrl}${BASE}${path}`;
   if (query) {
@@ -82,6 +105,14 @@ export async function cpRequest(method, path, opts = {}) {
     }
   }
   if (!res.ok) {
+    // Step-up transparente (T-005): 401 de garantia insuficiente ⇒ conduz o desafio e
+    // repete a operação UMA vez. Nunca no próprio /stepup/totp (evita recursão).
+    if (res.status === 401 && !_retried && path !== "/stepup/totp" && stepUpHandler && isStepUpChallenge(res, parsed)) {
+      const ok = await stepUpHandler();
+      if (ok) {
+        return cpRequest(method, path, opts, true);
+      }
+    }
     const msg = (parsed && (parsed.error || parsed.msg)) || `HTTP ${res.status}`;
     throw new ControlPlaneError(msg, res.status, parsed);
   }

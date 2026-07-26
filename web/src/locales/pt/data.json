@@ -368,6 +368,11 @@
     "Width": "Largura"
   },
   "general": {
+    "Invalid code": "Código inválido",
+    "Step-up completed": "Step-up concluído",
+    "Additional confirmation required": "Confirmação adicional necessária",
+    "This operation requires a stronger factor": "Esta operação exige um fator mais forte. Informe o código do seu autenticador.",
+    "Authenticator code": "Código do autenticador",
     "Tenant": "Tenant",
     "Tenant switched": "Tenant alterado",
     "Step-up required to switch tenant": "Step-up necessário para trocar de tenant",
