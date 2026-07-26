@@ -83,6 +83,28 @@ function migrate(db: Database.Database): void {
     );
     CREATE INDEX IF NOT EXISTS idx_sites_stack ON sites (stack);
     CREATE INDEX IF NOT EXISTS idx_sites_tenant ON sites (tenant_group);
+
+    -- Org Credential Broker (ADR-013) — metadata only; secrets in OpenBao
+    CREATE TABLE IF NOT EXISTS org_accounts (
+      id                      TEXT PRIMARY KEY,
+      slug                    TEXT NOT NULL UNIQUE,
+      name                    TEXT NOT NULL,
+      category                TEXT NOT NULL DEFAULT 'other',
+      product                 TEXT NOT NULL DEFAULT '',
+      url                     TEXT NOT NULL DEFAULT '',
+      login_hint              TEXT NOT NULL DEFAULT '',
+      auth_kind               TEXT NOT NULL DEFAULT 'password',
+      secret_ref              TEXT NOT NULL DEFAULT '',
+      criticality             TEXT NOT NULL DEFAULT 'P2',
+      owner_group             TEXT NOT NULL DEFAULT '',
+      requires_dual_control   INTEGER NOT NULL DEFAULT 0,
+      notes                   TEXT NOT NULL DEFAULT '',
+      runbook_url             TEXT NOT NULL DEFAULT '',
+      updated_at              TEXT NOT NULL,
+      updated_by              TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_org_accounts_category ON org_accounts (category);
+    CREATE INDEX IF NOT EXISTS idx_org_accounts_criticality ON org_accounts (criticality);
   `)
   // Migrate older DBs that lack multi-connector column
   try {

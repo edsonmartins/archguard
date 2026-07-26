@@ -18,6 +18,7 @@ import {
   Cloud,
   Gauge,
   Database,
+  Landmark,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -119,6 +120,12 @@ const navGroups: NavGroup[] = [
         to: '/secrets',
         icon: KeyRoundIcon,
         permission: 'secrets:read',
+      },
+      {
+        labelKey: 'nav.orgAccounts',
+        to: '/org-accounts',
+        icon: Landmark,
+        permission: 'org_accounts:read',
       },
       {
         labelKey: 'nav.oracle',

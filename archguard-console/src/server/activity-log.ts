@@ -69,6 +69,12 @@ function deriveAction(method: string, path: string): string {
     if (method === 'DELETE') return 'Excluir site'
     if (method === 'PUT' || method === 'POST') return 'Salvar site'
   }
+  if (path.startsWith('/archgate/org-accounts')) {
+    if (path.includes('/checkout')) return 'Checkout conta org'
+    if (path.includes('/checkin')) return 'Check-in conta org'
+    if (method === 'DELETE') return 'Excluir conta org'
+    if (method === 'PUT' || method === 'POST') return 'Salvar conta org'
+  }
   if (path.startsWith('/archgate/connector')) return 'Checklist connector'
   if (path.includes('/targets/') && path.includes('/secret'))
     return 'Secret de target (OpenBao)'

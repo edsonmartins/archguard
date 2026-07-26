@@ -24,6 +24,7 @@ import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settin
 import { Route as AuthedServiceAccountsIndexRouteImport } from './routes/_authed/service-accounts/index'
 import { Route as AuthedSecretsIndexRouteImport } from './routes/_authed/secrets/index'
 import { Route as AuthedPlatformIndexRouteImport } from './routes/_authed/platform/index'
+import { Route as AuthedOrgAccountsIndexRouteImport } from './routes/_authed/org-accounts/index'
 import { Route as AuthedOracleIndexRouteImport } from './routes/_authed/oracle/index'
 import { Route as AuthedOauth2IndexRouteImport } from './routes/_authed/oauth2/index'
 import { Route as AuthedIdentitiesIndexRouteImport } from './routes/_authed/identities/index'
@@ -44,6 +45,7 @@ import { Route as AuthedGroupsCreateRouteImport } from './routes/_authed/groups/
 import { Route as AuthedGroupsGroupIdRouteImport } from './routes/_authed/groups/$groupId'
 import { Route as ApiUnifiedV1SessionsRouteImport } from './routes/api/unified/v1/sessions'
 import { Route as ApiUnifiedV1ConnectionsRouteImport } from './routes/api/unified/v1/connections'
+import { Route as ApiOrgV1AccountsRouteImport } from './routes/api/org/v1/accounts'
 import { Route as ApiLabV1GrantTargetRouteImport } from './routes/api/lab/v1/grant-target'
 import { Route as AuthedSitesSlugEditRouteImport } from './routes/_authed/sites/$slug.edit'
 import { Route as ApiUnifiedV1OperatorBootstrapRouteImport } from './routes/api/unified/v1/operator/bootstrap'
@@ -122,6 +124,11 @@ const AuthedSecretsIndexRoute = AuthedSecretsIndexRouteImport.update({
 const AuthedPlatformIndexRoute = AuthedPlatformIndexRouteImport.update({
   id: '/platform/',
   path: '/platform/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedOrgAccountsIndexRoute = AuthedOrgAccountsIndexRouteImport.update({
+  id: '/org-accounts/',
+  path: '/org-accounts/',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedOracleIndexRoute = AuthedOracleIndexRouteImport.update({
@@ -228,6 +235,11 @@ const ApiUnifiedV1ConnectionsRoute = ApiUnifiedV1ConnectionsRouteImport.update({
   path: '/api/unified/v1/connections',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOrgV1AccountsRoute = ApiOrgV1AccountsRouteImport.update({
+  id: '/api/org/v1/accounts',
+  path: '/api/org/v1/accounts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiLabV1GrantTargetRoute = ApiLabV1GrantTargetRouteImport.update({
   id: '/api/lab/v1/grant-target',
   path: '/api/lab/v1/grant-target',
@@ -279,6 +291,7 @@ export interface FileRoutesByFullPath {
   '/identities/': typeof AuthedIdentitiesIndexRoute
   '/oauth2/': typeof AuthedOauth2IndexRoute
   '/oracle/': typeof AuthedOracleIndexRoute
+  '/org-accounts/': typeof AuthedOrgAccountsIndexRoute
   '/platform/': typeof AuthedPlatformIndexRoute
   '/secrets/': typeof AuthedSecretsIndexRoute
   '/service-accounts/': typeof AuthedServiceAccountsIndexRoute
@@ -286,6 +299,7 @@ export interface FileRoutesByFullPath {
   '/sites/': typeof AuthedSitesIndexRoute
   '/sites/$slug/edit': typeof AuthedSitesSlugEditRoute
   '/api/lab/v1/grant-target': typeof ApiLabV1GrantTargetRoute
+  '/api/org/v1/accounts': typeof ApiOrgV1AccountsRoute
   '/api/unified/v1/connections': typeof ApiUnifiedV1ConnectionsRoute
   '/api/unified/v1/sessions': typeof ApiUnifiedV1SessionsRoute
   '/api/unified/v1/auth/callback': typeof ApiUnifiedV1AuthCallbackRoute
@@ -319,6 +333,7 @@ export interface FileRoutesByTo {
   '/identities': typeof AuthedIdentitiesIndexRoute
   '/oauth2': typeof AuthedOauth2IndexRoute
   '/oracle': typeof AuthedOracleIndexRoute
+  '/org-accounts': typeof AuthedOrgAccountsIndexRoute
   '/platform': typeof AuthedPlatformIndexRoute
   '/secrets': typeof AuthedSecretsIndexRoute
   '/service-accounts': typeof AuthedServiceAccountsIndexRoute
@@ -326,6 +341,7 @@ export interface FileRoutesByTo {
   '/sites': typeof AuthedSitesIndexRoute
   '/sites/$slug/edit': typeof AuthedSitesSlugEditRoute
   '/api/lab/v1/grant-target': typeof ApiLabV1GrantTargetRoute
+  '/api/org/v1/accounts': typeof ApiOrgV1AccountsRoute
   '/api/unified/v1/connections': typeof ApiUnifiedV1ConnectionsRoute
   '/api/unified/v1/sessions': typeof ApiUnifiedV1SessionsRoute
   '/api/unified/v1/auth/callback': typeof ApiUnifiedV1AuthCallbackRoute
@@ -361,6 +377,7 @@ export interface FileRoutesById {
   '/_authed/identities/': typeof AuthedIdentitiesIndexRoute
   '/_authed/oauth2/': typeof AuthedOauth2IndexRoute
   '/_authed/oracle/': typeof AuthedOracleIndexRoute
+  '/_authed/org-accounts/': typeof AuthedOrgAccountsIndexRoute
   '/_authed/platform/': typeof AuthedPlatformIndexRoute
   '/_authed/secrets/': typeof AuthedSecretsIndexRoute
   '/_authed/service-accounts/': typeof AuthedServiceAccountsIndexRoute
@@ -368,6 +385,7 @@ export interface FileRoutesById {
   '/_authed/sites/': typeof AuthedSitesIndexRoute
   '/_authed/sites/$slug/edit': typeof AuthedSitesSlugEditRoute
   '/api/lab/v1/grant-target': typeof ApiLabV1GrantTargetRoute
+  '/api/org/v1/accounts': typeof ApiOrgV1AccountsRoute
   '/api/unified/v1/connections': typeof ApiUnifiedV1ConnectionsRoute
   '/api/unified/v1/sessions': typeof ApiUnifiedV1SessionsRoute
   '/api/unified/v1/auth/callback': typeof ApiUnifiedV1AuthCallbackRoute
@@ -403,6 +421,7 @@ export interface FileRouteTypes {
     | '/identities/'
     | '/oauth2/'
     | '/oracle/'
+    | '/org-accounts/'
     | '/platform/'
     | '/secrets/'
     | '/service-accounts/'
@@ -410,6 +429,7 @@ export interface FileRouteTypes {
     | '/sites/'
     | '/sites/$slug/edit'
     | '/api/lab/v1/grant-target'
+    | '/api/org/v1/accounts'
     | '/api/unified/v1/connections'
     | '/api/unified/v1/sessions'
     | '/api/unified/v1/auth/callback'
@@ -443,6 +463,7 @@ export interface FileRouteTypes {
     | '/identities'
     | '/oauth2'
     | '/oracle'
+    | '/org-accounts'
     | '/platform'
     | '/secrets'
     | '/service-accounts'
@@ -450,6 +471,7 @@ export interface FileRouteTypes {
     | '/sites'
     | '/sites/$slug/edit'
     | '/api/lab/v1/grant-target'
+    | '/api/org/v1/accounts'
     | '/api/unified/v1/connections'
     | '/api/unified/v1/sessions'
     | '/api/unified/v1/auth/callback'
@@ -484,6 +506,7 @@ export interface FileRouteTypes {
     | '/_authed/identities/'
     | '/_authed/oauth2/'
     | '/_authed/oracle/'
+    | '/_authed/org-accounts/'
     | '/_authed/platform/'
     | '/_authed/secrets/'
     | '/_authed/service-accounts/'
@@ -491,6 +514,7 @@ export interface FileRouteTypes {
     | '/_authed/sites/'
     | '/_authed/sites/$slug/edit'
     | '/api/lab/v1/grant-target'
+    | '/api/org/v1/accounts'
     | '/api/unified/v1/connections'
     | '/api/unified/v1/sessions'
     | '/api/unified/v1/auth/callback'
@@ -505,6 +529,7 @@ export interface RootRouteChildren {
   TestLoginRoute: typeof TestLoginRoute
   UnauthorizedRoute: typeof UnauthorizedRoute
   ApiLabV1GrantTargetRoute: typeof ApiLabV1GrantTargetRoute
+  ApiOrgV1AccountsRoute: typeof ApiOrgV1AccountsRoute
   ApiUnifiedV1ConnectionsRoute: typeof ApiUnifiedV1ConnectionsRoute
   ApiUnifiedV1SessionsRoute: typeof ApiUnifiedV1SessionsRoute
   ApiUnifiedV1AuthCallbackRoute: typeof ApiUnifiedV1AuthCallbackRoute
@@ -616,6 +641,13 @@ declare module '@tanstack/react-router' {
       path: '/platform'
       fullPath: '/platform/'
       preLoaderRoute: typeof AuthedPlatformIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/org-accounts/': {
+      id: '/_authed/org-accounts/'
+      path: '/org-accounts'
+      fullPath: '/org-accounts/'
+      preLoaderRoute: typeof AuthedOrgAccountsIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/oracle/': {
@@ -758,6 +790,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUnifiedV1ConnectionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/org/v1/accounts': {
+      id: '/api/org/v1/accounts'
+      path: '/api/org/v1/accounts'
+      fullPath: '/api/org/v1/accounts'
+      preLoaderRoute: typeof ApiOrgV1AccountsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/lab/v1/grant-target': {
       id: '/api/lab/v1/grant-target'
       path: '/api/lab/v1/grant-target'
@@ -824,6 +863,7 @@ interface AuthedRouteChildren {
   AuthedIdentitiesIndexRoute: typeof AuthedIdentitiesIndexRoute
   AuthedOauth2IndexRoute: typeof AuthedOauth2IndexRoute
   AuthedOracleIndexRoute: typeof AuthedOracleIndexRoute
+  AuthedOrgAccountsIndexRoute: typeof AuthedOrgAccountsIndexRoute
   AuthedPlatformIndexRoute: typeof AuthedPlatformIndexRoute
   AuthedSecretsIndexRoute: typeof AuthedSecretsIndexRoute
   AuthedServiceAccountsIndexRoute: typeof AuthedServiceAccountsIndexRoute
@@ -854,6 +894,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedIdentitiesIndexRoute: AuthedIdentitiesIndexRoute,
   AuthedOauth2IndexRoute: AuthedOauth2IndexRoute,
   AuthedOracleIndexRoute: AuthedOracleIndexRoute,
+  AuthedOrgAccountsIndexRoute: AuthedOrgAccountsIndexRoute,
   AuthedPlatformIndexRoute: AuthedPlatformIndexRoute,
   AuthedSecretsIndexRoute: AuthedSecretsIndexRoute,
   AuthedServiceAccountsIndexRoute: AuthedServiceAccountsIndexRoute,
@@ -872,6 +913,7 @@ const rootRouteChildren: RootRouteChildren = {
   TestLoginRoute: TestLoginRoute,
   UnauthorizedRoute: UnauthorizedRoute,
   ApiLabV1GrantTargetRoute: ApiLabV1GrantTargetRoute,
+  ApiOrgV1AccountsRoute: ApiOrgV1AccountsRoute,
   ApiUnifiedV1ConnectionsRoute: ApiUnifiedV1ConnectionsRoute,
   ApiUnifiedV1SessionsRoute: ApiUnifiedV1SessionsRoute,
   ApiUnifiedV1AuthCallbackRoute: ApiUnifiedV1AuthCallbackRoute,

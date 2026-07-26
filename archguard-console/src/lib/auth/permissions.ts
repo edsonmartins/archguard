@@ -44,6 +44,11 @@ export type Permission =
   // OpenBao / secrets control plane
   | 'secrets:read'
   | 'secrets:manage'
+  // Org Credential Broker (ADR-013) — IntegrAllTech corporate accounts
+  | 'org_accounts:read'
+  | 'org_accounts:admin'
+  | 'org_accounts:checkout'
+  | 'org_accounts:approve'
   // Sistema
   | 'settings:read'
   | 'settings:update'
@@ -82,6 +87,10 @@ export const ALL_PERMISSIONS: Permission[] = [
   'gateways:manage',
   'secrets:read',
   'secrets:manage',
+  'org_accounts:read',
+  'org_accounts:admin',
+  'org_accounts:checkout',
+  'org_accounts:approve',
   'settings:read',
   'settings:update',
   'system:admin',
@@ -101,6 +110,8 @@ const TENANT_ADMIN_PERMS: Permission[] = [
   'sites:update',
   'gateways:read',
   'secrets:read',
+  'org_accounts:read',
+  'org_accounts:checkout',
 ]
 
 /** Operator / Viewer: read-only authorized scope (5.4). */
@@ -108,6 +119,7 @@ const OPERATOR_READ_PERMS: Permission[] = [
   'persons:read',
   'groups:read',
   'sites:read',
+  'org_accounts:read',
 ]
 
 const GROUP_PERMISSIONS: Record<string, Permission[]> = {
