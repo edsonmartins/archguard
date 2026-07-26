@@ -281,6 +281,8 @@ export type OperatorBastion = {
   pg_host: string
   pg_port: number
   pg_database: string
+  mysql_host: string
+  mysql_port: number
   http_base: string
   guac_base: string
   console_base: string
@@ -315,6 +317,12 @@ export function operatorBastionFromEnv(): OperatorBastion {
       '217.196.60.108',
     pg_port: n('WG_PG_PORT', 55432),
     pg_database: process.env.WG_PG_DB || 'archgate_lab',
+    mysql_host:
+      process.env.WG_MYSQL_HOST ||
+      process.env.WARPGATE_MYSQL_HOST ||
+      process.env.ARCHGATE_VPS_IP ||
+      '217.196.60.108',
+    mysql_port: n('WG_MYSQL_PORT', 33306),
     http_base:
       process.env.WG_HTTP_BASE ||
       process.env.WARPGATE_PUBLIC_URL ||
