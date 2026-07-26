@@ -50,6 +50,14 @@
 
 ## Telas críticas de PAM (o que o herdado não tem)
 - [ ] **T-006** Concessões vigentes (privileged grants) com contagem regressiva e revogação.
+      - [x] **Parte A (lista)** — `web/src/GrantsPage.js`: tabela das concessões vigentes do tenant
+        ativo (GET `/api/v1/grants`, lê a org da sessão) com **contagem regressiva ao vivo** até
+        `expires_at` (verde / laranja <5min / vermelho expirado), alvo/origem/status. Rota `/grants`
+        + grupo de menu "Acesso Privilegiado" (ícone Tabler `key`). i18n en+pt. Fail-closed (sem
+        contexto/negação → vazio). Build local verde.
+      - [ ] **Parte B (revogação)** — expor `POST /api/v1/grants/revoke` (I-7.6; capacidade do pacote
+        004 existe — `privileged_access_service`/`grant_expirer`) + botão de revogar na tabela (L2/L3,
+        via step-up transparente da T-005).
 - [ ] **T-007** Solicitação de break-glass com justificativa e incidente.
 - [ ] **T-008** Fila de aprovação de break-glass (separação de deveres; sem autoaprovação).
 - [ ] **T-009** Timeline de auditoria com filtros + **indicador de integridade da cadeia sempre

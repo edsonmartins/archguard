@@ -369,6 +369,10 @@
     "Width": "Width"
   },
   "general": {
+    "Privileged Access": "Privileged Access",
+    "Active grants": "Active grants",
+    "Origin": "Origin",
+    "No active grants": "No active grants",
     "Invalid code": "Invalid code",
     "Step-up completed": "Step-up completed",
     "Additional confirmation required": "Additional confirmation required",

@@ -23,6 +23,7 @@ import {
   AppstoreOutlined,
   BarsOutlined, CheckCircleOutlined, DeploymentUnitOutlined, DownOutlined,
   HomeOutlined,
+  KeyOutlined,
   LockOutlined, LogoutOutlined,
   MenuFoldOutlined, MenuUnfoldOutlined,
   SafetyCertificateOutlined, SettingOutlined,
@@ -82,6 +83,7 @@ import ThemeSelect from "./common/select/ThemeSelect";
 import OpenTour from "./common/OpenTour";
 import OrganizationSelect from "./common/select/OrganizationSelect";
 import TenantSelect from "./common/select/TenantSelect";
+import GrantsPage from "./GrantsPage";
 import AccountAvatar from "./account/AccountAvatar";
 import BreadcrumbBar from "./common/BreadcrumbBar";
 import {Content, Header} from "antd/es/layout/layout";
@@ -103,6 +105,7 @@ import RuleEditPage from "./RuleEditPage";
 function getMenuParentKey(uri) {
   if (!uri) {return null;}
   if (uri === "/" || uri.includes("/shortcuts") || uri.includes("/apps")) {return "/home";}
+  if (uri.includes("/grants")) {return "/pam";}
   if (uri.includes("/organizations") || uri.includes("/trees") || uri.includes("/groups") || uri.includes("/users") || uri.includes("/invitations")) {return "/orgs";}
   if (uri.includes("/applications") || uri.includes("/providers") || uri.includes("/resources") || uri.includes("/certs") || uri.includes("/keys")) {return "/identity";}
   if (uri.includes("/entries") || uri.includes("/sites") || uri.includes("/rules")) {return "/gateway";}
@@ -368,6 +371,10 @@ function ManagementPage(props) {
       }
     })));
 
+    res.push(Setting.getItem(<Link style={{color: textColor}} to="/grants">{i18next.t("general:Privileged Access")}</Link>, "/pam", <KeyOutlined />, [
+      Setting.getItem(<Link to="/grants">{i18next.t("general:Active grants")}</Link>, "/grants"),
+    ]));
+
     res.push(Setting.getItem(<Link style={{color: textColor}} to="/sites">{i18next.t("general:LLM AI")}</Link>, "/gateway", <CheckCircleOutlined />, [
       Setting.getItem(<Link to="/entries">{i18next.t("general:Entries")}</Link>, "/entries"),
       Setting.getItem(<Link to="/sites">{i18next.t("general:Sites")}</Link>, "/sites"),
@@ -511,6 +518,7 @@ function ManagementPage(props) {
         <Route exact path="/rules" render={(props) => renderLoginIfNotLoggedIn(<RuleListPage account={account} {...props} />)} />
         <Route exact path="/rules/:organizationName/:ruleName" render={(props) => renderLoginIfNotLoggedIn(<RuleEditPage account={account} {...props} />)} />
         <Route exact path="/verifications" render={(props) => renderLoginIfNotLoggedIn(<VerificationListPage account={account} {...props} />)} />
+        <Route exact path="/grants" render={(props) => renderLoginIfNotLoggedIn(<GrantsPage account={account} {...props} />)} />
         <Route exact path="/roles" render={(props) => renderLoginIfNotLoggedIn(<RoleListPage account={account} {...props} />)} />
         <Route exact path="/roles/:organizationName/:roleName" render={(props) => renderLoginIfNotLoggedIn(<RoleEditPage account={account} {...props} />)} />
         <Route exact path="/permissions" render={(props) => renderLoginIfNotLoggedIn(<PermissionListPage account={account} {...props} />)} />

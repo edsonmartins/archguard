@@ -162,11 +162,14 @@ export function revokeMembership(payload) {
 // --- Concessões privilegiadas (T-006) ---
 
 /**
- * Concessões vigentes de um tenant (para contagem regressiva / revogação).
- * @returns {Promise<{grants: Array<object>}>}
+ * Concessões privilegiadas vigentes do TENANT ATIVO da sessão (o backend lê a org da
+ * sessão, nunca do request). Cada item traz `grant_id`, `target_type`/`target_id`/
+ * `target_scope`, `origin`, `status`, `not_before` e `expires_at` (Unix) — base para a
+ * contagem regressiva e a revogação.
+ * @returns {Promise<{grants: Array<{grant_id: string, target_type: string, target_id: string, target_scope?: string, origin: string, status: string, not_before: number, expires_at: number}>}>}
  */
-export function getGrants(organizationId) {
-  return cpRequest("GET", "/grants", {query: {organization_id: organizationId}});
+export function getGrants() {
+  return cpRequest("GET", "/grants");
 }
 
 // --- Auditoria (T-009) ---

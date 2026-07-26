@@ -368,6 +368,10 @@
     "Width": "Largura"
   },
   "general": {
+    "Privileged Access": "Acesso Privilegiado",
+    "Active grants": "Concessões vigentes",
+    "Origin": "Origem",
+    "No active grants": "Nenhuma concessão vigente",
     "Invalid code": "Código inválido",
     "Step-up completed": "Step-up concluído",
     "Additional confirmation required": "Confirmação adicional necessária",
