@@ -513,7 +513,7 @@
     "Keys": "密钥",
     "LDAPs": "LDAP",
     "LDAPs - Tooltip": "已配置的LDAP服务器，用于用户目录同步和身份验证",
-    "LLM AI": "大语言模型AI",
+    "LLM AI": "监控",
     "Languages": "语言",
     "Languages - Tooltip": "可选语言",
     "Last name": "姓氏",

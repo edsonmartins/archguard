@@ -179,7 +179,7 @@ class App extends Component {
       "/organizations", "/groups", "/users", "/invitations", // User Management
       "/applications", "/providers", "/resources", "/certs", "/keys", // Identity
       "/roles", "/permissions", "/models", "/adapters", "/enforcers", // Authorization
-      "/agents", "/servers", "/server-store", "/entries", "/sites", "/rules", // LLM AI
+      "/entries", "/sites", "/rules", // Monitoring
       "/sessions", "/records", "/tokens", "/verifications", // Auditing
       "/product-store", "/products", "/coupons", "/cart", "/orders", "/payments", "/plans", "/pricings", "/subscriptions", "/transactions", // Business
       "/sysinfo", "/forms", "/syncers", "/webhooks", "/webhook-events", "/tickets", "/swagger", // Admin
@@ -221,14 +221,8 @@ class App extends Component {
       }
     } else if (uri.includes("/keys")) {
       return "/keys";
-    } else if (uri.includes("/agents") || uri.includes("/servers") || uri.includes("/entries") || uri.includes("/sites") || uri.includes("/rules")) {
-      if (uri.includes("/agents")) {
-        return "/agents";
-      } else if (uri.includes("/servers")) {
-        return "/servers";
-      } else if (uri.includes("/server-store")) {
-        return "/server-store";
-      } else if (uri.includes("/entries")) {
+    } else if (uri.includes("/entries") || uri.includes("/sites") || uri.includes("/rules")) {
+      if (uri.includes("/entries")) {
         return "/entries";
       } else if (uri.includes("/sites")) {
         return "/sites";
@@ -317,7 +311,7 @@ class App extends Component {
       this.setState({selectedMenuKey: "/orgs"});
     } else if (uri.includes("/applications") || uri.includes("/providers") || uri.includes("/resources") || uri.includes("/certs") || uri.includes("/keys")) {
       this.setState({selectedMenuKey: "/identity"});
-    } else if (uri.includes("/agents") || uri.includes("/servers") || uri.includes("/server-store") || uri.includes("/entries") || uri.includes("/sites") || uri.includes("/rules")) {
+    } else if (uri.includes("/entries") || uri.includes("/sites") || uri.includes("/rules")) {
       this.setState({selectedMenuKey: "/gateway"});
     } else if (uri.includes("/roles") || uri.includes("/permissions") || uri.includes("/models") || uri.includes("/adapters") || uri.includes("/enforcers")) {
       this.setState({selectedMenuKey: "/auth"});

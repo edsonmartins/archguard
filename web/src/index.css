@@ -258,10 +258,10 @@ a[href^="mailto:"]:active {
   min-height: 420px;
 }
 
-/* Sidebar menu: selected item - darker background */
+/* Sidebar menu: selected item - light green (ArchGuard brand) */
 .ant-layout-sider .ant-menu-light .ant-menu-item-selected,
 .ant-layout-sider .ant-menu-light > .ant-menu .ant-menu-item-selected {
-  background-color: rgb(0 0 0 / 15%) !important;
+  background-color: #dcfce7 !important;
 }
 
 /* Sidebar menu container: hide scrollbar but keep scroll behavior */

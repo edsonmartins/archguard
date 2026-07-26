@@ -112,11 +112,6 @@ import TicketListPage from "./TicketListPage";
 import TicketEditPage from "./TicketEditPage";
 import * as Cookie from "cookie";
 import * as UserBackend from "./backend/UserBackend";
-import AgentListPage from "./AgentListPage";
-import AgentEditPage from "./AgentEditPage";
-import ServerListPage from "./ServerListPage";
-import ServerStorePage from "./ServerStorePage";
-import ServerEditPage from "./ServerEditPage";
 import EntryListPage from "./EntryListPage";
 import EntryEditPage from "./EntryEditPage";
 import OpenClawSessionTranscriptPage from "./OpenClawSessionTranscriptPage";
@@ -130,7 +125,7 @@ function getMenuParentKey(uri) {
   if (uri === "/" || uri.includes("/shortcuts") || uri.includes("/apps")) {return "/home";}
   if (uri.includes("/organizations") || uri.includes("/trees") || uri.includes("/groups") || uri.includes("/users") || uri.includes("/invitations")) {return "/orgs";}
   if (uri.includes("/applications") || uri.includes("/providers") || uri.includes("/resources") || uri.includes("/certs") || uri.includes("/keys")) {return "/identity";}
-  if (uri.includes("/agents") || uri.includes("/servers") || uri.includes("/server-store") || uri.includes("/entries") || uri.includes("/sites") || uri.includes("/rules")) {return "/gateway";}
+  if (uri.includes("/entries") || uri.includes("/sites") || uri.includes("/rules")) {return "/gateway";}
   if (uri.includes("/roles") || uri.includes("/permissions") || uri.includes("/models") || uri.includes("/adapters") || uri.includes("/enforcers")) {return "/auth";}
   if (uri.includes("/records") || uri.includes("/tokens") || uri.includes("/sessions") || uri.includes("/verifications")) {return "/logs";}
   if (uri.includes("/product-store") || uri.includes("/products") || uri.includes("/coupons") || uri.includes("/orders") || uri.includes("/payments") || uri.includes("/plans") || uri.includes("/pricings") || uri.includes("/subscriptions") || uri.includes("/transactions") || uri.includes("/cart")) {return "/business";}
@@ -390,9 +385,6 @@ function ManagementPage(props) {
     })));
 
     res.push(Setting.getItem(<Link style={{color: textColor}} to="/sites">{i18next.t("general:LLM AI")}</Link>, "/gateway", <CheckCircleOutlined />, [
-      Setting.getItem(<Link to="/agents">{i18next.t("general:Agents")}</Link>, "/agents"),
-      Setting.getItem(<Link to="/servers">{i18next.t("general:MCP Servers")}</Link>, "/servers"),
-      Setting.getItem(<Link to="/server-store">{i18next.t("general:MCP Store")}</Link>, "/server-store"),
       Setting.getItem(<Link to="/entries">{i18next.t("general:Entries")}</Link>, "/entries"),
       Setting.getItem(<Link to="/sites">{i18next.t("general:Sites")}</Link>, "/sites"),
       Setting.getItem(<Link to="/rules">{i18next.t("general:Rules")}</Link>, "/rules"),
@@ -540,11 +532,6 @@ function ManagementPage(props) {
         <Route exact path="/certs/:organizationName/:certName" render={(props) => renderLoginIfNotLoggedIn(<CertEditPage account={account} {...props} />)} />
         <Route exact path="/keys" render={(props) => renderLoginIfNotLoggedIn(<KeyListPage account={account} {...props} />)} />
         <Route exact path="/keys/:organizationName/:keyName" render={(props) => renderLoginIfNotLoggedIn(<KeyEditPage account={account} {...props} />)} />
-        <Route exact path="/agents" render={(props) => renderLoginIfNotLoggedIn(<AgentListPage account={account} {...props} />)} />
-        <Route exact path="/agents/:organizationName/:agentName" render={(props) => renderLoginIfNotLoggedIn(<AgentEditPage account={account} {...props} />)} />
-        <Route exact path="/servers" render={(props) => renderLoginIfNotLoggedIn(<ServerListPage account={account} {...props} />)} />
-        <Route exact path="/server-store" render={(props) => renderLoginIfNotLoggedIn(<ServerStorePage account={account} {...props} />)} />
-        <Route exact path="/servers/:organizationName/:serverName" render={(props) => renderLoginIfNotLoggedIn(<ServerEditPage account={account} {...props} />)} />
         <Route exact path="/entries" render={(props) => renderLoginIfNotLoggedIn(<EntryListPage account={account} {...props} />)} />
         <Route exact path="/entries/:organizationName/:entryName/transcript" render={(props) => renderLoginIfNotLoggedIn(<OpenClawSessionTranscriptPage account={account} {...props} />)} />
         <Route exact path="/entries/:organizationName/:entryName" render={(props) => renderLoginIfNotLoggedIn(<EntryEditPage account={account} {...props} />)} />

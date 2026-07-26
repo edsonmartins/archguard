@@ -17,11 +17,11 @@
 
 export const shadcnThemeToken = {
   fontFamily: "'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif",
-  colorPrimary: "#262626",
+  colorPrimary: "#16a34a",
   colorSuccess: "#22c55e",
   colorWarning: "#f97316",
   colorError: "#ef4444",
-  colorInfo: "#262626",
+  colorInfo: "#16a34a",
   colorTextBase: "#262626",
   colorBgBase: "#ffffff",
   colorSuccessBg: "#f0fdf4",
@@ -51,7 +51,7 @@ export const shadcnThemeToken = {
   colorErrorText: "#dc2626",
   colorErrorTextHover: "#dc2626",
   colorErrorTextActive: "#b91c1c",
-  colorLink: "#262626",
+  colorLink: "#16a34a",
   colorText: "#262626",
   colorTextSecondary: "#525252",
   colorTextTertiary: "#737373",
@@ -85,8 +85,8 @@ export const shadcnThemeToken = {
 // not be duplicated here — keep this list to genuine light/dark differences.
 export const shadcnDarkThemeToken = {
   ...shadcnThemeToken,
-  colorPrimary: "#fafafa",
-  colorInfo: "#fafafa",
+  colorPrimary: "#22c55e",
+  colorInfo: "#22c55e",
   colorTextBase: "#fafafa",
   colorBgBase: "#0a0a0a",
   colorSuccessBg: "#052e16",
@@ -116,7 +116,7 @@ export const shadcnDarkThemeToken = {
   colorErrorText: "#f87171",
   colorErrorTextHover: "#f87171",
   colorErrorTextActive: "#fca5a5",
-  colorLink: "#fafafa",
+  colorLink: "#22c55e",
   colorText: "#fafafa",
   colorTextSecondary: "#d4d4d4",
   colorTextTertiary: "#a3a3a3",
@@ -197,6 +197,10 @@ export const shadcnThemeComponents = {
     groupTitleFontSize: 12,
     itemHeight: 40,
     fontWeightStrong: 600,
+    // Guarantee readable selected/active items (fixes dark-on-dark contrast).
+    itemSelectedBg: "#f0fdf4",
+    itemSelectedColor: "#15803d",
+    itemActiveBg: "#f0fdf4",
   },
   Table: {
     headerBg: "#fafafa",
@@ -247,11 +251,16 @@ export const shadcnDarkThemeComponents = {
     headerBg: "#18181b",
     headerSplitColor: "#27272a",
   },
-  // The organization theme's primary color (near-black by default) is kept
-  // as-is in dark mode, so selected tab labels need an explicit light color.
+  // Dark-mode selected/active menu items: light-green text on dark-green bg.
+  Menu: {
+    ...shadcnThemeComponents.Menu,
+    itemSelectedBg: "#14532d",
+    itemSelectedColor: "#4ade80",
+    itemActiveBg: "#166534",
+  },
   Tabs: {
-    itemSelectedColor: "#fafafa",
-    itemHoverColor: "#d4d4d4",
-    inkBarColor: "#fafafa",
+    itemSelectedColor: "#4ade80",
+    itemHoverColor: "#86efac",
+    inkBarColor: "#22c55e",
   },
 };
