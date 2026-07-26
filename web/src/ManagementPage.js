@@ -81,6 +81,7 @@ import LanguageSelect from "./common/select/LanguageSelect";
 import ThemeSelect from "./common/select/ThemeSelect";
 import OpenTour from "./common/OpenTour";
 import OrganizationSelect from "./common/select/OrganizationSelect";
+import TenantSelect from "./common/select/TenantSelect";
 import AccountAvatar from "./account/AccountAvatar";
 import BreadcrumbBar from "./common/BreadcrumbBar";
 import {Content, Header} from "antd/es/layout/layout";
@@ -301,6 +302,11 @@ function ManagementPage(props) {
                 🚀 SaaS Hosting 🔥
               </span>
             </a>
+          }
+          {!Setting.isMobile() &&
+            <span style={{marginRight: "10px", display: "flex", alignItems: "center"}}>
+              <TenantSelect />
+            </span>
           }
           {Setting.isAdminUser(props.account) && (props.uri.indexOf("/trees") === -1) &&
             <OrganizationSelect

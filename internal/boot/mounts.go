@@ -130,7 +130,7 @@ func mountTenants(p *Pipeline, f *Factory) error {
 		return err
 	}
 	global := postgres.NewGlobalRepository(f.Pool(), globalaccess.NewProfileAuthorizer(), globalaccess.NewMemoryAuditor())
-	handler := apihttp.NewTenantsHandler(postgres.NewMembershipReader(global))
+	handler := apihttp.NewTenantsHandler(postgres.NewMembershipReader(global), postgres.NewOrgDisplayNamer(f.Pool()))
 	RegisterAPIHandler("/tenants", p.Require(opID, handler))
 	return nil
 }

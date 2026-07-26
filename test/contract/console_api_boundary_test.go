@@ -18,9 +18,22 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
+
+// stripComments remove comentários de linha (//…) e de bloco (/* … */) para que a
+// trava veja apenas CÓDIGO: uma menção a "/api/v1" em comentário (documentação) não
+// é acesso cru; só uma URL/fetch de fato conta.
+var lineComment = regexp.MustCompile(`//[^\n]*`)
+var blockComment = regexp.MustCompile(`(?s)/\*.*?\*/`)
+
+func stripComments(src string) string {
+	src = blockComment.ReplaceAllString(src, "")
+	src = lineComment.ReplaceAllString(src, "")
+	return src
+}
 
 // TestNoRawControlPlaneAccessOutsideModule é a trava automatizável da T-003 (pacote
 // 008): o `/api/v1` (plano de controle) só pode ser referenciado pela camada dedicada
@@ -55,7 +68,7 @@ func TestNoRawControlPlaneAccessOutsideModule(t *testing.T) {
 		if rerr != nil {
 			return rerr
 		}
-		if strings.Contains(string(b), "/api/v1") {
+		if strings.Contains(stripComments(string(b)), "/api/v1") {
 			rel, _ := filepath.Rel(root, path)
 			offenders = append(offenders, rel)
 		}

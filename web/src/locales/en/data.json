@@ -369,6 +369,11 @@
     "Width": "Width"
   },
   "general": {
+    "Tenant": "Tenant",
+    "Tenant switched": "Tenant switched",
+    "Step-up required to switch tenant": "Step-up required to switch tenant",
+    "Not a member of the target tenant": "Not a member of the target tenant",
+    "Failed to switch tenant": "Failed to switch tenant",
     "A normal user can only modify the permission submitted by itself": "A normal user can only modify the permission submitted by itself",
     "AI Assistant": "AI Assistant",
     "API key": "API key",

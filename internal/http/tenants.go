@@ -29,23 +29,34 @@ type MembershipLister interface {
 	ListByIdentity(ctx context.Context, identityID uuid.UUID) ([]domain.Membership, error)
 }
 
+// OrgNamer resolves organization UUIDs to display names for the selector
+// (postgres.OrgDisplayNamer implements it). Optional: a nil namer or a resolution
+// failure degrades to the id — the list still serves, just without friendly names.
+type OrgNamer interface {
+	DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]string, error)
+}
+
 // TenantsHandler serves GET /tenants: the tenants the authenticated caller can act
 // in — the data the console's tenant selector needs. It reads the caller's identity
 // from the injected session, never from the request, so one caller cannot list
-// another's tenants. Thin (CLAUDE.md §6): resolve, list, encode.
+// another's tenants. Thin (CLAUDE.md §6): resolve, list, name, encode.
 type TenantsHandler struct {
 	lister MembershipLister
+	namer  OrgNamer
 }
 
-// NewTenantsHandler builds the handler over a membership lister.
-func NewTenantsHandler(lister MembershipLister) *TenantsHandler {
-	return &TenantsHandler{lister: lister}
+// NewTenantsHandler builds the handler over a membership lister and an org namer
+// (namer may be nil — the list then carries ids without display names).
+func NewTenantsHandler(lister MembershipLister, namer OrgNamer) *TenantsHandler {
+	return &TenantsHandler{lister: lister, namer: namer}
 }
 
-// tenantItem is one selectable tenant. active marks the session's current tenant.
+// tenantItem is one selectable tenant. active marks the session's current tenant;
+// display_name is the friendly org name (falls back to organization_id when absent).
 type tenantItem struct {
 	MembershipID   string `json:"membership_id"`
 	OrganizationID string `json:"organization_id"`
+	DisplayName    string `json:"display_name"`
 	Status         string `json:"status"`
 	Active         bool   `json:"active"`
 }
@@ -69,11 +80,29 @@ func (h *TenantsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Resolve display names (best-effort): a nil namer or a failure degrades to the
+	// id — the tenant list is never withheld for a cosmetic lookup.
+	names := map[uuid.UUID]string{}
+	if h.namer != nil {
+		ids := make([]uuid.UUID, 0, len(memberships))
+		for _, m := range memberships {
+			ids = append(ids, m.OrganizationID)
+		}
+		if resolved, nerr := h.namer.DisplayNames(r.Context(), ids); nerr == nil {
+			names = resolved
+		}
+	}
+
 	items := make([]tenantItem, 0, len(memberships))
 	for _, m := range memberships {
+		name := names[m.OrganizationID]
+		if name == "" {
+			name = m.OrganizationID.String()
+		}
 		items = append(items, tenantItem{
 			MembershipID:   m.ID.String(),
 			OrganizationID: m.OrganizationID.String(),
+			DisplayName:    name,
 			Status:         string(m.Status),
 			Active:         session.OrganizationID != nil && *session.OrganizationID == m.OrganizationID,
 		})

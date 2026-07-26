@@ -37,6 +37,52 @@ func (f *fakeLister) ListByIdentity(_ context.Context, id uuid.UUID) ([]domain.M
 	return f.memberships, f.err
 }
 
+type fakeNamer struct {
+	names map[uuid.UUID]string
+	err   error
+}
+
+func (n *fakeNamer) DisplayNames(_ context.Context, _ []uuid.UUID) (map[uuid.UUID]string, error) {
+	return n.names, n.err
+}
+
+// TestTenantsHandlerResolvesDisplayNames: o item traz o display_name da org quando o
+// namer o conhece; e faz fallback para o organization_id quando não (nunca vazio).
+func TestTenantsHandlerResolvesDisplayNames(t *testing.T) {
+	orgA, orgB := uuid.New(), uuid.New()
+	lister := &fakeLister{memberships: []domain.Membership{
+		{ID: uuid.New(), OrganizationID: orgA, Status: domain.MembershipActive},
+		{ID: uuid.New(), OrganizationID: orgB, Status: domain.MembershipActive},
+	}}
+	namer := &fakeNamer{names: map[uuid.UUID]string{orgA: "Acme"}} // orgB ausente de propósito
+	session := &domain.AuthSession{IdentityID: uuid.New(), OrganizationID: &orgA, Status: domain.SessionActive}
+
+	req := httptest.NewRequest(http.MethodGet, "/tenants", nil)
+	req = req.WithContext(withSession(req.Context(), session))
+	rr := httptest.NewRecorder()
+	NewTenantsHandler(lister, namer).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status %d, want 200", rr.Code)
+	}
+	var body struct {
+		Tenants []tenantItem `json:"tenants"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decodificar: %v", err)
+	}
+	got := map[string]string{}
+	for _, ti := range body.Tenants {
+		got[ti.OrganizationID] = ti.DisplayName
+	}
+	if got[orgA.String()] != "Acme" {
+		t.Fatalf("orgA display_name = %q, want %q", got[orgA.String()], "Acme")
+	}
+	if got[orgB.String()] != orgB.String() {
+		t.Fatalf("orgB display_name = %q, want fallback ao UUID %q", got[orgB.String()], orgB.String())
+	}
+}
+
 func TestTenantsHandlerListsCallerTenants(t *testing.T) {
 	idID := uuid.New()
 	orgA, orgB := uuid.New(), uuid.New()
@@ -49,7 +95,7 @@ func TestTenantsHandlerListsCallerTenants(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/tenants", nil)
 	req = req.WithContext(withSession(req.Context(), session))
 	rr := httptest.NewRecorder()
-	NewTenantsHandler(lister).ServeHTTP(rr, req)
+	NewTenantsHandler(lister, nil).ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status %d, want 200", rr.Code)
@@ -84,7 +130,7 @@ func TestTenantsHandlerListsCallerTenants(t *testing.T) {
 
 func TestTenantsHandlerFailsClosedWithoutSession(t *testing.T) {
 	rr := httptest.NewRecorder()
-	NewTenantsHandler(&fakeLister{}).ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/tenants", nil))
+	NewTenantsHandler(&fakeLister{}, nil).ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/tenants", nil))
 	if rr.Code != http.StatusUnauthorized {
 		t.Fatalf("no session: status %d, want 401", rr.Code)
 	}
@@ -95,7 +141,7 @@ func TestTenantsHandlerFailsClosedOnListError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/tenants", nil)
 	req = req.WithContext(withSession(req.Context(), session))
 	rr := httptest.NewRecorder()
-	NewTenantsHandler(&fakeLister{err: errors.New("global access denied")}).ServeHTTP(rr, req)
+	NewTenantsHandler(&fakeLister{err: errors.New("global access denied")}, nil).ServeHTTP(rr, req)
 	if rr.Code != http.StatusInternalServerError {
 		t.Fatalf("list error: status %d, want 500 (fail-closed)", rr.Code)
 	}

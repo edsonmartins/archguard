@@ -32,9 +32,14 @@
         atômica). `ErrStepUpRequired` → 401 RFC 9470; negações → 403/409; fail-closed (política/
         auditoria) → 503. `switchTenant()` no ControlPlaneBackend. Testes de todos os caminhos +
         http/boot/contract/invariantes verdes.
-      - [ ] **Parte B (frontend)** — componente `TenantSelect` (selo fixo do tenant ativo; multi
-        vira dropdown); troca chama `switchTenant()` → 200 recarrega `/session`, 401 dispara step-up
-        (interplay com T-005).
+      - [x] **Parte B (frontend)** — `web/src/common/select/TenantSelect.js`: selo verde proeminente
+        do tenant ativo (distinção inequívoca); multi-membership → dropdown de troca. Troca chama
+        `switchTenant()` → 200 recarrega o contexto; 401 → aviso de step-up (tratamento mínimo;
+        transparente é a T-005); 403 → não-membro. Ligado no cabeçalho do ManagementPage (coexiste
+        com o OrganizationSelect herdado). `/api/v1/tenants` enriquecido com `display_name`
+        (namer `OrgDisplayNamer`, fallback ao UUID). i18n en+pt. Ponte de login já ligada
+        (auth.go→bridgeDomainSession→BridgeLogin), então o admin logado resolve o `/api/v1`.
+        Build local + VPS + testes verdes.
 - [ ] **T-005** Interceptor global de step-up: captura garantia insuficiente, apresenta desafio
       WebAuthn e **retoma a operação** preservando o estado do formulário; cancelar mantém o form.
 

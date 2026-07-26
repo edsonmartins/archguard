@@ -96,8 +96,9 @@ export function getSessionContext() {
 }
 
 /**
- * Tenants (organizações) do usuário atual.
- * @returns {Promise<{tenants: Array<{organization_id: string, [k: string]: any}>}>}
+ * Tenants (organizações) do usuário atual, cada um com `active` (o tenant da sessão)
+ * e `display_name` (nome amigável; cai no organization_id se ausente).
+ * @returns {Promise<{tenants: Array<{membership_id: string, organization_id: string, display_name: string, status: string, active: boolean}>}>}
  */
 export function getTenants() {
   return cpRequest("GET", "/tenants");

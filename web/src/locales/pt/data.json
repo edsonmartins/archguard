@@ -368,6 +368,11 @@
     "Width": "Largura"
   },
   "general": {
+    "Tenant": "Tenant",
+    "Tenant switched": "Tenant alterado",
+    "Step-up required to switch tenant": "Step-up necessário para trocar de tenant",
+    "Not a member of the target tenant": "Você não é membro do tenant de destino",
+    "Failed to switch tenant": "Falha ao trocar de tenant",
     "A normal user can only modify the permission submitted by itself": "Um usuário comum só pode modificar a permissão enviada por ele mesmo",
     "AI Assistant": "Assistente de IA",
     "API key": "Chave da API",
