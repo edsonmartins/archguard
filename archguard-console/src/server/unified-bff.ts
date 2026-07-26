@@ -3,7 +3,10 @@
 
 import { listSites } from './sites'
 import { listWarpgateTargets } from './warpgate-proxy'
-import { listConnections as listGuacConnections } from './guacamole-proxy'
+import {
+  listConnections as listGuacConnections,
+  issueOperatorGuacTunnel,
+} from './guacamole-proxy'
 import {
   filterSitesByTenant,
   getSessionOrNull,
@@ -168,30 +171,59 @@ export async function createUnifiedSession(
     proto === 'kubernetes' // guac when browser path
 
   if (wantsGuac) {
-    const opaque = Buffer.from(
-      JSON.stringify({
-        u: session.user?.name,
-        t: hit.target,
-        exp: Date.now() + expiresIn * 1000,
-      }),
-    ).toString('base64url')
     const base = guacPublic.replace(/\/$/, '')
-    logger.info(
-      { user: session.user?.name, target: hit.target, protocol: proto },
-      'unified session guacamole issued',
-    )
-    return {
-      tunnel_url: `${base}/websocket-tunnel`,
-      connect_data: opaque,
-      expires_in: expiresIn,
-      /** Prefer iframe SSO when guacd token not fully wired (Connect embed). */
-      embed_url: base + '/',
-      embed_mode: 'iframe' as const,
-      launch: {
-        engine: 'guacamole',
-        target: hit.target,
-        protocol: hit.protocol || proto || 'rdp',
-      },
+    const username =
+      session.user?.name || session.user?.email?.split('@')[0] || ''
+    // Public WS for guacamole-common-js (token in connect_data). oauth2-proxy
+    // must skip auth on /websocket-tunnel so short-lived Guac tokens work
+    // (deploy/guacamole/oauth2-proxy-deploy.sh).
+    const tunnelWs = base.replace(/^http/, 'ws') + '/websocket-tunnel'
+
+    try {
+      const guac = await issueOperatorGuacTunnel(username, hit.target)
+      const embedWithToken =
+        `${base}/?token=${encodeURIComponent(guac.authToken)}#/client/${guac.clientHash}`
+      logger.info(
+        {
+          user: username,
+          target: hit.target,
+          protocol: proto,
+          guac_id: guac.connectionId,
+          mode: 'websocket',
+        },
+        'unified session guacamole token issued',
+      )
+      return {
+        tunnel_url: tunnelWs,
+        connect_data: guac.connectData,
+        expires_in: expiresIn,
+        embed_url: embedWithToken,
+        embed_mode: 'websocket' as const,
+        launch: {
+          engine: 'guacamole',
+          target: hit.target,
+          protocol: hit.protocol || guac.protocol || proto || 'rdp',
+        },
+      }
+    } catch (e) {
+      // Fallback: iframe SSO portal (no admin token leak).
+      const msg = e instanceof Error ? e.message : String(e)
+      logger.warn(
+        { user: username, target: hit.target, err: msg },
+        'unified session guacamole token mint failed — iframe fallback',
+      )
+      return {
+        tunnel_url: '',
+        connect_data: '',
+        expires_in: expiresIn,
+        embed_url: base + '/',
+        embed_mode: 'iframe' as const,
+        launch: {
+          engine: 'guacamole',
+          target: hit.target,
+          protocol: hit.protocol || proto || 'rdp',
+        },
+      }
     }
   }
 

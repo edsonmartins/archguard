@@ -183,3 +183,170 @@ export async function createConnection(
 export async function deleteConnection(id: string): Promise<void> {
   await api('DELETE', `/api/session/data/{ds}/connections/${id}`)
 }
+
+/**
+ * Mint a short-lived Guacamole authToken for an operator via header-auth
+ * (ADR-007A: X-Forwarded-User = Kanidm preferred_username).
+ * Never uses guacadmin for operator sessions.
+ */
+export async function mintOperatorAuthToken(
+  username: string,
+): Promise<{ token: string; dataSource: string; username: string }> {
+  const user = username.trim()
+  if (!user) {
+    throw new Error('Guacamole operator username required')
+  }
+  if (!GUAC_URL) {
+    throw new Error('GUACAMOLE_URL not configured')
+  }
+  const res = await integrationFetch(`${GUAC_URL}/api/tokens`, {
+    method: 'POST',
+    integration: 'guacamole',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-Forwarded-User': user,
+    },
+    body: new URLSearchParams(),
+  })
+  if (!res.ok) {
+    const t = await res.text()
+    throw new Error(
+      `Guacamole header-auth token failed for ${user}: ${res.status} ${t.slice(0, 200)}`,
+    )
+  }
+  const data = (await res.json()) as {
+    authToken?: string
+    dataSource?: string
+    username?: string
+  }
+  if (!data.authToken) {
+    throw new Error(`Guacamole returned empty authToken for ${user}`)
+  }
+  return {
+    token: data.authToken,
+    dataSource: data.dataSource || 'postgresql',
+    username: data.username || user,
+  }
+}
+
+/** List connections visible to a specific operator token (ACL-aware). */
+export async function listConnectionsForToken(
+  token: string,
+  dataSource: string,
+): Promise<GuacConnectionSummary[]> {
+  const url = `${GUAC_URL}/api/session/data/${encodeURIComponent(dataSource)}/connections?token=${encodeURIComponent(token)}`
+  const res = await integrationFetch(url, {
+    method: 'GET',
+    integration: 'guacamole',
+    headers: { 'Guacamole-Token': token },
+  })
+  const text = await res.text()
+  if (!res.ok) {
+    throw new Error(
+      `Guacamole list connections: ${res.status} ${text.slice(0, 200)}`,
+    )
+  }
+  let raw: Record<
+    string,
+    {
+      name?: string
+      protocol?: string
+      parentIdentifier?: string
+      activeConnections?: number
+    }
+  >
+  try {
+    raw = JSON.parse(text) as typeof raw
+  } catch {
+    return []
+  }
+  if (!raw || typeof raw !== 'object' || (raw as { message?: string }).message) {
+    return []
+  }
+  return Object.entries(raw).map(([id, v]) => ({
+    id,
+    name: v?.name || id,
+    protocol: v?.protocol || 'unknown',
+    parentIdentifier: v?.parentIdentifier,
+    activeConnections: v?.activeConnections,
+  }))
+}
+
+/** Query string for Guacamole.Client.connect() / WebSocketTunnel. */
+export function buildGuacConnectData(opts: {
+  token: string
+  dataSource: string
+  connectionId: string
+  type?: 'c' | 'g'
+}): string {
+  const params = new URLSearchParams()
+  params.set('token', opts.token)
+  params.set('GUAC_DATA_SOURCE', opts.dataSource)
+  params.set('GUAC_ID', opts.connectionId)
+  params.set('GUAC_TYPE', opts.type || 'c')
+  return params.toString()
+}
+
+/**
+ * Encode Guacamole client hash id: base64(connectionId + NUL + type + NUL + dataSource).
+ * Used for iframe deep-link fallback `#/client/…`.
+ */
+export function guacClientHashId(
+  connectionId: string,
+  dataSource: string,
+  type: 'c' | 'g' = 'c',
+): string {
+  const raw = `${connectionId}\0${type}\0${dataSource}`
+  return Buffer.from(raw, 'utf8')
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
+}
+
+export type OperatorGuacTunnel = {
+  authToken: string
+  dataSource: string
+  connectionId: string
+  connectionName: string
+  protocol: string
+  connectData: string
+  clientHash: string
+}
+
+/**
+ * Resolve operator-visible Guac connection by catalog name and mint connect_data.
+ * Throws if the connection is not in the operator's ACL.
+ */
+export async function issueOperatorGuacTunnel(
+  username: string,
+  connectionName: string,
+): Promise<OperatorGuacTunnel> {
+  const auth = await mintOperatorAuthToken(username)
+  const conns = await listConnectionsForToken(auth.token, auth.dataSource)
+  const nameLc = connectionName.toLowerCase()
+  const hit =
+    conns.find((c) => c.name === connectionName) ||
+    conns.find((c) => c.name.toLowerCase() === nameLc) ||
+    conns.find((c) => c.name.toLowerCase().includes(nameLc))
+  if (!hit) {
+    const names = conns.map((c) => c.name).slice(0, 12).join(', ')
+    throw new Error(
+      `Guacamole connection «${connectionName}» not in ACL for ${username}` +
+        (names ? ` (visible: ${names})` : ' (no connections)'),
+    )
+  }
+  return {
+    authToken: auth.token,
+    dataSource: auth.dataSource,
+    connectionId: hit.id,
+    connectionName: hit.name,
+    protocol: hit.protocol,
+    connectData: buildGuacConnectData({
+      token: auth.token,
+      dataSource: auth.dataSource,
+      connectionId: hit.id,
+    }),
+    clientHash: guacClientHashId(hit.id, auth.dataSource),
+  }
+}
