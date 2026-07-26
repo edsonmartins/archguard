@@ -11,8 +11,10 @@
       tipadas por JSDoc: session/tenants/memberships/grants/audit-timeline/audit-verify/
       access-effective/health/stepup/factors; sessão por cookie; distinção denied×error).
       Ponto único de acesso ao `/api/v1` (base da trava T-003). eslint verde.
-- [ ] **T-002** Teste de contrato no CI: as chamadas do console ao `/api/v1` conferem com o
-      OpenAPI publicado (detecta *drift* contrato↔console). Falha o CI se defasar.
+- [x] **T-002** Teste de contrato no CI (`test/contract/console_api_contract_test.go`): estático,
+      sem DB — toda rota `/api/v1` chamada pelo console (`cpRequest` em ControlPlaneBackend.js)
+      DEVE estar montada no backend (`RegisterAPIHandler` em internal/boot/mounts.go). Falha o CI
+      em *drift* (console chama rota não montada; I-7.6). `go test`/`go vet` verdes.
 - [ ] **T-003** Trava de revisão/lint: nenhum endpoint "só para a UI" (I-7.6); nenhuma decisão de
       autorização no frontend.
 
