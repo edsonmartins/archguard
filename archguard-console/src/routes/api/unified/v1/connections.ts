@@ -1,10 +1,8 @@
 // GET /api/unified/v1/connections — UnifiedUI catalog (BFF)
 
 import { createFileRoute } from '@tanstack/react-router'
-import {
-  listUnifiedConnections,
-  requireUnifiedSession,
-} from '@/server/unified-bff'
+import { listUnifiedConnections } from '@/server/unified-bff'
+import { resolveOperatorSession } from '@/server/operator-session'
 import { logger } from '@/server/logger'
 
 function corsHeaders(request: Request): HeadersInit {
@@ -34,7 +32,8 @@ export const Route = createFileRoute('/api/unified/v1/connections')({
           ...corsHeaders(request),
         }
         try {
-          const session = requireUnifiedSession()
+          // Cookie (browser) or Bearer / lab-* (Connect desktop) — same as sessions.
+          const session = await resolveOperatorSession(request)
           const connections = await listUnifiedConnections(session)
           return new Response(JSON.stringify({ connections }), {
             status: 200,
