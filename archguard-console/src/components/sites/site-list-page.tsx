@@ -29,6 +29,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/shared/empty-state'
+import { PageHeader } from '@/components/shared/page-header'
 import { PermissionGate } from '@/components/shared/permission-gate'
 import {
   useExportAllSitesYaml,
@@ -117,13 +118,15 @@ export function SiteListPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+      <PageHeader
+        title={
+          <span className="inline-flex items-center gap-2">
             <Building2 className="h-7 w-7 text-primary" />
             {t('sites.title')}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          </span>
+        }
+        description={
+          <>
             {t('sites.subtitle')}
             {backendInfo?.backend && (
               <span className="ml-2">
@@ -132,9 +135,10 @@ export function SiteListPage() {
                 </Badge>
               </span>
             )}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+          </>
+        }
+        actions={
+          <div className="flex flex-wrap gap-2">
           <PermissionGate require={['sites:create', 'sites:update']} any>
             <Button asChild>
               <Link to="/sites/wizard">
@@ -207,8 +211,9 @@ export function SiteListPage() {
               </Link>
             </Button>
           </PermissionGate>
-        </div>
-      </div>
+          </div>
+        }
+      />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {Object.entries(counts).map(([stack, n]) => (

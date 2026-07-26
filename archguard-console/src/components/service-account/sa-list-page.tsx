@@ -21,6 +21,7 @@ import {
   Eye,
   Plus,
 } from 'lucide-react'
+import { PageHeader } from '@/components/shared/page-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -208,24 +209,20 @@ export function ServiceAccountListPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Service Accounts
-          </h1>
-          <p className="text-muted-foreground">
-            Gerencie contas de serviço e tokens de API
-          </p>
-        </div>
-        <PermissionGate require="service_accounts:create">
-          <Button asChild>
-            <Link to="/service-accounts/create">
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Service Account
-            </Link>
-          </Button>
-        </PermissionGate>
-      </div>
+      <PageHeader
+        title="Service Accounts"
+        description="Gerencie contas de serviço e tokens de API"
+        actions={
+          <PermissionGate require="service_accounts:create">
+            <Button asChild>
+              <Link to="/service-accounts/create">
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Service Account
+              </Link>
+            </Button>
+          </PermissionGate>
+        }
+      />
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

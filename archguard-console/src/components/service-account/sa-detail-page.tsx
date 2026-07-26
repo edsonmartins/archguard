@@ -40,6 +40,7 @@ import { PermissionGate } from '@/components/shared/permission-gate'
 import { CopyButton } from '@/components/shared/copy-button'
 import { GroupBadge } from '@/components/shared/group-badge'
 import { TimeAgo } from '@/components/shared/time-ago'
+import { GuideButton } from '@/components/shared/guide-button'
 import {
   useServiceAccount,
   useDeleteServiceAccount,
@@ -96,7 +97,7 @@ export function ServiceAccountDetailPage() {
         <Bot className="h-8 w-8 text-muted-foreground" />
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">{account.displayName}</h1>
+            <div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold">{account.displayName}</h1><GuideButton size="sm" variant="outline" /></div>
             <StatusBadge status={account.status as 'active' | 'expired' | 'disabled'} />
           </div>
           <p className="text-muted-foreground">@{account.name}</p>

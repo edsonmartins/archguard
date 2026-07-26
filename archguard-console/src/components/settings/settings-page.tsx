@@ -19,6 +19,7 @@ import { systemApi, accountPolicyApi } from '@/lib/api/kanidm-client'
 import { queryKeys } from '@/lib/utils/query-keys'
 import { LanguageSwitcher } from '@/components/layout/language-switcher'
 import { enumLabel } from '@/lib/i18n/labels'
+import { PageHeader } from '@/components/shared/page-header'
 
 const CREDENTIAL_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
   any: 'outline',
@@ -59,10 +60,10 @@ export function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t('settings.title')}</h1>
-        <p className="text-muted-foreground">{t('settings.subtitle')}</p>
-      </div>
+      <PageHeader
+        title={t('settings.title')}
+        description={t('settings.subtitle')}
+      />
 
       <Tabs defaultValue="general">
         <TabsList>

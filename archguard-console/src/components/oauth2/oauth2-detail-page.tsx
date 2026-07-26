@@ -38,6 +38,7 @@ import { useGroups } from '@/lib/hooks/use-groups'
 import { getIntegrationSnippets } from '@/components/oauth2/integration-snippets'
 import { AppAccessMatrix } from '@/components/oauth2/app-access-matrix'
 import { queryKeys } from '@/lib/utils/query-keys'
+import { GuideButton } from '@/components/shared/guide-button'
 
 export function OAuth2DetailPage() {
   const { t } = useTranslation()
@@ -101,7 +102,7 @@ export function OAuth2DetailPage() {
             <Shield className="h-6 w-6 text-green-500" />
           )}
           <div className="flex-1">
-            <h1 className="text-2xl font-bold">{client.displayName}</h1>
+            <div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold">{client.displayName}</h1><GuideButton size="sm" variant="outline" /></div>
             <p className="font-mono text-sm text-muted-foreground">
               {client.name}
             </p>

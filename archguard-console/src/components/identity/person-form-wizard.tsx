@@ -27,6 +27,7 @@ import { useGroups } from '@/lib/hooks/use-groups'
 import { queryKeys } from '@/lib/utils/query-keys'
 import { createPersonSchema } from '@/lib/utils/validators'
 import type { CreatePersonInput } from '@/lib/utils/validators'
+import { GuideButton } from '@/components/shared/guide-button'
 
 export function PersonFormWizard() {
   const { t } = useTranslation()
@@ -121,7 +122,7 @@ export function PersonFormWizard() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Nova Pessoa</h1>
+        <div className="flex flex-wrap items-center gap-2"><h1 className="text-3xl font-bold tracking-tight">Nova Pessoa</h1><GuideButton size="sm" variant="outline" /></div>
         <p className="text-muted-foreground">
           Crie uma nova identidade no sistema
         </p>

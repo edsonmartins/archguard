@@ -27,6 +27,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { PageHeader } from '@/components/shared/page-header'
 import {
   getPlatformOverviewFn,
   type PlatformService,
@@ -129,28 +130,28 @@ export function PlatformPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+      <PageHeader
+        title={
+          <span className="inline-flex items-center gap-2">
             <Gauge className="h-7 w-7 text-primary" />
             {t('platform.title')}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t('platform.subtitle')}
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={q.isFetching}
-          onClick={() => void q.refetch()}
-        >
-          <RefreshCw
-            className={`h-4 w-4 mr-2 ${q.isFetching ? 'animate-spin' : ''}`}
-          />
-          {t('common.refresh')}
-        </Button>
-      </div>
+          </span>
+        }
+        description={t('platform.subtitle')}
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={q.isFetching}
+            onClick={() => void q.refetch()}
+          >
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${q.isFetching ? 'animate-spin' : ''}`}
+            />
+            {t('common.refresh')}
+          </Button>
+        }
+      />
 
       {q.isError && (
         <Card className="border-destructive">

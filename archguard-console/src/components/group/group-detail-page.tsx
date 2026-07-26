@@ -41,6 +41,7 @@ import {
 } from '@/lib/hooks/use-groups'
 import { usePersons } from '@/lib/hooks/use-persons'
 import { initials } from '@/lib/utils/formatters'
+import { GuideButton } from '@/components/shared/guide-button'
 
 export function GroupDetailPage() {
   const { t } = useTranslation()
@@ -96,7 +97,7 @@ export function GroupDetailPage() {
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">{group.name}</h1>
+            <div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold">{group.name}</h1><GuideButton size="sm" variant="outline" /></div>
             <GroupBadge name={group.name} />
             {group.isBuiltin && (
               <Badge variant="outline">

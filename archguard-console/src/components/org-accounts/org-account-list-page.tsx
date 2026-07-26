@@ -45,6 +45,7 @@ import type { CheckoutResult } from '@/server/org-accounts-fn'
 import { usePermissions } from '@/lib/hooks/use-permissions'
 import { PermissionGate } from '@/components/shared/permission-gate'
 import { EmptyState } from '@/components/shared/empty-state'
+import { PageHeader } from '@/components/shared/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -316,28 +317,24 @@ export function OrgAccountListPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {t('orgAccounts.title')}
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            {t('orgAccounts.subtitle')}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+      <PageHeader
+        title={t('orgAccounts.title')}
+        description={t('orgAccounts.subtitle')}
+        actions={
           <PermissionGate require={['org_accounts:admin']}>
-            <Button type="button" variant="outline" onClick={openSettings}>
-              <Settings2 className="mr-2 h-4 w-4" />
-              {t('orgAccounts.brokerSettings')}
-            </Button>
-            <Button type="button" onClick={openCreate}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('orgAccounts.add')}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" onClick={openSettings}>
+                <Settings2 className="mr-2 h-4 w-4" />
+                {t('orgAccounts.brokerSettings')}
+              </Button>
+              <Button type="button" onClick={openCreate}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t('orgAccounts.add')}
+              </Button>
+            </div>
           </PermissionGate>
-        </div>
-      </div>
+        }
+      />
 
       {health ? (
         <Card

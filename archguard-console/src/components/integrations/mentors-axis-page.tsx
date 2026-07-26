@@ -30,6 +30,7 @@ import {
 } from '@/server/mentors-axis-fn'
 import { usePermissions } from '@/lib/hooks/use-permissions'
 import { siteKeys } from '@/lib/hooks/use-sites'
+import { PageHeader } from '@/components/shared/page-header'
 
 export function MentorsAxisPage() {
   const { can } = usePermissions()
@@ -71,28 +72,32 @@ export function MentorsAxisPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+      <PageHeader
+        title={
+          <span className="inline-flex items-center gap-2">
             <Cloud className="h-7 w-7 text-primary" />
             Mentors Axis
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          </span>
+        }
+        description={
+          <>
             SoT comercial de clientes. Sync orquestra:{' '}
             <strong>site</strong> → <strong>grupo Kanidm tenant_*</strong> →{' '}
             <strong>role Warpgate</strong> (ADR-004). Pessoas/offboarding full =
             Fase 4.
-          </p>
-        </div>
-        {canSync && status.data?.configured && (
-          <Button onClick={() => sync.mutate()} disabled={sync.isPending}>
-            <RefreshCw
-              className={`h-4 w-4 mr-2 ${sync.isPending ? 'animate-spin' : ''}`}
-            />
-            Sincronizar + orquestrar
-          </Button>
-        )}
-      </div>
+          </>
+        }
+        actions={
+          canSync && status.data?.configured ? (
+            <Button onClick={() => sync.mutate()} disabled={sync.isPending}>
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${sync.isPending ? 'animate-spin' : ''}`}
+              />
+              Sincronizar + orquestrar
+            </Button>
+          ) : null
+        }
+      />
 
       <Card>
         <CardHeader>

@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { PageHeader } from '@/components/shared/page-header'
 import { vaultApi } from '@/lib/api/vault-client'
 import { queryKeys } from '@/lib/utils/query-keys'
 
@@ -50,41 +51,41 @@ export function VaultDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('vaultPage.title')}</h1>
-          <p className="text-muted-foreground">
-            {t('vaultPage.subtitle')}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void refetch()}
-            disabled={isFetching}
-          >
-            <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/secrets">
-              <Key className="mr-2 h-4 w-4" />
-              {t('vaultPage.secretsLink')}
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <a
-              href="https://secrets.archgate.com.br"
-              target="_blank"
-              rel="noopener noreferrer"
+      <PageHeader
+        title={t('vaultPage.title')}
+        description={t('vaultPage.subtitle')}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void refetch()}
+              disabled={isFetching}
             >
-              <ExternalLink className="mr-2 h-4 w-4" />
-              {t('vaultPage.openUi')}
-            </a>
-          </Button>
-        </div>
-      </div>
+              <RefreshCw
+                className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`}
+              />
+              Atualizar
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/secrets">
+                <Key className="mr-2 h-4 w-4" />
+                {t('vaultPage.secretsLink')}
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <a
+                href="https://secrets.archgate.com.br"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                {t('vaultPage.openUi')}
+              </a>
+            </Button>
+          </div>
+        }
+      />
 
       <Card className={isOnline ? 'border-green-500/30' : 'border-destructive/30'}>
         <CardContent className="flex items-center gap-4 pt-6">

@@ -38,6 +38,7 @@ import {
   type SiteTarget,
 } from '@/lib/api/types/site'
 import { Skeleton } from '@/components/ui/skeleton'
+import { GuideButton } from '@/components/shared/guide-button'
 
 const emptyTarget = (): SiteTarget => ({
   nome: '',
@@ -244,11 +245,11 @@ export function SiteFormPage({
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">
+          <div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold">
             {mode === 'create'
               ? t('sites.createTitle')
               : t('sites.edit', { name: form.cliente || slug })}
-          </h1>
+          </h1><GuideButton size="sm" variant="outline" /></div>
           <p className="text-sm text-muted-foreground">
             {t('sites.subtitle')}
           </p>

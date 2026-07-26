@@ -46,6 +46,7 @@ import { applySiteTargetsFn } from '@/server/warpgate-fn'
 import { usePermissions } from '@/lib/hooks/use-permissions'
 import { ConnectorStatusPanel } from '@/components/sites/connector-status-panel'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { GuideButton } from '@/components/shared/guide-button'
 
 export function SiteDetailPage({ slug }: { slug: string }) {
   const { t } = useTranslation()
@@ -138,10 +139,10 @@ export function SiteDetailPage({ slug }: { slug: string }) {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold flex items-center gap-2">
               <Building2 className="h-6 w-6 text-primary" />
               {site.cliente}
-            </h1>
+            </h1><GuideButton size="sm" variant="outline" /></div>
             <p className="text-sm text-muted-foreground font-mono">
               {site.slug} · {site.tenant_group}
             </p>

@@ -8,6 +8,7 @@ import { usePermissions } from '@/lib/hooks/use-permissions'
 import { WarpgatePanel } from './warpgate-panel'
 import { GuacamolePanel } from './guacamole-panel'
 import { SessionsPanel } from './sessions-panel'
+import { PageHeader } from '@/components/shared/page-header'
 
 export function GatewaysPage() {
   const { t } = useTranslation()
@@ -21,19 +22,23 @@ export function GatewaysPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Server className="h-7 w-7 text-primary" />
-          {t('gatewaysPage.title')}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {t('gatewaysPage.subtitle')}{' '}
-          <Link to="/sites" className="text-primary underline">
-            {t('nav.sites')}
-          </Link>
-          .
-        </p>
-      </div>
+      <PageHeader
+        title={
+          <span className="inline-flex items-center gap-2">
+            <Server className="h-7 w-7 text-primary" />
+            {t('gatewaysPage.title')}
+          </span>
+        }
+        description={
+          <>
+            {t('gatewaysPage.subtitle')}{' '}
+            <Link to="/sites" className="text-primary underline">
+              {t('nav.sites')}
+            </Link>
+            .
+          </>
+        }
+      />
 
       <Tabs defaultValue="warpgate">
         <TabsList>

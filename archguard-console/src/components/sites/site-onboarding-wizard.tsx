@@ -45,6 +45,7 @@ import {
   type WizardStepResult,
 } from '@/server/onboarding-fn'
 import { usePermissions } from '@/lib/hooks/use-permissions'
+import { GuideButton } from '@/components/shared/guide-button'
 
 type StepId = 'identity' | 'network' | 'targets' | 'review' | 'done'
 
@@ -252,10 +253,10 @@ export function SiteOnboardingWizard() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold flex items-center gap-2">
             <Sparkles className="h-6 w-6 text-primary" />
             Novo cliente
-          </h1>
+          </h1><GuideButton size="sm" variant="outline" /></div>
           <p className="text-sm text-muted-foreground">
             Fluxo único (console tipo AWS): identidade → rede → targets →
             materializar.

@@ -19,6 +19,7 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { EmptyState } from '@/components/shared/empty-state'
 import { useRecycleBin, useReviveEntry } from '@/lib/hooks/use-recycle-bin'
 import type { RecycleBinEntry } from '@/lib/api/types/kanidm'
+import { PageHeader } from '@/components/shared/page-header'
 
 const TYPE_CONFIG: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; variant: 'default' | 'secondary' | 'outline' }> = {
   person: { label: 'person', icon: User, variant: 'default' },
@@ -45,12 +46,10 @@ export function RecycleBinPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t('recycleBin.title')}</h1>
-        <p className="text-muted-foreground">
-          Itens excluídos recentemente. Restaure antes que sejam removidos permanentemente.
-        </p>
-      </div>
+      <PageHeader
+        title={t('recycleBin.title')}
+        description="Itens excluídos recentemente. Restaure antes que sejam removidos permanentemente."
+      />
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

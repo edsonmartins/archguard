@@ -23,6 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { PageHeader } from '@/components/shared/page-header'
 import { EmptyState } from '@/components/shared/empty-state'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { PermissionGate } from '@/components/shared/permission-gate'
@@ -53,22 +54,20 @@ export function OAuth2ListPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('oauth2Page.title')}</h1>
-          <p className="text-muted-foreground">
-            {t('oauth2Page.emptyHint')}
-          </p>
-        </div>
-        <PermissionGate require="oauth2:create">
-          <Button asChild>
-            <Link to="/oauth2/create">
-              <KeyRound className="mr-2 h-4 w-4" />
-              {t('oauth2Page.create')}
-            </Link>
-          </Button>
-        </PermissionGate>
-      </div>
+      <PageHeader
+        title={t('oauth2Page.title')}
+        description={t('oauth2Page.emptyHint')}
+        actions={
+          <PermissionGate require="oauth2:create">
+            <Button asChild>
+              <Link to="/oauth2/create">
+                <KeyRound className="mr-2 h-4 w-4" />
+                {t('oauth2Page.create')}
+              </Link>
+            </Button>
+          </PermissionGate>
+        }
+      />
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

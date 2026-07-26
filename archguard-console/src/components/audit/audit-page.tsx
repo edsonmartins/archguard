@@ -41,6 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { PageHeader } from '@/components/shared/page-header'
 import {
   listUnifiedAuditFn,
   type TimelineEvent,
@@ -186,13 +187,15 @@ export function AuditPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+      <PageHeader
+        title={
+          <span className="inline-flex items-center gap-2">
             <ClipboardList className="h-7 w-7 text-primary" />
             {t('audit.title', { defaultValue: 'Auditoria' })}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          </span>
+        }
+        description={
+          <>
             Timeline unificada: ações do console + sessões Warpgate (quando a
             API expõe).
             {q.data?.sources && (
@@ -201,8 +204,9 @@ export function AuditPage() {
                 {q.data.sources.warpgate}
               </span>
             )}
-          </p>
-        </div>
+          </>
+        }
+        actions={
         <div className="flex flex-wrap gap-2">
           <Select
             value={source}
@@ -237,7 +241,8 @@ export function AuditPage() {
             />
           </Button>
         </div>
-      </div>
+        }
+      />
 
       {entries.length === 0 ? (
         <EmptyState

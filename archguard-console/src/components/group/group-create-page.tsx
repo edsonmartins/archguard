@@ -18,6 +18,7 @@ import { useCreateGroup, useAddGroupMembers } from '@/lib/hooks/use-groups'
 import { usePersons } from '@/lib/hooks/use-persons'
 import { queryKeys } from '@/lib/utils/query-keys'
 import { createGroupSchema } from '@/lib/utils/validators'
+import { GuideButton } from '@/components/shared/guide-button'
 
 export function GroupCreatePage() {
   const { t } = useTranslation()
@@ -72,7 +73,7 @@ export function GroupCreatePage() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Novo Grupo</h1>
+          <div className="flex flex-wrap items-center gap-2"><h1 className="text-3xl font-bold tracking-tight">Novo Grupo</h1><GuideButton size="sm" variant="outline" /></div>
           <p className="text-muted-foreground">
             Crie um grupo para organizar identidades
           </p>

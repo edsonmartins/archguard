@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/table'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { personApi } from '@/lib/api/kanidm-client'
+import { GuideButton } from '@/components/shared/guide-button'
 import {
   parseCsv,
   mapCsvRows,
@@ -197,7 +198,7 @@ export function CsvImportWizard() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Importar CSV</h1>
+          <div className="flex flex-wrap items-center gap-2"><h1 className="text-3xl font-bold tracking-tight">Importar CSV</h1><GuideButton size="sm" variant="outline" /></div>
           <p className="text-muted-foreground">
             Importe pessoas em lote a partir de um arquivo CSV
           </p>

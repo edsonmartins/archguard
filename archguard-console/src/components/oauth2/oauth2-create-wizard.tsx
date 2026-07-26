@@ -25,6 +25,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useCreateOAuth2Client, useSetScopeMap } from '@/lib/hooks/use-oauth2'
 import { useGroups } from '@/lib/hooks/use-groups'
 import { queryKeys } from '@/lib/utils/query-keys'
+import { GuideButton } from '@/components/shared/guide-button'
 
 interface ScopeMapEntry {
   groupId: string
@@ -132,7 +133,7 @@ export function OAuth2CreateWizard() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Novo Client OAuth2</h1>
+        <div className="flex flex-wrap items-center gap-2"><h1 className="text-3xl font-bold tracking-tight">Novo Client OAuth2</h1><GuideButton size="sm" variant="outline" /></div>
         <p className="text-muted-foreground">
           Configure um novo cliente para integração via SSO
         </p>

@@ -7,6 +7,7 @@ import { StatsCards } from '@/components/dashboard/stats-cards'
 import { SystemHealth } from '@/components/dashboard/system-health'
 import { QuickActions } from '@/components/dashboard/quick-actions'
 import { ManagerModules } from '@/components/dashboard/manager-modules'
+import { PageHeader } from '@/components/shared/page-header'
 import { personApi, groupApi, oauth2Api, systemApi } from '@/lib/api/kanidm-client'
 import { getOpenBaoStatusFn } from '@/server/openbao-fn'
 import { queryKeys } from '@/lib/utils/query-keys'
@@ -113,10 +114,10 @@ function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t('dashboard.title')}</h1>
-        <p className="text-muted-foreground">{t('dashboard.subtitle')}</p>
-      </div>
+      <PageHeader
+        title={t('dashboard.title')}
+        description={t('dashboard.subtitle')}
+      />
 
       <StatsCards
         personsCount={filteredPersons.length}

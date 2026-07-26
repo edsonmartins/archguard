@@ -39,6 +39,7 @@ import {
 } from '@/server/oracle-fn'
 import { usePermissions } from '@/lib/hooks/use-permissions'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
+import { PageHeader } from '@/components/shared/page-header'
 
 type IssuedCred = {
   username: string
@@ -138,16 +139,15 @@ export function OraclePage() {
 
   return (
     <div className="space-y-6 p-6 max-w-4xl">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Database className="h-7 w-7 text-primary" />
-          Oracle
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Credenciais dinâmicas (ADR-001): OpenBao database role ou oracle-proxy
-          direto. Senha exibida só no momento da emissão.
-        </p>
-      </div>
+      <PageHeader
+        title={
+          <span className="inline-flex items-center gap-2">
+            <Database className="h-7 w-7 text-primary" />
+            Oracle
+          </span>
+        }
+        description="Credenciais dinâmicas (ADR-001): OpenBao database role ou oracle-proxy direto. Senha exibida só no momento da emissão."
+      />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>

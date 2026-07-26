@@ -16,6 +16,7 @@ import {
   type ColumnFiltersState,
 } from '@tanstack/react-table'
 import { UserPlus, Upload, Search, MoreHorizontal, Trash2, KeySquare, Eye } from 'lucide-react'
+import { PageHeader } from '@/components/shared/page-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -280,30 +281,28 @@ export function PersonListPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Identidades</h1>
-          <p className="text-muted-foreground">
-            Gerencie pessoas e suas credenciais
-          </p>
-        </div>
-        <div className="flex gap-2">
+      <PageHeader
+        title="Identidades"
+        description="Gerencie pessoas e suas credenciais"
+        actions={
           <PermissionGate require="persons:create">
-            <Button asChild variant="outline">
-              <Link to="/identities/import">
-                <Upload className="mr-2 h-4 w-4" />
-                Importar CSV
-              </Link>
-            </Button>
-            <Button asChild>
-              <Link to="/identities/create">
-                <UserPlus className="mr-2 h-4 w-4" />
-                Nova Pessoa
-              </Link>
-            </Button>
+            <div className="flex gap-2">
+              <Button asChild variant="outline">
+                <Link to="/identities/import">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Importar CSV
+                </Link>
+              </Button>
+              <Button asChild>
+                <Link to="/identities/create">
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Nova Pessoa
+                </Link>
+              </Button>
+            </div>
           </PermissionGate>
-        </div>
-      </div>
+        }
+      />
 
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">

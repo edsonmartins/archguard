@@ -17,6 +17,7 @@ import { useCreateServiceAccount } from '@/lib/hooks/use-service-accounts'
 import { useGroups } from '@/lib/hooks/use-groups'
 import { queryKeys } from '@/lib/utils/query-keys'
 import { createServiceAccountSchema } from '@/lib/utils/validators'
+import { GuideButton } from '@/components/shared/guide-button'
 
 export function ServiceAccountCreatePage() {
   const { t } = useTranslation()
@@ -68,9 +69,9 @@ export function ServiceAccountCreatePage() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <div className="flex flex-wrap items-center gap-2"><h1 className="text-3xl font-bold tracking-tight">
             Novo Service Account
-          </h1>
+          </h1><GuideButton size="sm" variant="outline" /></div>
           <p className="text-muted-foreground">
             Crie uma conta de serviço para integrações M2M
           </p>

@@ -23,6 +23,7 @@ import {
   Network,
   Lock,
 } from 'lucide-react'
+import { PageHeader } from '@/components/shared/page-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -188,22 +189,20 @@ export function GroupListPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Grupos</h1>
-          <p className="text-muted-foreground">
-            Gerencie grupos e associações de membros
-          </p>
-        </div>
-        <PermissionGate require="groups:create">
-          <Button asChild>
-            <Link to="/groups/create">
-              <UsersRound className="mr-2 h-4 w-4" />
-              Novo Grupo
-            </Link>
-          </Button>
-        </PermissionGate>
-      </div>
+      <PageHeader
+        title="Grupos"
+        description="Gerencie grupos e associações de membros"
+        actions={
+          <PermissionGate require="groups:create">
+            <Button asChild>
+              <Link to="/groups/create">
+                <UsersRound className="mr-2 h-4 w-4" />
+                Novo Grupo
+              </Link>
+            </Button>
+          </PermissionGate>
+        }
+      />
 
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">

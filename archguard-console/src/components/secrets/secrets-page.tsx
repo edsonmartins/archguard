@@ -22,6 +22,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
+import { PageHeader } from '@/components/shared/page-header'
 import {
   getOpenBaoOverviewFn,
   getOpenBaoStatusFn,
@@ -78,24 +79,24 @@ export function SecretsPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+      <PageHeader
+        title={
+          <span className="inline-flex items-center gap-2">
             <KeyRound className="h-7 w-7 text-primary" />
             {t('secretsPage.title')}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t('secretsPage.subtitle')}
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => void qc.invalidateQueries({ queryKey: ['openbao'] })}
-        >
-          <RefreshCw className="h-4 w-4 mr-1" /> Atualizar
-        </Button>
-      </div>
+          </span>
+        }
+        description={t('secretsPage.subtitle')}
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void qc.invalidateQueries({ queryKey: ['openbao'] })}
+          >
+            <RefreshCw className="h-4 w-4 mr-1" /> Atualizar
+          </Button>
+        }
+      />
 
       <Card>
         <CardHeader>

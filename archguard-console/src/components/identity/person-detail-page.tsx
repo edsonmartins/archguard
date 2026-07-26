@@ -48,6 +48,7 @@ import {
 } from '@/server/lifecycle-fn'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { GuideButton } from '@/components/shared/guide-button'
 import {
   Dialog,
   DialogContent,
@@ -165,7 +166,7 @@ export function PersonDetailPage() {
         </Avatar>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">{person.displayName}</h1>
+            <div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold">{person.displayName}</h1><GuideButton size="sm" variant="outline" /></div>
             <StatusBadge status={person.status} />
           </div>
           <p className="text-muted-foreground">@{person.username}</p>
