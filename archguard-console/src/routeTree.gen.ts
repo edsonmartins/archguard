@@ -50,6 +50,7 @@ import { Route as ApiLabV1GrantTargetRouteImport } from './routes/api/lab/v1/gra
 import { Route as AuthedSitesSlugEditRouteImport } from './routes/_authed/sites/$slug.edit'
 import { Route as ApiUnifiedV1OperatorBootstrapRouteImport } from './routes/api/unified/v1/operator/bootstrap'
 import { Route as ApiUnifiedV1AuthCallbackRouteImport } from './routes/api/unified/v1/auth/callback'
+import { Route as ApiOrgV1AccountsIdCheckoutRouteImport } from './routes/api/org/v1/accounts.$id.checkout'
 
 const UnauthorizedRoute = UnauthorizedRouteImport.update({
   id: '/unauthorized',
@@ -262,6 +263,12 @@ const ApiUnifiedV1AuthCallbackRoute =
     path: '/api/unified/v1/auth/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiOrgV1AccountsIdCheckoutRoute =
+  ApiOrgV1AccountsIdCheckoutRouteImport.update({
+    id: '/$id/checkout',
+    path: '/$id/checkout',
+    getParentRoute: () => ApiOrgV1AccountsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -299,11 +306,12 @@ export interface FileRoutesByFullPath {
   '/sites/': typeof AuthedSitesIndexRoute
   '/sites/$slug/edit': typeof AuthedSitesSlugEditRoute
   '/api/lab/v1/grant-target': typeof ApiLabV1GrantTargetRoute
-  '/api/org/v1/accounts': typeof ApiOrgV1AccountsRoute
+  '/api/org/v1/accounts': typeof ApiOrgV1AccountsRouteWithChildren
   '/api/unified/v1/connections': typeof ApiUnifiedV1ConnectionsRoute
   '/api/unified/v1/sessions': typeof ApiUnifiedV1SessionsRoute
   '/api/unified/v1/auth/callback': typeof ApiUnifiedV1AuthCallbackRoute
   '/api/unified/v1/operator/bootstrap': typeof ApiUnifiedV1OperatorBootstrapRoute
+  '/api/org/v1/accounts/$id/checkout': typeof ApiOrgV1AccountsIdCheckoutRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -341,11 +349,12 @@ export interface FileRoutesByTo {
   '/sites': typeof AuthedSitesIndexRoute
   '/sites/$slug/edit': typeof AuthedSitesSlugEditRoute
   '/api/lab/v1/grant-target': typeof ApiLabV1GrantTargetRoute
-  '/api/org/v1/accounts': typeof ApiOrgV1AccountsRoute
+  '/api/org/v1/accounts': typeof ApiOrgV1AccountsRouteWithChildren
   '/api/unified/v1/connections': typeof ApiUnifiedV1ConnectionsRoute
   '/api/unified/v1/sessions': typeof ApiUnifiedV1SessionsRoute
   '/api/unified/v1/auth/callback': typeof ApiUnifiedV1AuthCallbackRoute
   '/api/unified/v1/operator/bootstrap': typeof ApiUnifiedV1OperatorBootstrapRoute
+  '/api/org/v1/accounts/$id/checkout': typeof ApiOrgV1AccountsIdCheckoutRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -385,11 +394,12 @@ export interface FileRoutesById {
   '/_authed/sites/': typeof AuthedSitesIndexRoute
   '/_authed/sites/$slug/edit': typeof AuthedSitesSlugEditRoute
   '/api/lab/v1/grant-target': typeof ApiLabV1GrantTargetRoute
-  '/api/org/v1/accounts': typeof ApiOrgV1AccountsRoute
+  '/api/org/v1/accounts': typeof ApiOrgV1AccountsRouteWithChildren
   '/api/unified/v1/connections': typeof ApiUnifiedV1ConnectionsRoute
   '/api/unified/v1/sessions': typeof ApiUnifiedV1SessionsRoute
   '/api/unified/v1/auth/callback': typeof ApiUnifiedV1AuthCallbackRoute
   '/api/unified/v1/operator/bootstrap': typeof ApiUnifiedV1OperatorBootstrapRoute
+  '/api/org/v1/accounts/$id/checkout': typeof ApiOrgV1AccountsIdCheckoutRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -434,6 +444,7 @@ export interface FileRouteTypes {
     | '/api/unified/v1/sessions'
     | '/api/unified/v1/auth/callback'
     | '/api/unified/v1/operator/bootstrap'
+    | '/api/org/v1/accounts/$id/checkout'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -476,6 +487,7 @@ export interface FileRouteTypes {
     | '/api/unified/v1/sessions'
     | '/api/unified/v1/auth/callback'
     | '/api/unified/v1/operator/bootstrap'
+    | '/api/org/v1/accounts/$id/checkout'
   id:
     | '__root__'
     | '/'
@@ -519,6 +531,7 @@ export interface FileRouteTypes {
     | '/api/unified/v1/sessions'
     | '/api/unified/v1/auth/callback'
     | '/api/unified/v1/operator/bootstrap'
+    | '/api/org/v1/accounts/$id/checkout'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -529,7 +542,7 @@ export interface RootRouteChildren {
   TestLoginRoute: typeof TestLoginRoute
   UnauthorizedRoute: typeof UnauthorizedRoute
   ApiLabV1GrantTargetRoute: typeof ApiLabV1GrantTargetRoute
-  ApiOrgV1AccountsRoute: typeof ApiOrgV1AccountsRoute
+  ApiOrgV1AccountsRoute: typeof ApiOrgV1AccountsRouteWithChildren
   ApiUnifiedV1ConnectionsRoute: typeof ApiUnifiedV1ConnectionsRoute
   ApiUnifiedV1SessionsRoute: typeof ApiUnifiedV1SessionsRoute
   ApiUnifiedV1AuthCallbackRoute: typeof ApiUnifiedV1AuthCallbackRoute
@@ -825,6 +838,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUnifiedV1AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/org/v1/accounts/$id/checkout': {
+      id: '/api/org/v1/accounts/$id/checkout'
+      path: '/$id/checkout'
+      fullPath: '/api/org/v1/accounts/$id/checkout'
+      preLoaderRoute: typeof ApiOrgV1AccountsIdCheckoutRouteImport
+      parentRoute: typeof ApiOrgV1AccountsRoute
+    }
   }
 }
 
@@ -905,6 +925,17 @@ const AuthedRouteChildren: AuthedRouteChildren = {
 const AuthedRouteWithChildren =
   AuthedRoute._addFileChildren(AuthedRouteChildren)
 
+interface ApiOrgV1AccountsRouteChildren {
+  ApiOrgV1AccountsIdCheckoutRoute: typeof ApiOrgV1AccountsIdCheckoutRoute
+}
+
+const ApiOrgV1AccountsRouteChildren: ApiOrgV1AccountsRouteChildren = {
+  ApiOrgV1AccountsIdCheckoutRoute: ApiOrgV1AccountsIdCheckoutRoute,
+}
+
+const ApiOrgV1AccountsRouteWithChildren =
+  ApiOrgV1AccountsRoute._addFileChildren(ApiOrgV1AccountsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRoute: AuthedRouteWithChildren,
@@ -913,7 +944,7 @@ const rootRouteChildren: RootRouteChildren = {
   TestLoginRoute: TestLoginRoute,
   UnauthorizedRoute: UnauthorizedRoute,
   ApiLabV1GrantTargetRoute: ApiLabV1GrantTargetRoute,
-  ApiOrgV1AccountsRoute: ApiOrgV1AccountsRoute,
+  ApiOrgV1AccountsRoute: ApiOrgV1AccountsRouteWithChildren,
   ApiUnifiedV1ConnectionsRoute: ApiUnifiedV1ConnectionsRoute,
   ApiUnifiedV1SessionsRoute: ApiUnifiedV1SessionsRoute,
   ApiUnifiedV1AuthCallbackRoute: ApiUnifiedV1AuthCallbackRoute,

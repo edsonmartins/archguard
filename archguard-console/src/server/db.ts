@@ -105,6 +105,23 @@ function migrate(db: Database.Database): void {
     );
     CREATE INDEX IF NOT EXISTS idx_org_accounts_category ON org_accounts (category);
     CREATE INDEX IF NOT EXISTS idx_org_accounts_criticality ON org_accounts (criticality);
+
+    CREATE TABLE IF NOT EXISTS org_checkouts (
+      id              TEXT PRIMARY KEY,
+      account_id      TEXT NOT NULL,
+      account_slug    TEXT NOT NULL,
+      principal       TEXT NOT NULL,
+      reason          TEXT NOT NULL,
+      ttl_seconds     INTEGER NOT NULL,
+      status          TEXT NOT NULL,
+      approved_by     TEXT,
+      created_at      TEXT NOT NULL,
+      expires_at      TEXT NOT NULL,
+      closed_at       TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_org_checkouts_account ON org_checkouts (account_id);
+    CREATE INDEX IF NOT EXISTS idx_org_checkouts_principal ON org_checkouts (principal);
+    CREATE INDEX IF NOT EXISTS idx_org_checkouts_status ON org_checkouts (status);
   `)
   // Migrate older DBs that lack multi-connector column
   try {

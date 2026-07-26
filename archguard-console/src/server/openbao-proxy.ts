@@ -301,9 +301,10 @@ export function openbaoAddr(): string {
  *
  * Returns password/value from data.password | data.value | data.secret | first string field.
  */
-export async function readSecretValue(
+/** Read KV object (password/username/api_key/…) from OpenBao. */
+export async function readSecretData(
   secretRef: string,
-): Promise<string | undefined> {
+): Promise<Record<string, string> | undefined> {
   if (!tokenConfigured()) {
     throw new Error('OPENBAO_APP_TOKEN ausente para resolver secret_ref')
   }
@@ -328,11 +329,48 @@ export async function readSecretValue(
       typeof payload.data === 'object'
         ? (payload.data as Record<string, unknown>)
         : (payload as Record<string, unknown> | undefined)
-    if (!inner) continue
-    const value = pickSecretField(inner)
-    if (value) return value
+    if (!inner || typeof inner !== 'object') continue
+    const out: Record<string, string> = {}
+    for (const [k, v] of Object.entries(inner)) {
+      if (typeof v === 'string' && v.length > 0) out[k] = v
+    }
+    if (Object.keys(out).length > 0) return out
   }
   return undefined
+}
+
+export async function readSecretValue(
+  secretRef: string,
+): Promise<string | undefined> {
+  const data = await readSecretData(secretRef)
+  if (!data) return undefined
+  return pickSecretField(data)
+}
+
+/** Write arbitrary string fields to OpenBao KV v2 at secret_ref path. */
+export async function writeSecretData(
+  secretRef: string,
+  fields: Record<string, string>,
+): Promise<{ secret_ref: string }> {
+  if (!tokenConfigured()) {
+    throw new Error('OPENBAO_APP_TOKEN (ou TOKEN) ausente para gravar secret')
+  }
+  let path = secretRef.replace(/^\//, '').replace(/\/$/, '')
+  if (!path) throw new Error('secret_ref vazio')
+  if (!path.includes('/data/')) {
+    const m = path.match(/^([^/]+)\/(.+)$/)
+    if (m) path = `${m[1]}/data/${m[2]}`
+    else path = `secret/data/${path}`
+  }
+  const { status, data } = await api<{ errors?: string[] }>('POST', `/${path}`, {
+    data: fields,
+  })
+  if (status >= 400) {
+    throw new Error(
+      `OpenBao write ${status}: ${(data as { errors?: string[] })?.errors?.join?.('; ') || 'failed'}`,
+    )
+  }
+  return { secret_ref: path }
 }
 
 function kvPathsToTry(ref: string): string[] {

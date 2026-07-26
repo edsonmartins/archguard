@@ -1,5 +1,14 @@
 import { useMemo, useState } from 'react'
-import { ExternalLink, KeyRound, Plus, Search, Trash2 } from 'lucide-react'
+import {
+  Copy,
+  ExternalLink,
+  KeyRound,
+  Lock,
+  Plus,
+  Search,
+  Trash2,
+  Unlock,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import type {
@@ -15,10 +24,14 @@ import {
   ORG_CRITICALITIES,
 } from '@/lib/api/types/org-account'
 import {
+  useCheckinOrgAccount,
+  useCheckoutOrgAccount,
   useDeleteOrgAccount,
   useOrgAccounts,
+  useStoreOrgAccountSecret,
   useUpsertOrgAccount,
 } from '@/lib/hooks/use-org-accounts'
+import type { CheckoutResult } from '@/server/org-accounts-fn'
 import { usePermissions } from '@/lib/hooks/use-permissions'
 import { PermissionGate } from '@/components/shared/permission-gate'
 import { EmptyState } from '@/components/shared/empty-state'
@@ -84,10 +97,21 @@ export function OrgAccountListPage() {
   const { data, isLoading, isError, error } = useOrgAccounts()
   const upsert = useUpsertOrgAccount()
   const del = useDeleteOrgAccount()
+  const checkout = useCheckoutOrgAccount()
+  const checkin = useCheckinOrgAccount()
+  const storeSecret = useStoreOrgAccountSecret()
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState<OrgAccountInput>(blank())
   const [editing, setEditing] = useState<OrgAccount | null>(null)
+  const [checkoutAcc, setCheckoutAcc] = useState<OrgAccount | null>(null)
+  const [reason, setReason] = useState('')
+  const [ttlMin, setTtlMin] = useState(60)
+  const [reveal, setReveal] = useState<CheckoutResult | null>(null)
+  const [secretAcc, setSecretAcc] = useState<OrgAccount | null>(null)
+  const [secretPw, setSecretPw] = useState('')
+  const [secretUser, setSecretUser] = useState('')
+  const [secretKey, setSecretKey] = useState('')
 
   const filtered = useMemo(() => {
     const list = data || []
@@ -147,6 +171,62 @@ export function OrgAccountListPage() {
     } catch (e) {
       toast.error((e as Error).message || t('orgAccounts.deleteError'))
     }
+  }
+
+  async function doCheckout() {
+    if (!checkoutAcc) return
+    try {
+      const res = await checkout.mutateAsync({
+        id: checkoutAcc.id,
+        reason,
+        ttl_seconds: Math.max(5, ttlMin) * 60,
+      })
+      setReveal(res)
+      if (res.secret) toast.success(t('orgAccounts.checkoutOk'))
+      else toast.message(res.message || t('orgAccounts.checkoutNoSecret'))
+    } catch (e) {
+      toast.error((e as Error).message || t('orgAccounts.checkoutError'))
+    }
+  }
+
+  async function doCheckin() {
+    if (!reveal?.checkout?.id) return
+    try {
+      await checkin.mutateAsync(reveal.checkout.id)
+      toast.success(t('orgAccounts.checkinOk'))
+      setReveal(null)
+      setCheckoutAcc(null)
+      setReason('')
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
+  }
+
+  async function doStoreSecret() {
+    if (!secretAcc) return
+    try {
+      const r = await storeSecret.mutateAsync({
+        id: secretAcc.id,
+        password: secretPw || undefined,
+        username: secretUser || undefined,
+        api_key: secretKey || undefined,
+      })
+      toast.success(t('orgAccounts.secretStored', { ref: r.secret_ref }))
+      setSecretAcc(null)
+      setSecretPw('')
+      setSecretUser('')
+      setSecretKey('')
+    } catch (e) {
+      toast.error((e as Error).message || t('orgAccounts.secretStoreError'))
+    }
+  }
+
+  function copyText(label: string, text?: string) {
+    if (!text) return
+    void navigator.clipboard.writeText(text).then(
+      () => toast.success(`${label} ${t('common.copied')}`),
+      () => toast.error('clipboard failed'),
+    )
   }
 
   return (
@@ -242,7 +322,7 @@ export function OrgAccountListPage() {
                       {a.login_hint || '—'}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
+                      <div className="flex flex-wrap justify-end gap-1">
                         {a.url ? (
                           <Button variant="ghost" size="icon" asChild>
                             <a
@@ -255,8 +335,38 @@ export function OrgAccountListPage() {
                             </a>
                           </Button>
                         ) : null}
+                        <PermissionGate
+                          require={['org_accounts:checkout', 'org_accounts:admin']}
+                          any
+                        >
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              setCheckoutAcc(a)
+                              setReveal(null)
+                              setReason('')
+                            }}
+                          >
+                            <Unlock className="mr-1 h-3.5 w-3.5" />
+                            {t('orgAccounts.checkout')}
+                          </Button>
+                        </PermissionGate>
                         {canAdmin ? (
                           <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSecretAcc(a)
+                                setSecretPw('')
+                                setSecretUser(a.login_hint || '')
+                                setSecretKey('')
+                              }}
+                              title={t('orgAccounts.storeSecret')}
+                            >
+                              <Lock className="h-4 w-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -285,6 +395,203 @@ export function OrgAccountListPage() {
           </p>
         </CardContent>
       </Card>
+
+      {/* Checkout dialog */}
+      <Dialog
+        open={!!checkoutAcc}
+        onOpenChange={(v) => {
+          if (!v) {
+            setCheckoutAcc(null)
+            setReveal(null)
+            setReason('')
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {t('orgAccounts.checkoutTitle', {
+                name: checkoutAcc?.name || '',
+              })}
+            </DialogTitle>
+          </DialogHeader>
+          {!reveal?.secret ? (
+            <div className="grid gap-3 py-2">
+              <div className="grid gap-1.5">
+                <Label>{t('orgAccounts.reason')}</Label>
+                <Textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder={t('orgAccounts.reasonPh')}
+                  rows={3}
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label>{t('orgAccounts.ttlMinutes')}</Label>
+                <Input
+                  type="number"
+                  min={5}
+                  max={480}
+                  value={ttlMin}
+                  onChange={(e) => setTtlMin(Number(e.target.value) || 60)}
+                />
+              </div>
+              {checkoutAcc?.requires_dual_control ? (
+                <p className="text-xs text-amber-600">
+                  {t('orgAccounts.dualNote')}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <div className="grid gap-3 py-2">
+              <p className="text-sm text-muted-foreground">
+                {reveal.message} · expira{' '}
+                {new Date(reveal.checkout.expires_at).toLocaleString()}
+              </p>
+              {reveal.secret.username ? (
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 truncate rounded bg-muted px-2 py-1 text-sm">
+                    {reveal.secret.username}
+                  </code>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() =>
+                      copyText('user', reveal.secret?.username)
+                    }
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : null}
+              {reveal.secret.password ? (
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 truncate rounded bg-muted px-2 py-1 font-mono text-sm">
+                    {reveal.secret.password}
+                  </code>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() =>
+                      copyText('password', reveal.secret?.password)
+                    }
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : null}
+              {reveal.secret.api_key ? (
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 truncate rounded bg-muted px-2 py-1 font-mono text-xs">
+                    {reveal.secret.api_key}
+                  </code>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => copyText('api_key', reveal.secret?.api_key)}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : null}
+              {!reveal.secret.password &&
+              !reveal.secret.api_key &&
+              reveal.secret.fields ? (
+                <pre className="max-h-40 overflow-auto rounded bg-muted p-2 text-xs">
+                  {JSON.stringify(reveal.secret.fields, null, 2)}
+                </pre>
+              ) : null}
+            </div>
+          )}
+          <DialogFooter>
+            {!reveal?.secret ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setCheckoutAcc(null)}
+                >
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  onClick={() => void doCheckout()}
+                  disabled={checkout.isPending || reason.trim().length < 3}
+                >
+                  {t('orgAccounts.checkout')}
+                </Button>
+              </>
+            ) : (
+              <Button onClick={() => void doCheckin()}>
+                {t('orgAccounts.checkin')}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Store secret in OpenBao */}
+      <Dialog
+        open={!!secretAcc}
+        onOpenChange={(v) => {
+          if (!v) setSecretAcc(null)
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {t('orgAccounts.storeSecretTitle', {
+                name: secretAcc?.name || '',
+              })}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            {t('orgAccounts.storeSecretHint')}{' '}
+            <code className="text-[11px]">
+              {secretAcc?.secret_ref ||
+                `secret/data/org/${secretAcc?.category}/${secretAcc?.slug}`}
+            </code>
+          </p>
+          <div className="grid gap-3 py-2">
+            <div className="grid gap-1.5">
+              <Label>username</Label>
+              <Input
+                value={secretUser}
+                onChange={(e) => setSecretUser(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>password</Label>
+              <Input
+                type="password"
+                value={secretPw}
+                onChange={(e) => setSecretPw(e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>api_key</Label>
+              <Input
+                type="password"
+                value={secretKey}
+                onChange={(e) => setSecretKey(e.target.value)}
+                autoComplete="off"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSecretAcc(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              onClick={() => void doStoreSecret()}
+              disabled={
+                storeSecret.isPending || (!secretPw && !secretKey)
+              }
+            >
+              {t('common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
