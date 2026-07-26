@@ -46,7 +46,7 @@ export const Countries = [
   {label: "日本語", key: "ja", country: "JP", alt: "日本語"},
   {label: "中文", key: "zh", country: "CN", alt: "中文"},
   {label: "TiếngViệt", key: "vi", country: "VN", alt: "TiếngViệt"},
-  {label: "Português", key: "pt", country: "PT", alt: "Português"},
+  {label: "Português (Brasil)", key: "pt", country: "BR", alt: "Português (Brasil)"},
   {label: "Türkçe", key: "tr", country: "TR", alt: "Türkçe"},
   {label: "Polski", key: "pl", country: "PL", alt: "Polski"},
   {label: "Українська", key: "uk", country: "UA", alt: "Українська"},
