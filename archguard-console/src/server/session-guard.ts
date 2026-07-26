@@ -11,19 +11,34 @@ import {
 import { deriveTenants, stripGroupDomain } from '@/lib/auth/roles'
 import type { Site } from '@/lib/api/types/site'
 
+/**
+ * Decrypt session cookie. Rejects unauthenticated or expired sessions so
+ * modules like org-accounts (ADR-013 A1) return 401 after Kanidm offboard /
+ * access-token expiry without waiting for a browser refresh path.
+ */
 export function getSessionOrNull(): SessionData | null {
   try {
     const cookie = getCookie('archguard_session')
     if (!cookie) return null
     const s = decryptSession<SessionData>(cookie)
     if (!s?.isAuthenticated) return null
+    if (typeof s.expiresAt === 'number' && s.expiresAt <= Date.now()) {
+      return null
+    }
     return s
   } catch {
     return null
   }
 }
 
-/** Require an authenticated session cookie. */
+/** True when session is present, authenticated, and not past expiresAt. */
+export function isSessionLive(s: SessionData | null | undefined): boolean {
+  if (!s?.isAuthenticated) return false
+  if (typeof s.expiresAt === 'number' && s.expiresAt <= Date.now()) return false
+  return true
+}
+
+/** Require an authenticated, non-expired session cookie. */
 export function requireSession(): SessionData {
   const s = getSessionOrNull()
   if (!s) throw new Error('Unauthorized: session required')

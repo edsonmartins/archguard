@@ -9,6 +9,7 @@ import {
   createCheckout,
   denyCheckout,
   expireDueCheckouts,
+  forceCloseCheckoutsForPrincipal,
   getCheckout,
   listPendingCheckouts,
   samePrincipal,
@@ -90,5 +91,38 @@ describe('org-checkouts', () => {
     const d = denyCheckout(c.id, 'bob')
     expect(d?.status).toBe('denied')
     expect(d?.approved_by).toBe('bob')
+  })
+
+  it('force-closes active and pending checkouts for principal (A1 offboarding)', () => {
+    const active = createCheckout({
+      account_id: 'a1',
+      account_slug: 'vendax',
+      principal: 'edson@integrall.tech',
+      reason: 'support',
+      ttl_seconds: 3600,
+      status: 'active',
+    })
+    const pending = createCheckout({
+      account_id: 'a2',
+      account_slug: 'apple',
+      principal: 'edson@integrall.tech',
+      reason: 'ship',
+      ttl_seconds: 3600,
+      status: 'pending',
+    })
+    const other = createCheckout({
+      account_id: 'a3',
+      account_slug: 'gcp',
+      principal: 'other@integrall.tech',
+      reason: 'ops',
+      ttl_seconds: 3600,
+      status: 'active',
+    })
+    // bare username match against email principal
+    expect(forceCloseCheckoutsForPrincipal('edson')).toBe(2)
+    expect(getCheckout(active.id)?.status).toBe('checked_in')
+    expect(getCheckout(pending.id)?.status).toBe('checked_in')
+    expect(getCheckout(other.id)?.status).toBe('active')
+    expect(forceCloseCheckoutsForPrincipal('edson')).toBe(0)
   })
 })

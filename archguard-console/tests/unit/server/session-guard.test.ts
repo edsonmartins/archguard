@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { SessionData } from '@/server/auth'
 import type { Site } from '@/lib/api/types/site'
-import { filterSitesByTenant } from '@/server/session-guard'
+import {
+  filterSitesByTenant,
+  isSessionLive,
+} from '@/server/session-guard'
 
 function session(
   partial: Partial<SessionData> & {
@@ -62,6 +65,40 @@ const sites: Site[] = [
     updated_by: null,
   },
 ]
+
+describe('isSessionLive (A1 offboarding)', () => {
+  it('rejects null, unauthenticated, and expired sessions', () => {
+    expect(isSessionLive(null)).toBe(false)
+    expect(
+      isSessionLive(
+        session({
+          groups: [],
+          isAuthenticated: false,
+          expiresAt: Date.now() + 60_000,
+        }),
+      ),
+    ).toBe(false)
+    expect(
+      isSessionLive(
+        session({
+          groups: ['archguard_users'],
+          expiresAt: Date.now() - 1,
+        }),
+      ),
+    ).toBe(false)
+  })
+
+  it('accepts live authenticated session', () => {
+    expect(
+      isSessionLive(
+        session({
+          groups: ['archguard_users'],
+          expiresAt: Date.now() + 120_000,
+        }),
+      ),
+    ).toBe(true)
+  })
+})
 
 describe('filterSitesByTenant', () => {
   it('system:admin sees all sites', () => {

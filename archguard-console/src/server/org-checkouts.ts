@@ -158,6 +158,33 @@ export function listActiveCheckoutsForPrincipal(principal: string): OrgCheckout[
   return rows.map(rowToCheckout)
 }
 
+/**
+ * A1 / offboarding: force-close all open checkouts for a principal
+ * (active + pending). Matches email or bare username case-insensitively.
+ * Returns number of rows closed.
+ */
+export function forceCloseCheckoutsForPrincipal(principal: string): number {
+  expireDueCheckouts()
+  const p = principal.trim()
+  if (!p) return 0
+  const now = new Date().toISOString()
+  const bare = p.includes('@') ? p.split('@')[0]! : p
+  // Match exact principal or email local-part / full email variants.
+  const res = getDb()
+    .prepare(
+      `UPDATE org_checkouts
+       SET status = 'checked_in', closed_at = ?
+       WHERE status IN ('active', 'pending')
+         AND (
+           lower(principal) = lower(?)
+           OR lower(principal) = lower(?)
+           OR lower(principal) LIKE lower(?) || '@%'
+         )`,
+    )
+    .run(now, p, bare, bare)
+  return res.changes
+}
+
 export function listPendingCheckouts(limit = 50): OrgCheckout[] {
   expireDueCheckouts()
   const rows = getDb()

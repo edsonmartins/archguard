@@ -14,6 +14,7 @@ import {
   deleteWarpgateUserByName,
   warpgateConfigured,
 } from './warpgate-proxy'
+import { forceCloseCheckoutsForPrincipal } from './org-checkouts'
 
 const KANIDM_URL = (
   process.env.ARCHGUARD_ID_URL || 'https://localhost:8443'
@@ -184,6 +185,25 @@ export const revokePersonAccessFn = createServerFn({ method: 'POST' })
 
     // Always enforce IdP block even if orch is mock-only
     steps.push(await expireKanidmPerson(username))
+
+    // ADR-013 A1: close any open org-account checkouts for this principal
+    try {
+      const closed = forceCloseCheckoutsForPrincipal(username)
+      steps.push({
+        component: 'org_checkouts',
+        ok: true,
+        detail:
+          closed > 0
+            ? `closed ${closed} open org checkout(s)`
+            : 'no open org checkouts',
+      })
+    } catch (e) {
+      steps.push({
+        component: 'org_checkouts',
+        ok: false,
+        detail: (e as Error).message,
+      })
+    }
 
     if (warpgateConfigured()) {
       try {
