@@ -27,7 +27,7 @@ export let StaticBaseUrl = "https://cdn.casbin.org";
 export const InitThemeAlgorithm = true;
 export const ThemeDefault = {
   themeType: "default",
-  colorPrimary: "#262626",
+  colorPrimary: "#16a34a", // verde ArchGuard (aplicado ao token via App.js ConfigProvider)
   borderRadius: 10,
   isCompact: false,
 };

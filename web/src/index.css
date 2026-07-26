@@ -264,6 +264,16 @@ a[href^="mailto:"]:active {
   background-color: #dcfce7 !important;
 }
 
+/* Dropdown menus (theme selector etc.): selected item readable green in both themes */
+.ant-dropdown-menu-item-selected,
+.ant-dropdown-menu-item-selected:hover {
+  background-color: #dcfce7 !important;
+  color: #15803d !important;
+}
+.ant-dropdown-menu-item-selected .anticon {
+  color: #15803d !important;
+}
+
 /* Sidebar menu container: hide scrollbar but keep scroll behavior */
 .sider-menu-container {
   scrollbar-width: none; /* Firefox */
