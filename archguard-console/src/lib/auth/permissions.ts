@@ -112,6 +112,7 @@ const TENANT_ADMIN_PERMS: Permission[] = [
   'secrets:read',
   'org_accounts:read',
   'org_accounts:checkout',
+  'org_accounts:approve',
 ]
 
 /** Operator / Viewer: read-only authorized scope (5.4). */

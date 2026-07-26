@@ -54,14 +54,14 @@ function rowToCheckout(r: Row): OrgCheckout {
   }
 }
 
-/** Mark overdue active checkouts as expired. */
+/** Mark overdue active/pending checkouts as expired. */
 export function expireDueCheckouts(): number {
   const now = new Date().toISOString()
   const res = getDb()
     .prepare(
       `UPDATE org_checkouts
        SET status = 'expired', closed_at = @now
-       WHERE status = 'active' AND expires_at < @now`,
+       WHERE status IN ('active', 'pending') AND expires_at < @now`,
     )
     .run({ now })
   return res.changes
@@ -156,6 +156,78 @@ export function listActiveCheckoutsForPrincipal(principal: string): OrgCheckout[
     )
     .all(principal) as Row[]
   return rows.map(rowToCheckout)
+}
+
+export function listPendingCheckouts(limit = 50): OrgCheckout[] {
+  expireDueCheckouts()
+  const rows = getDb()
+    .prepare(
+      `SELECT * FROM org_checkouts
+       WHERE status = 'pending'
+       ORDER BY created_at ASC
+       LIMIT ?`,
+    )
+    .all(limit) as Row[]
+  return rows.map(rowToCheckout)
+}
+
+/**
+ * Approve pending checkout (OCB-2). Caller must enforce:
+ * - approver has org_accounts:approve
+ * - approver !== principal (no self-approve)
+ * Returns updated checkout; secret reveal is done by caller after approve.
+ */
+export function approveCheckout(
+  id: string,
+  approver: string,
+): OrgCheckout | null {
+  expireDueCheckouts()
+  const c = getCheckout(id)
+  if (!c || c.status !== 'pending') return c
+  if (samePrincipal(c.principal, approver)) {
+    throw new Error('Self-approve forbidden')
+  }
+  // Restart TTL window from approval
+  const now = new Date()
+  const expires = new Date(now.getTime() + c.ttl_seconds * 1000)
+  getDb()
+    .prepare(
+      `UPDATE org_checkouts
+       SET status = 'active',
+           approved_by = ?,
+           created_at = ?,
+           expires_at = ?
+       WHERE id = ? AND status = 'pending'`,
+    )
+    .run(approver, now.toISOString(), expires.toISOString(), id)
+  return getCheckout(id)
+}
+
+export function denyCheckout(
+  id: string,
+  approver: string,
+): OrgCheckout | null {
+  expireDueCheckouts()
+  const c = getCheckout(id)
+  if (!c || c.status !== 'pending') return c
+  if (samePrincipal(c.principal, approver)) {
+    throw new Error('Self-deny of own pending is allowed only via check-in; use check-in to cancel')
+  }
+  const now = new Date().toISOString()
+  getDb()
+    .prepare(
+      `UPDATE org_checkouts
+       SET status = 'denied', approved_by = ?, closed_at = ?
+       WHERE id = ? AND status = 'pending'`,
+    )
+    .run(approver, now, id)
+  return getCheckout(id)
+}
+
+/** Normalize for compare (email vs display). */
+export function samePrincipal(a: string, b: string): boolean {
+  const n = (s: string) => s.trim().toLowerCase()
+  return n(a) === n(b)
 }
 
 export const TTL_MIN = 300 // 5 min

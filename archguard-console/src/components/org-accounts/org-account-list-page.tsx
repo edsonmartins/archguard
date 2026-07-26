@@ -24,10 +24,13 @@ import {
   ORG_CRITICALITIES,
 } from '@/lib/api/types/org-account'
 import {
+  useApproveOrgCheckout,
   useCheckinOrgAccount,
   useCheckoutOrgAccount,
   useDeleteOrgAccount,
+  useDenyOrgCheckout,
   useOrgAccounts,
+  usePendingOrgCheckouts,
   useStoreOrgAccountSecret,
   useUpsertOrgAccount,
 } from '@/lib/hooks/use-org-accounts'
@@ -94,12 +97,16 @@ export function OrgAccountListPage() {
   const { t } = useTranslation()
   const { can } = usePermissions()
   const canAdmin = can('org_accounts:admin')
+  const canApprove = can('org_accounts:approve') || canAdmin
   const { data, isLoading, isError, error } = useOrgAccounts()
+  const pendingQ = usePendingOrgCheckouts(canApprove)
   const upsert = useUpsertOrgAccount()
   const del = useDeleteOrgAccount()
   const checkout = useCheckoutOrgAccount()
   const checkin = useCheckinOrgAccount()
   const storeSecret = useStoreOrgAccountSecret()
+  const approveMut = useApproveOrgCheckout()
+  const denyMut = useDenyOrgCheckout()
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState<OrgAccountInput>(blank())
@@ -182,10 +189,35 @@ export function OrgAccountListPage() {
         ttl_seconds: Math.max(5, ttlMin) * 60,
       })
       setReveal(res)
-      if (res.secret) toast.success(t('orgAccounts.checkoutOk'))
-      else toast.message(res.message || t('orgAccounts.checkoutNoSecret'))
+      if (res.checkout.status === 'pending') {
+        toast.message(t('orgAccounts.checkoutPending'))
+      } else if (res.secret) {
+        toast.success(t('orgAccounts.checkoutOk'))
+      } else {
+        toast.message(res.message || t('orgAccounts.checkoutNoSecret'))
+      }
     } catch (e) {
       toast.error((e as Error).message || t('orgAccounts.checkoutError'))
+    }
+  }
+
+  async function doApprove(id: string) {
+    try {
+      const res = await approveMut.mutateAsync(id)
+      setReveal(res)
+      setCheckoutAcc(null)
+      toast.success(t('orgAccounts.approved'))
+    } catch (e) {
+      toast.error((e as Error).message || t('orgAccounts.approveError'))
+    }
+  }
+
+  async function doDeny(id: string) {
+    try {
+      await denyMut.mutateAsync({ checkout_id: id })
+      toast.success(t('orgAccounts.denied'))
+    } catch (e) {
+      toast.error((e as Error).message || t('orgAccounts.denyError'))
     }
   }
 
@@ -247,6 +279,73 @@ export function OrgAccountListPage() {
           </Button>
         </PermissionGate>
       </div>
+
+      {canApprove ? (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">
+              {t('orgAccounts.pendingQueue')}
+              {pendingQ.data?.length ? (
+                <Badge className="ml-2" variant="destructive">
+                  {pendingQ.data.length}
+                </Badge>
+              ) : null}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {pendingQ.isLoading ? (
+              <Skeleton className="h-8 w-full" />
+            ) : !pendingQ.data?.length ? (
+              <p className="text-sm text-muted-foreground">
+                {t('orgAccounts.pendingEmpty')}
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('orgAccounts.colName')}</TableHead>
+                    <TableHead>{t('orgAccounts.requester')}</TableHead>
+                    <TableHead>{t('orgAccounts.reason')}</TableHead>
+                    <TableHead className="text-right">
+                      {t('orgAccounts.colActions')}
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingQ.data.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell className="font-medium">
+                        {c.account_slug}
+                      </TableCell>
+                      <TableCell className="text-sm">{c.principal}</TableCell>
+                      <TableCell className="max-w-[14rem] truncate text-sm">
+                        {c.reason}
+                      </TableCell>
+                      <TableCell className="text-right space-x-1">
+                        <Button
+                          size="sm"
+                          onClick={() => void doApprove(c.id)}
+                          disabled={approveMut.isPending}
+                        >
+                          {t('orgAccounts.approve')}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void doDeny(c.id)}
+                          disabled={denyMut.isPending}
+                        >
+                          {t('orgAccounts.deny')}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader className="pb-3">
@@ -415,7 +514,16 @@ export function OrgAccountListPage() {
               })}
             </DialogTitle>
           </DialogHeader>
-          {!reveal?.secret ? (
+          {reveal?.checkout?.status === 'pending' ? (
+            <div className="grid gap-3 py-2">
+              <p className="text-sm text-amber-700 dark:text-amber-500">
+                {reveal.message || t('orgAccounts.checkoutPending')}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                id: {reveal.checkout.id.slice(0, 8)}… · TTL {ttlMin} min
+              </p>
+            </div>
+          ) : !reveal?.secret ? (
             <div className="grid gap-3 py-2">
               <div className="grid gap-1.5">
                 <Label>{t('orgAccounts.reason')}</Label>
@@ -504,7 +612,20 @@ export function OrgAccountListPage() {
             </div>
           )}
           <DialogFooter>
-            {!reveal?.secret ? (
+            {reveal?.checkout?.status === 'pending' ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => void doCheckin()}
+                  disabled={!reveal.checkout.id}
+                >
+                  {t('orgAccounts.cancelPending')}
+                </Button>
+                <Button onClick={() => setCheckoutAcc(null)}>
+                  {t('common.close', { defaultValue: 'Fechar' })}
+                </Button>
+              </>
+            ) : !reveal?.secret ? (
               <>
                 <Button
                   variant="outline"

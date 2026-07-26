@@ -12,9 +12,14 @@ import {
   TTL_DEFAULT,
   TTL_MAX,
   TTL_MIN,
+  approveCheckout,
   checkinCheckout,
   createCheckout,
+  denyCheckout,
+  getCheckout,
   listCheckoutsForAccount,
+  listPendingCheckouts,
+  samePrincipal,
   type OrgCheckout,
 } from './org-checkouts'
 import {
@@ -151,9 +156,95 @@ export const deleteOrgAccountFn = createServerFn({ method: 'POST' })
     return { ok }
   })
 
+async function revealForAccount(
+  acc: NonNullable<ReturnType<typeof getOrgAccount>>,
+  checkout: OrgCheckout,
+  actor: string,
+  reason: string,
+): Promise<CheckoutResult> {
+  const baoOk = openbaoTokenConfigured()
+  if (!acc.secret_ref) {
+    recordActivity(
+      'POST',
+      `/archgate/org-accounts/${acc.slug}/checkout`,
+      actor,
+      'error',
+      'secret_ref missing',
+      { checkout_id: checkout.id, reason },
+    )
+    return {
+      checkout,
+      openbao_configured: baoOk,
+      message:
+        'Conta sem secret_ref. Admin deve preencher o path OpenBao (ex. secret/data/org/store/…).',
+    }
+  }
+  if (!baoOk) {
+    recordActivity(
+      'POST',
+      `/archgate/org-accounts/${acc.slug}/checkout`,
+      actor,
+      'error',
+      'openbao token missing',
+      { checkout_id: checkout.id, reason },
+    )
+    return {
+      checkout,
+      openbao_configured: false,
+      message:
+        'OpenBao sem OPENBAO_APP_TOKEN no console. Configure wire de secrets.',
+    }
+  }
+  const fields = await readSecretData(acc.secret_ref)
+  if (!fields) {
+    recordActivity(
+      'POST',
+      `/archgate/org-accounts/${acc.slug}/checkout`,
+      actor,
+      'error',
+      'secret empty or not found',
+      { checkout_id: checkout.id, reason, secret_ref: acc.secret_ref },
+    )
+    return {
+      checkout,
+      openbao_configured: true,
+      message: `Secret não encontrado em ${acc.secret_ref}. Grave o valor no OpenBao (admin).`,
+    }
+  }
+  recordActivity(
+    'POST',
+    `/archgate/org-accounts/${acc.slug}/checkout`,
+    actor,
+    'success',
+    undefined,
+    {
+      checkout_id: checkout.id,
+      reason,
+      ttl_seconds: checkout.ttl_seconds,
+      expires_at: checkout.expires_at,
+      dual_control: acc.requires_dual_control,
+      approved_by: checkout.approved_by,
+      secret_keys: Object.keys(fields),
+    },
+  )
+  return {
+    checkout,
+    openbao_configured: true,
+    secret: {
+      password: fields.password || fields.value || fields.secret || fields.pass,
+      username: fields.username || fields.user || acc.login_hint || undefined,
+      api_key: fields.api_key || fields.token || fields.key,
+      fields,
+    },
+    message:
+      'Checkout ativo. Não compartilhe no chat; faça check-in ao terminar.',
+  }
+}
+
 /**
- * OCB-1: checkout secret with reason + TTL.
- * Dual-control hard gate is OCB-2 — for now P0 is allowed with audit flag.
+ * Checkout with reason + TTL.
+ * OCB-2: accounts with requires_dual_control create status=pending (no secret)
+ * until a different principal approves.
  */
 export const checkoutOrgAccountFn = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) => {
@@ -182,68 +273,18 @@ export const checkoutOrgAccountFn = createServerFn({ method: 'POST' })
     const reason = data.reason.trim()
     if (reason.length < 3) throw new Error('reason required (min 3 chars)')
 
+    const needsDual = !!acc.requires_dual_control
     const baoOk = openbaoTokenConfigured()
-    const checkout = createCheckout({
-      account_id: acc.id,
-      account_slug: acc.slug,
-      principal: actor,
-      reason,
-      ttl_seconds: ttl,
-      status: 'active',
-    })
 
-    if (!acc.secret_ref) {
-      recordActivity(
-        'POST',
-        `/archgate/org-accounts/${acc.slug}/checkout`,
-        actor,
-        'error',
-        'secret_ref missing',
-        { checkout_id: checkout.id, reason },
-      )
-      return {
-        checkout,
-        openbao_configured: baoOk,
-        message:
-          'Conta sem secret_ref. Admin deve preencher o path OpenBao (ex. secret/data/org/store/…).',
-      }
-    }
-
-    if (!baoOk) {
-      recordActivity(
-        'POST',
-        `/archgate/org-accounts/${acc.slug}/checkout`,
-        actor,
-        'error',
-        'openbao token missing',
-        { checkout_id: checkout.id, reason },
-      )
-      return {
-        checkout,
-        openbao_configured: false,
-        message:
-          'OpenBao sem OPENBAO_APP_TOKEN no console. Configure wire de secrets (OCB-1).',
-      }
-    }
-
-    try {
-      const fields = await readSecretData(acc.secret_ref)
-      if (!fields) {
-        recordActivity(
-          'POST',
-          `/archgate/org-accounts/${acc.slug}/checkout`,
-          actor,
-          'error',
-          'secret empty or not found',
-          { checkout_id: checkout.id, reason, secret_ref: acc.secret_ref },
-        )
-        return {
-          checkout,
-          openbao_configured: true,
-          message: `Secret não encontrado em ${acc.secret_ref}. Grave o valor no OpenBao (admin).`,
-        }
-      }
-
+    if (needsDual) {
+      const checkout = createCheckout({
+        account_id: acc.id,
+        account_slug: acc.slug,
+        principal: actor,
+        reason,
+        ttl_seconds: ttl,
+        status: 'pending',
+      })
       recordActivity(
         'POST',
         `/archgate/org-accounts/${acc.slug}/checkout`,
@@ -254,26 +295,28 @@ export const checkoutOrgAccountFn = createServerFn({ method: 'POST' })
           checkout_id: checkout.id,
           reason,
           ttl_seconds: ttl,
-          expires_at: checkout.expires_at,
-          dual_control_required: acc.requires_dual_control,
-          // never log secret material
-          secret_keys: Object.keys(fields),
+          status: 'pending',
+          dual_control: true,
         },
       )
-
       return {
         checkout,
-        openbao_configured: true,
-        secret: {
-          password: fields.password || fields.value || fields.secret || fields.pass,
-          username: fields.username || fields.user || acc.login_hint || undefined,
-          api_key: fields.api_key || fields.token || fields.key,
-          fields,
-        },
-        message: acc.requires_dual_control
-          ? 'Checkout ativo (P0). Dual-control formal chega no OCB-2 — uso auditado.'
-          : 'Checkout ativo. Não compartilhe no chat; faça check-in ao terminar.',
+        openbao_configured: baoOk,
+        message:
+          'Checkout P0 pendente de dual-control. Outro admin com org_accounts:approve deve aprovar na fila.',
       }
+    }
+
+    const checkout = createCheckout({
+      account_id: acc.id,
+      account_slug: acc.slug,
+      principal: actor,
+      reason,
+      ttl_seconds: ttl,
+      status: 'active',
+    })
+    try {
+      return await revealForAccount(acc, checkout, actor, reason)
     } catch (e) {
       const msg = (e as Error).message
       recordActivity(
@@ -287,6 +330,134 @@ export const checkoutOrgAccountFn = createServerFn({ method: 'POST' })
       throw e
     }
   })
+
+/** OCB-2: approve pending checkout and reveal secret to the approver flow (returned once). */
+export const approveOrgCheckoutFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: unknown) => {
+    const r = z.object({ checkout_id: z.string().min(1) }).safeParse(data)
+    if (!r.success) throw new Error(r.error.message)
+    return r.data
+  })
+  .handler(async ({ data }): Promise<CheckoutResult> => {
+    const s = requireSession()
+    requireAnyPerm(
+      s,
+      ['org_accounts:approve', 'org_accounts:admin'],
+      'org_accounts:approve',
+    )
+    const actor = sessionActor(s)
+    const existing = getCheckout(data.checkout_id)
+    if (!existing) throw new Error('Checkout não encontrado')
+    if (existing.status !== 'pending') {
+      throw new Error(`Checkout não está pendente (status=${existing.status})`)
+    }
+    if (samePrincipal(existing.principal, actor)) {
+      recordActivity(
+        'POST',
+        `/archgate/org-accounts/checkout/${data.checkout_id}/approve`,
+        actor,
+        'error',
+        'self-approve forbidden',
+      )
+      throw new Error('Forbidden: self-approve não permitido')
+    }
+
+    let approved: OrgCheckout | null
+    try {
+      approved = approveCheckout(data.checkout_id, actor)
+    } catch (e) {
+      recordActivity(
+        'POST',
+        `/archgate/org-accounts/checkout/${data.checkout_id}/approve`,
+        actor,
+        'error',
+        (e as Error).message,
+      )
+      throw e
+    }
+    if (!approved || approved.status !== 'active') {
+      throw new Error('Falha ao aprovar checkout')
+    }
+
+    const acc = getOrgAccount(approved.account_id)
+    if (!acc) throw new Error('Conta não encontrada')
+
+    recordActivity(
+      'POST',
+      `/archgate/org-accounts/checkout/${data.checkout_id}/approve`,
+      actor,
+      'success',
+      undefined,
+      {
+        principal: approved.principal,
+        account_slug: approved.account_slug,
+        reason: approved.reason,
+      },
+    )
+
+    // Secret returned to approver session — they hand process offline / requester
+    // re-checks via their own follow-up is not re-revealed without new checkout.
+    // Spec: reveal after approve — return secret once to the approver who can copy
+    // and coordinate; requester was told "pending".
+    return await revealForAccount(acc, approved, actor, approved.reason)
+  })
+
+export const denyOrgCheckoutFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: unknown) => {
+    const r = z
+      .object({
+        checkout_id: z.string().min(1),
+        note: z.string().max(500).optional(),
+      })
+      .safeParse(data)
+    if (!r.success) throw new Error(r.error.message)
+    return r.data
+  })
+  .handler(async ({ data }): Promise<{ checkout: OrgCheckout | null }> => {
+    const s = requireSession()
+    requireAnyPerm(
+      s,
+      ['org_accounts:approve', 'org_accounts:admin'],
+      'org_accounts:approve',
+    )
+    const actor = sessionActor(s)
+    const existing = getCheckout(data.checkout_id)
+    if (!existing) throw new Error('Checkout não encontrado')
+    if (existing.status !== 'pending') {
+      throw new Error(`Checkout não está pendente (status=${existing.status})`)
+    }
+    if (samePrincipal(existing.principal, actor)) {
+      throw new Error(
+        'Use Check-in para cancelar seu próprio pedido pendente',
+      )
+    }
+    const denied = denyCheckout(data.checkout_id, actor)
+    recordActivity(
+      'POST',
+      `/archgate/org-accounts/checkout/${data.checkout_id}/deny`,
+      actor,
+      'success',
+      undefined,
+      {
+        principal: existing.principal,
+        account_slug: existing.account_slug,
+        note: data.note || '',
+      },
+    )
+    return { checkout: denied }
+  })
+
+export const listPendingOrgCheckoutsFn = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<OrgCheckout[]> => {
+    const s = requireSession()
+    requireAnyPerm(
+      s,
+      ['org_accounts:approve', 'org_accounts:admin'],
+      'org_accounts:approve',
+    )
+    return listPendingCheckouts()
+  },
+)
 
 export const checkinOrgAccountFn = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) => {

@@ -50,6 +50,7 @@ import { Route as ApiLabV1GrantTargetRouteImport } from './routes/api/lab/v1/gra
 import { Route as AuthedSitesSlugEditRouteImport } from './routes/_authed/sites/$slug.edit'
 import { Route as ApiUnifiedV1OperatorBootstrapRouteImport } from './routes/api/unified/v1/operator/bootstrap'
 import { Route as ApiUnifiedV1AuthCallbackRouteImport } from './routes/api/unified/v1/auth/callback'
+import { Route as ApiOrgV1CheckoutsIdApproveRouteImport } from './routes/api/org/v1/checkouts.$id.approve'
 import { Route as ApiOrgV1AccountsIdCheckoutRouteImport } from './routes/api/org/v1/accounts.$id.checkout'
 
 const UnauthorizedRoute = UnauthorizedRouteImport.update({
@@ -263,6 +264,12 @@ const ApiUnifiedV1AuthCallbackRoute =
     path: '/api/unified/v1/auth/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiOrgV1CheckoutsIdApproveRoute =
+  ApiOrgV1CheckoutsIdApproveRouteImport.update({
+    id: '/api/org/v1/checkouts/$id/approve',
+    path: '/api/org/v1/checkouts/$id/approve',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiOrgV1AccountsIdCheckoutRoute =
   ApiOrgV1AccountsIdCheckoutRouteImport.update({
     id: '/$id/checkout',
@@ -312,6 +319,7 @@ export interface FileRoutesByFullPath {
   '/api/unified/v1/auth/callback': typeof ApiUnifiedV1AuthCallbackRoute
   '/api/unified/v1/operator/bootstrap': typeof ApiUnifiedV1OperatorBootstrapRoute
   '/api/org/v1/accounts/$id/checkout': typeof ApiOrgV1AccountsIdCheckoutRoute
+  '/api/org/v1/checkouts/$id/approve': typeof ApiOrgV1CheckoutsIdApproveRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -355,6 +363,7 @@ export interface FileRoutesByTo {
   '/api/unified/v1/auth/callback': typeof ApiUnifiedV1AuthCallbackRoute
   '/api/unified/v1/operator/bootstrap': typeof ApiUnifiedV1OperatorBootstrapRoute
   '/api/org/v1/accounts/$id/checkout': typeof ApiOrgV1AccountsIdCheckoutRoute
+  '/api/org/v1/checkouts/$id/approve': typeof ApiOrgV1CheckoutsIdApproveRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -400,6 +409,7 @@ export interface FileRoutesById {
   '/api/unified/v1/auth/callback': typeof ApiUnifiedV1AuthCallbackRoute
   '/api/unified/v1/operator/bootstrap': typeof ApiUnifiedV1OperatorBootstrapRoute
   '/api/org/v1/accounts/$id/checkout': typeof ApiOrgV1AccountsIdCheckoutRoute
+  '/api/org/v1/checkouts/$id/approve': typeof ApiOrgV1CheckoutsIdApproveRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -445,6 +455,7 @@ export interface FileRouteTypes {
     | '/api/unified/v1/auth/callback'
     | '/api/unified/v1/operator/bootstrap'
     | '/api/org/v1/accounts/$id/checkout'
+    | '/api/org/v1/checkouts/$id/approve'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -488,6 +499,7 @@ export interface FileRouteTypes {
     | '/api/unified/v1/auth/callback'
     | '/api/unified/v1/operator/bootstrap'
     | '/api/org/v1/accounts/$id/checkout'
+    | '/api/org/v1/checkouts/$id/approve'
   id:
     | '__root__'
     | '/'
@@ -532,6 +544,7 @@ export interface FileRouteTypes {
     | '/api/unified/v1/auth/callback'
     | '/api/unified/v1/operator/bootstrap'
     | '/api/org/v1/accounts/$id/checkout'
+    | '/api/org/v1/checkouts/$id/approve'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -547,6 +560,7 @@ export interface RootRouteChildren {
   ApiUnifiedV1SessionsRoute: typeof ApiUnifiedV1SessionsRoute
   ApiUnifiedV1AuthCallbackRoute: typeof ApiUnifiedV1AuthCallbackRoute
   ApiUnifiedV1OperatorBootstrapRoute: typeof ApiUnifiedV1OperatorBootstrapRoute
+  ApiOrgV1CheckoutsIdApproveRoute: typeof ApiOrgV1CheckoutsIdApproveRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -838,6 +852,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUnifiedV1AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/org/v1/checkouts/$id/approve': {
+      id: '/api/org/v1/checkouts/$id/approve'
+      path: '/api/org/v1/checkouts/$id/approve'
+      fullPath: '/api/org/v1/checkouts/$id/approve'
+      preLoaderRoute: typeof ApiOrgV1CheckoutsIdApproveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/org/v1/accounts/$id/checkout': {
       id: '/api/org/v1/accounts/$id/checkout'
       path: '/$id/checkout'
@@ -949,6 +970,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiUnifiedV1SessionsRoute: ApiUnifiedV1SessionsRoute,
   ApiUnifiedV1AuthCallbackRoute: ApiUnifiedV1AuthCallbackRoute,
   ApiUnifiedV1OperatorBootstrapRoute: ApiUnifiedV1OperatorBootstrapRoute,
+  ApiOrgV1CheckoutsIdApproveRoute: ApiOrgV1CheckoutsIdApproveRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

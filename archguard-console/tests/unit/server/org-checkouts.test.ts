@@ -4,10 +4,14 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { _resetDbForTests, getDb } from '../../../src/server/db'
 import {
+  approveCheckout,
   checkinCheckout,
   createCheckout,
+  denyCheckout,
   expireDueCheckouts,
   getCheckout,
+  listPendingCheckouts,
+  samePrincipal,
 } from '../../../src/server/org-checkouts'
 
 describe('org-checkouts', () => {
@@ -54,5 +58,37 @@ describe('org-checkouts', () => {
       .run('2000-01-01T00:00:00.000Z', c.id)
     expect(expireDueCheckouts()).toBeGreaterThanOrEqual(1)
     expect(getCheckout(c.id)?.status).toBe('expired')
+  })
+
+  it('dual-control: approve by other, reject self-approve', () => {
+    const c = createCheckout({
+      account_id: 'a1',
+      account_slug: 'apple',
+      principal: 'alice@x',
+      reason: 'ship ios',
+      ttl_seconds: 3600,
+      status: 'pending',
+    })
+    expect(listPendingCheckouts()).toHaveLength(1)
+    expect(samePrincipal('alice@x', 'Alice@X')).toBe(true)
+    expect(() => approveCheckout(c.id, 'alice@x')).toThrow(/Self-approve/)
+    const ok = approveCheckout(c.id, 'bob@x')
+    expect(ok?.status).toBe('active')
+    expect(ok?.approved_by).toBe('bob@x')
+    expect(listPendingCheckouts()).toHaveLength(0)
+  })
+
+  it('deny by other principal', () => {
+    const c = createCheckout({
+      account_id: 'a1',
+      account_slug: 'apple',
+      principal: 'alice',
+      reason: 'nope',
+      ttl_seconds: 600,
+      status: 'pending',
+    })
+    const d = denyCheckout(c.id, 'bob')
+    expect(d?.status).toBe('denied')
+    expect(d?.approved_by).toBe('bob')
   })
 })

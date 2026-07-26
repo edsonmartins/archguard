@@ -70,6 +70,8 @@ function deriveAction(method: string, path: string): string {
     if (method === 'PUT' || method === 'POST') return 'Salvar site'
   }
   if (path.startsWith('/archgate/org-accounts')) {
+    if (path.includes('/approve')) return 'Aprovar checkout org'
+    if (path.includes('/deny')) return 'Negar checkout org'
     if (path.includes('/checkout')) return 'Checkout conta org'
     if (path.includes('/checkin')) return 'Check-in conta org'
     if (method === 'DELETE') return 'Excluir conta org'
