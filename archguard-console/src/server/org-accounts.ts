@@ -200,16 +200,9 @@ export function markOrgAccountRotated(
   return getOrgAccount(acc.id)
 }
 
-/** Seed IntegrAllTech inventory placeholders (no secrets). */
-export function seedDefaultOrgAccountsIfEmpty(actor = 'system'): number {
-  const n = (
-    getDb().prepare(`SELECT COUNT(*) AS c FROM org_accounts`).get() as {
-      c: number
-    }
-  ).c
-  if (n > 0) return 0
-
-  const defaults: OrgAccountInput[] = [
+/** Canonical IntegrAllTech inventory placeholders (no secrets). Shared by seed + OCB-4 backfill. */
+export function defaultOrgAccountSpecs(): OrgAccountInput[] {
+  return [
     {
       slug: 'apple-appstore-integrall',
       name: 'App Store Connect · IntegrAllTech',
@@ -336,10 +329,66 @@ export function seedDefaultOrgAccountsIfEmpty(actor = 'system'): number {
       runbook_url: 'documentos/runbooks/org-product-oidc-federation.md',
     },
   ]
+}
 
+/** Seed IntegrAllTech inventory placeholders (no secrets). */
+export function seedDefaultOrgAccountsIfEmpty(actor = 'system'): number {
+  const n = (
+    getDb().prepare(`SELECT COUNT(*) AS c FROM org_accounts`).get() as {
+      c: number
+    }
+  ).c
+  if (n > 0) return 0
+
+  const defaults = defaultOrgAccountSpecs()
   for (const d of defaults) {
     upsertOrgAccount(d, actor)
   }
   logger.info({ count: defaults.length }, 'seeded default org accounts')
   return defaults.length
+}
+
+/**
+ * OCB-4 live backfill: for known seed slugs still on password_only (migration
+ * default), apply federation_status / oidc_client_id / auth_kind from specs.
+ * Does not overwrite oidc_only or other explicit federation choices.
+ * Idempotent — returns number of rows updated.
+ */
+export function backfillOrgAccountFederation(actor = 'system'): number {
+  let updated = 0
+  for (const d of defaultOrgAccountSpecs()) {
+    if (!d.slug) continue
+    const existing = getOrgAccount(d.slug)
+    if (!existing) continue
+
+    const fed = existing.federation_status || 'password_only'
+    const needsFed = fed === 'password_only' && d.federation_status
+    const needsOidc =
+      !!d.oidc_client_id && !existing.oidc_client_id && fed !== 'oidc_only'
+    if (!needsFed && !needsOidc) continue
+
+    upsertOrgAccount(
+      {
+        slug: d.slug,
+        ...(needsFed
+          ? {
+              name: d.name,
+              auth_kind: d.auth_kind,
+              federation_status: d.federation_status,
+              runbook_url: d.runbook_url || existing.runbook_url,
+              notes: existing.notes?.trim() ? existing.notes : d.notes,
+            }
+          : {}),
+        ...(needsOidc || needsFed
+          ? { oidc_client_id: d.oidc_client_id || existing.oidc_client_id }
+          : {}),
+      },
+      actor,
+    )
+    updated++
+  }
+  if (updated > 0) {
+    logger.info({ count: updated }, 'backfilled org account federation metadata')
+  }
+  return updated
 }

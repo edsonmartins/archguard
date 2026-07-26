@@ -6,6 +6,7 @@ import {
   getOrgAccount,
   listOrgAccounts,
   markOrgAccountRotated,
+  backfillOrgAccountFederation,
   seedDefaultOrgAccountsIfEmpty,
   upsertOrgAccount,
 } from './org-accounts'
@@ -85,7 +86,9 @@ export const listOrgAccountsFn = createServerFn({ method: 'GET' }).handler(
       ['org_accounts:read', 'org_accounts:admin'],
       'org_accounts:read',
     )
-    seedDefaultOrgAccountsIfEmpty(sessionActor(s))
+    const actor = sessionActor(s)
+    seedDefaultOrgAccountsIfEmpty(actor)
+    backfillOrgAccountFederation(actor)
     return listOrgAccounts()
   },
 )

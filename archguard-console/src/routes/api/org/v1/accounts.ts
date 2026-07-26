@@ -4,6 +4,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 import {
   listOrgAccounts,
+  backfillOrgAccountFederation,
   seedDefaultOrgAccountsIfEmpty,
   upsertOrgAccount,
 } from '@/server/org-accounts'
@@ -45,7 +46,9 @@ export const Route = createFileRoute('/api/org/v1/accounts')({
             ['org_accounts:read', 'org_accounts:admin'],
             'org_accounts:read',
           )
-          seedDefaultOrgAccountsIfEmpty(sessionActor(s))
+          const actor = sessionActor(s)
+          seedDefaultOrgAccountsIfEmpty(actor)
+          backfillOrgAccountFederation(actor)
           const accounts = listOrgAccounts()
           return new Response(JSON.stringify({ accounts }), {
             status: 200,

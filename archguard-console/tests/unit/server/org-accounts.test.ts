@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { _resetDbForTests } from '../../../src/server/db'
 import {
+  backfillOrgAccountFederation,
   deleteOrgAccount,
   getOrgAccount,
   listOrgAccounts,
@@ -53,5 +54,49 @@ describe('org-accounts persistence', () => {
     expect(got?.name).toBe('Demo SaaS')
     expect(deleteOrgAccount('demo-saas')).toBe(true)
     expect(getOrgAccount('demo-saas')).toBeNull()
+  })
+
+  it('backfills federation_status on known seed slugs still password_only', () => {
+    upsertOrgAccount(
+      {
+        slug: 'vendax-admin',
+        name: 'Vendax · admin',
+        category: 'product_admin',
+        product: 'vendax',
+        criticality: 'P1',
+        auth_kind: 'password',
+        federation_status: 'password_only',
+        secret_ref: 'secret/data/org/product/vendax-admin',
+      },
+      'legacy',
+    )
+    const n = backfillOrgAccountFederation('migrate')
+    expect(n).toBeGreaterThanOrEqual(1)
+    const v = getOrgAccount('vendax-admin')!
+    expect(v.federation_status).toBe('oidc_primary')
+    expect(v.oidc_client_id).toBe('vendax-admin')
+    expect(v.auth_kind).toBe('oidc')
+    // second pass is no-op for this slug
+    expect(backfillOrgAccountFederation('migrate')).toBe(0)
+  })
+
+  it('does not overwrite explicit oidc_only federation', () => {
+    upsertOrgAccount(
+      {
+        slug: 'vendax-admin',
+        name: 'Vendax',
+        category: 'product_admin',
+        product: 'vendax',
+        criticality: 'P1',
+        auth_kind: 'oidc',
+        federation_status: 'oidc_only',
+        oidc_client_id: 'custom-client',
+      },
+      'admin',
+    )
+    expect(backfillOrgAccountFederation('migrate')).toBe(0)
+    const v = getOrgAccount('vendax-admin')!
+    expect(v.federation_status).toBe('oidc_only')
+    expect(v.oidc_client_id).toBe('custom-client')
   })
 })
