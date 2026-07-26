@@ -6,16 +6,22 @@ import {
   checkoutOrgAccountFn,
   deleteOrgAccountFn,
   denyOrgCheckoutFn,
+  getOrgBrokerHealthFn,
+  getOrgBrokerSettingsFn,
   listOrgAccountsFn,
   listPendingOrgCheckoutsFn,
+  saveOrgBrokerSettingsFn,
   storeOrgAccountSecretFn,
   upsertOrgAccountFn,
   type CheckoutResult,
 } from '@/server/org-accounts-fn'
+import type { OrgBrokerHealth, OrgBrokerSettings } from '@/server/org-broker-ops'
 import type { OrgCheckout } from '@/server/org-checkouts'
 
 export const orgAccountKeys = {
   all: ['org-accounts'] as const,
+  health: ['org-accounts', 'health'] as const,
+  settings: ['org-accounts', 'settings'] as const,
 }
 
 export function useOrgAccounts() {
@@ -113,6 +119,39 @@ export function useDenyOrgCheckout() {
       denyOrgCheckoutFn({ data: input }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: pendingCheckoutKeys.all })
+    },
+  })
+}
+
+export function useOrgBrokerHealth(enabled = true) {
+  return useQuery({
+    queryKey: orgAccountKeys.health,
+    queryFn: () => getOrgBrokerHealthFn() as Promise<OrgBrokerHealth>,
+    refetchInterval: enabled ? 60_000 : false,
+    enabled,
+  })
+}
+
+export function useOrgBrokerSettings(enabled = true) {
+  return useQuery({
+    queryKey: orgAccountKeys.settings,
+    queryFn: () => getOrgBrokerSettingsFn() as Promise<OrgBrokerSettings>,
+    enabled,
+  })
+}
+
+export function useSaveOrgBrokerSettings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: {
+      checkout_webhook_url?: string
+      ttl_default_seconds?: number
+      ttl_max_seconds?: number
+    }) =>
+      saveOrgBrokerSettingsFn({ data: input }) as Promise<OrgBrokerSettings>,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: orgAccountKeys.settings })
+      void qc.invalidateQueries({ queryKey: orgAccountKeys.health })
     },
   })
 }

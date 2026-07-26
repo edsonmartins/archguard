@@ -30,6 +30,14 @@ import {
   readSecretData,
   writeSecretData,
 } from './openbao-proxy'
+import {
+  friendlySecretBackendError,
+  getOrgBrokerHealth,
+  getOrgBrokerSettings,
+  saveOrgBrokerSettings,
+  type OrgBrokerHealth,
+  type OrgBrokerSettings,
+} from './org-broker-ops'
 import { recordActivity } from './activity-log'
 import {
   requireAnyPerm,
@@ -191,7 +199,7 @@ async function revealForAccount(
       checkout,
       openbao_configured: baoOk,
       message:
-        'Conta sem secret_ref. Admin deve preencher o path OpenBao (ex. secret/data/org/store/…).',
+        'Conta sem secret_ref. Admin: use “Gravar secret” — o path é criado automaticamente no Manager.',
     }
   }
   if (!baoOk) {
@@ -207,10 +215,28 @@ async function revealForAccount(
       checkout,
       openbao_configured: false,
       message:
-        'OpenBao sem OPENBAO_APP_TOKEN no console. Configure wire de secrets.',
+        'Backend de segredos sem credencial. Veja o status do broker nesta página (admin de plataforma).',
     }
   }
-  const fields = await readSecretData(acc.secret_ref)
+  let fields: Record<string, string> | undefined
+  try {
+    fields = await readSecretData(acc.secret_ref)
+  } catch (e) {
+    const msg = friendlySecretBackendError((e as Error).message)
+    recordActivity(
+      'POST',
+      `/archgate/org-accounts/${acc.slug}/checkout`,
+      actor,
+      'error',
+      msg,
+      { checkout_id: checkout.id, reason, secret_ref: acc.secret_ref },
+    )
+    return {
+      checkout,
+      openbao_configured: true,
+      message: msg,
+    }
+  }
   if (!fields) {
     recordActivity(
       'POST',
@@ -223,7 +249,8 @@ async function revealForAccount(
     return {
       checkout,
       openbao_configured: true,
-      message: `Secret não encontrado em ${acc.secret_ref}. Grave o valor no OpenBao (admin).`,
+      message:
+        'Secret ainda não gravado nesta conta. Admin: Contas da org → Gravar secret.',
     }
   }
   recordActivity(
@@ -267,7 +294,8 @@ export const checkoutOrgAccountFn = createServerFn({ method: 'POST' })
       .object({
         id: z.string().min(1),
         reason: z.string().min(3).max(1000),
-        ttl_seconds: z.number().int().min(TTL_MIN).max(TTL_MAX).optional(),
+        // Bounds refined against Manager settings in handler (console-only ops).
+        ttl_seconds: z.number().int().min(TTL_MIN).max(24 * 3600).optional(),
       })
       .safeParse(data)
     if (!r.success) throw new Error(r.error.message)
@@ -284,7 +312,12 @@ export const checkoutOrgAccountFn = createServerFn({ method: 'POST' })
     const acc = getOrgAccount(data.id)
     if (!acc) throw new Error('Conta não encontrada')
 
-    const ttl = data.ttl_seconds ?? TTL_DEFAULT
+    const broker = getOrgBrokerSettings()
+    const ttlMax = broker.ttl_max_seconds || TTL_MAX
+    const ttlDefault = broker.ttl_default_seconds || TTL_DEFAULT
+    let ttl = data.ttl_seconds ?? ttlDefault
+    if (ttl < TTL_MIN) ttl = TTL_MIN
+    if (ttl > ttlMax) ttl = ttlMax
     const reason = data.reason.trim()
     if (reason.length < 3) throw new Error('reason required (min 3 chars)')
 
@@ -552,13 +585,16 @@ export const storeOrgAccountSecretFn = createServerFn({ method: 'POST' })
     const s = requireSession()
     requireAnyPerm(s, ['org_accounts:admin'], 'org_accounts:admin')
     if (!openbaoTokenConfigured()) {
-      throw new Error('OpenBao sem OPENBAO_APP_TOKEN no console')
+      throw new Error(
+        'Backend de segredos sem credencial no console. Contate admin de plataforma.',
+      )
     }
     const acc = getOrgAccount(data.id)
     if (!acc) throw new Error('Conta não encontrada')
     const actor = sessionActor(s)
     let ref = acc.secret_ref
     if (!ref) {
+      // Ensure path: Manager assigns conventional secret_ref — no manual OpenBao UI.
       ref = `secret/data/org/${acc.category}/${acc.slug}`
       upsertOrgAccount(
         {
@@ -569,6 +605,8 @@ export const storeOrgAccountSecretFn = createServerFn({ method: 'POST' })
           url: acc.url,
           login_hint: acc.login_hint,
           auth_kind: data.auth_kind || acc.auth_kind,
+          federation_status: acc.federation_status,
+          oidc_client_id: acc.oidc_client_id,
           secret_ref: ref,
           criticality: acc.criticality,
           owner_group: acc.owner_group,
@@ -588,6 +626,8 @@ export const storeOrgAccountSecretFn = createServerFn({ method: 'POST' })
           url: acc.url,
           login_hint: acc.login_hint,
           auth_kind: data.auth_kind,
+          federation_status: acc.federation_status,
+          oidc_client_id: acc.oidc_client_id,
           secret_ref: acc.secret_ref,
           criticality: acc.criticality,
           owner_group: acc.owner_group,
@@ -608,7 +648,21 @@ export const storeOrgAccountSecretFn = createServerFn({ method: 'POST' })
       fields.rotated_at = new Date().toISOString()
       fields.rotated_by = actor
     }
-    const written = await writeSecretData(ref, fields)
+    let written: { secret_ref: string }
+    try {
+      written = await writeSecretData(ref, fields)
+    } catch (e) {
+      const msg = friendlySecretBackendError((e as Error).message)
+      recordActivity(
+        'PUT',
+        `/archgate/org-accounts/${acc.slug}/secret`,
+        actor,
+        'error',
+        msg,
+        { secret_ref: ref },
+      )
+      throw new Error(msg)
+    }
     if (data.rotate) {
       markOrgAccountRotated(acc.id, actor)
     }
@@ -632,4 +686,61 @@ export const storeOrgAccountSecretFn = createServerFn({ method: 'POST' })
       secret_ref: written.secret_ref,
       rotated: !!data.rotate,
     }
+  })
+
+/** Manager-only: broker health (secrets backend + settings + inventory gaps). */
+export const getOrgBrokerHealthFn = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<OrgBrokerHealth> => {
+    const s = requireSession()
+    requireAnyPerm(
+      s,
+      ['org_accounts:read', 'org_accounts:admin'],
+      'org_accounts:read',
+    )
+    return getOrgBrokerHealth()
+  },
+)
+
+export const getOrgBrokerSettingsFn = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<OrgBrokerSettings> => {
+    const s = requireSession()
+    requireAnyPerm(
+      s,
+      ['org_accounts:read', 'org_accounts:admin'],
+      'org_accounts:read',
+    )
+    return getOrgBrokerSettings()
+  },
+)
+
+export const saveOrgBrokerSettingsFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: unknown) => {
+    const r = z
+      .object({
+        checkout_webhook_url: z.string().max(2048).optional(),
+        ttl_default_seconds: z.number().int().min(TTL_MIN).max(24 * 3600).optional(),
+        ttl_max_seconds: z.number().int().min(TTL_MIN).max(24 * 3600).optional(),
+      })
+      .safeParse(data)
+    if (!r.success) throw new Error(r.error.message)
+    return r.data
+  })
+  .handler(async ({ data }): Promise<OrgBrokerSettings> => {
+    const s = requireSession()
+    requireAnyPerm(s, ['org_accounts:admin'], 'org_accounts:admin')
+    const actor = sessionActor(s)
+    const saved = saveOrgBrokerSettings(data, actor)
+    recordActivity(
+      'PUT',
+      '/archgate/org-accounts/settings',
+      actor,
+      'success',
+      undefined,
+      {
+        webhook: !!saved.checkout_webhook_url,
+        ttl_default: saved.ttl_default_seconds,
+        ttl_max: saved.ttl_max_seconds,
+      },
+    )
+    return saved
   })

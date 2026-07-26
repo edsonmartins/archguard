@@ -1,7 +1,8 @@
-// Optional webhook notify for dual-control pending checkouts (OCB-2 residual).
-// Set ORG_CHECKOUT_WEBHOOK_URL (Slack incoming webhook or generic JSON POST).
+// Optional webhook notify for dual-control pending checkouts.
+// Prefer Manager setting (org.checkout_webhook_url); env is bootstrap fallback only.
 
 import { logger } from './logger'
+import { resolveCheckoutWebhookUrl } from './org-broker-ops'
 
 export type PendingCheckoutNotify = {
   checkout_id: string
@@ -20,7 +21,7 @@ export type PendingCheckoutNotify = {
 export async function notifyPendingCheckout(
   payload: PendingCheckoutNotify,
 ): Promise<void> {
-  const url = (process.env.ORG_CHECKOUT_WEBHOOK_URL || '').trim()
+  const url = resolveCheckoutWebhookUrl()
   if (!url) return
 
   const text =

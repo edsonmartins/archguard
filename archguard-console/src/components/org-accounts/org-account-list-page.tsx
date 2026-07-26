@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react'
 import {
+  Activity,
   Copy,
   ExternalLink,
   KeyRound,
   Lock,
   Plus,
   Search,
+  Settings2,
   Trash2,
   Unlock,
 } from 'lucide-react'
@@ -32,7 +34,10 @@ import {
   useDeleteOrgAccount,
   useDenyOrgCheckout,
   useOrgAccounts,
+  useOrgBrokerHealth,
+  useOrgBrokerSettings,
   usePendingOrgCheckouts,
+  useSaveOrgBrokerSettings,
   useStoreOrgAccountSecret,
   useUpsertOrgAccount,
 } from '@/lib/hooks/use-org-accounts'
@@ -102,7 +107,11 @@ export function OrgAccountListPage() {
   const { can } = usePermissions()
   const canAdmin = can('org_accounts:admin')
   const canApprove = can('org_accounts:approve') || canAdmin
+  const canRead = can('org_accounts:read') || canAdmin
   const { data, isLoading, isError, error } = useOrgAccounts()
+  const healthQ = useOrgBrokerHealth(canRead)
+  const settingsQ = useOrgBrokerSettings(canAdmin)
+  const saveSettings = useSaveOrgBrokerSettings()
   const pendingQ = usePendingOrgCheckouts(canApprove)
   const upsert = useUpsertOrgAccount()
   const del = useDeleteOrgAccount()
@@ -113,6 +122,10 @@ export function OrgAccountListPage() {
   const denyMut = useDenyOrgCheckout()
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [webhookUrl, setWebhookUrl] = useState('')
+  const [ttlDefaultMin, setTtlDefaultMin] = useState(60)
+  const [ttlMaxMin, setTtlMaxMin] = useState(480)
   const [form, setForm] = useState<OrgAccountInput>(blank())
   const [editing, setEditing] = useState<OrgAccount | null>(null)
   const [checkoutAcc, setCheckoutAcc] = useState<OrgAccount | null>(null)
@@ -277,6 +290,30 @@ export function OrgAccountListPage() {
     )
   }
 
+  function openSettings() {
+    const s = settingsQ.data
+    setWebhookUrl(s?.checkout_webhook_url || '')
+    setTtlDefaultMin(Math.round((s?.ttl_default_seconds || 3600) / 60))
+    setTtlMaxMin(Math.round((s?.ttl_max_seconds || 8 * 3600) / 60))
+    setSettingsOpen(true)
+  }
+
+  async function saveBrokerSettings() {
+    try {
+      await saveSettings.mutateAsync({
+        checkout_webhook_url: webhookUrl.trim(),
+        ttl_default_seconds: Math.max(5, ttlDefaultMin) * 60,
+        ttl_max_seconds: Math.max(5, ttlMaxMin) * 60,
+      })
+      toast.success(t('orgAccounts.settingsSaved'))
+      setSettingsOpen(false)
+    } catch (e) {
+      toast.error((e as Error).message || t('orgAccounts.settingsError'))
+    }
+  }
+
+  const health = healthQ.data
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -288,13 +325,71 @@ export function OrgAccountListPage() {
             {t('orgAccounts.subtitle')}
           </p>
         </div>
-        <PermissionGate require={['org_accounts:admin']}>
-          <Button type="button" onClick={openCreate}>
-            <Plus className="mr-2 h-4 w-4" />
-            {t('orgAccounts.add')}
-          </Button>
-        </PermissionGate>
+        <div className="flex flex-wrap gap-2">
+          <PermissionGate require={['org_accounts:admin']}>
+            <Button type="button" variant="outline" onClick={openSettings}>
+              <Settings2 className="mr-2 h-4 w-4" />
+              {t('orgAccounts.brokerSettings')}
+            </Button>
+            <Button type="button" onClick={openCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('orgAccounts.add')}
+            </Button>
+          </PermissionGate>
+        </div>
       </div>
+
+      {health ? (
+        <Card
+          className={
+            health.ok
+              ? 'border-emerald-500/40 bg-emerald-500/5'
+              : 'border-destructive/40 bg-destructive/5'
+          }
+        >
+          <CardHeader className="pb-2">
+            <CardTitle className="flex flex-wrap items-center gap-2 text-base font-medium">
+              <Activity className="h-4 w-4" />
+              {t('orgAccounts.brokerStatus')}
+              <Badge variant={health.ok ? 'default' : 'destructive'}>
+                {health.ok ? t('orgAccounts.brokerOk') : t('orgAccounts.brokerDegraded')}
+              </Badge>
+              {health.openbao.write_ok ? (
+                <Badge variant="secondary">{t('orgAccounts.secretsWriteOk')}</Badge>
+              ) : (
+                <Badge variant="destructive">
+                  {t('orgAccounts.secretsWriteFail')}
+                </Badge>
+              )}
+              {health.settings.webhook_configured ? (
+                <Badge variant="secondary">{t('orgAccounts.webhookOn')}</Badge>
+              ) : (
+                <Badge variant="outline">{t('orgAccounts.webhookOff')}</Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1 text-sm text-muted-foreground">
+            {health.openbao.detail ? (
+              <p className="text-foreground/90">{health.openbao.detail}</p>
+            ) : null}
+            <p>
+              {t('orgAccounts.brokerStats', {
+                total: health.accounts.total,
+                withRef: health.accounts.with_secret_ref,
+                p0: health.accounts.p0_missing_secret_ref,
+                ttl: Math.round(health.settings.ttl_default_seconds / 60),
+              })}
+            </p>
+            {health.hints.map((h) => (
+              <p key={h} className="text-xs">
+                • {h}
+              </p>
+            ))}
+          </CardContent>
+        </Card>
+      ) : healthQ.isLoading ? (
+        <Skeleton className="h-20 w-full" />
+      ) : null}
 
       {canApprove ? (
         <Card>
@@ -693,7 +788,7 @@ export function OrgAccountListPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Store secret in OpenBao */}
+      {/* Store secret (backend via Manager BFF — no OpenBao UI) */}
       <Dialog
         open={!!secretAcc}
         onOpenChange={(v) => {
@@ -935,7 +1030,7 @@ export function OrgAccountListPage() {
               </div>
             </div>
             <div className="grid gap-1.5">
-              <Label>oidc_client_id (Kanidm)</Label>
+              <Label>{t('orgAccounts.oidcClientId')}</Label>
               <Input
                 value={form.oidc_client_id || ''}
                 onChange={(e) =>
@@ -943,6 +1038,9 @@ export function OrgAccountListPage() {
                 }
                 placeholder="vendax-admin"
               />
+              <p className="text-[11px] text-muted-foreground">
+                {t('orgAccounts.oidcClientHint')}
+              </p>
             </div>
             <div className="grid gap-1.5">
               <Label>URL</Label>
@@ -964,7 +1062,7 @@ export function OrgAccountListPage() {
               />
             </div>
             <div className="grid gap-1.5">
-              <Label>secret_ref (OpenBao)</Label>
+              <Label>{t('orgAccounts.secretRef')}</Label>
               <Input
                 value={form.secret_ref || ''}
                 onChange={(e) =>
@@ -972,6 +1070,9 @@ export function OrgAccountListPage() {
                 }
                 placeholder="secret/data/org/store/…"
               />
+              <p className="text-[11px] text-muted-foreground">
+                {t('orgAccounts.secretRefHint')}
+              </p>
             </div>
             <div className="grid gap-1.5">
               <Label>product / owner_group</Label>
@@ -1010,6 +1111,66 @@ export function OrgAccountListPage() {
             <Button
               onClick={() => void save()}
               disabled={upsert.isPending || !form.slug || !form.name}
+            >
+              {t('common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Broker settings — Manager-only (no env/SSH for day-to-day) */}
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('orgAccounts.brokerSettings')}</DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            {t('orgAccounts.brokerSettingsHint')}
+          </p>
+          <div className="grid gap-3 py-2">
+            <div className="grid gap-1.5">
+              <Label>{t('orgAccounts.webhookUrl')}</Label>
+              <Input
+                value={webhookUrl}
+                onChange={(e) => setWebhookUrl(e.target.value)}
+                placeholder="https://hooks.slack.com/services/…"
+              />
+              {settingsQ.data?.webhook_from_env ? (
+                <p className="text-[11px] text-amber-700 dark:text-amber-500">
+                  {t('orgAccounts.webhookFromEnv')}
+                </p>
+              ) : null}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="grid gap-1.5">
+                <Label>{t('orgAccounts.ttlDefaultMin')}</Label>
+                <Input
+                  type="number"
+                  min={5}
+                  value={ttlDefaultMin}
+                  onChange={(e) =>
+                    setTtlDefaultMin(Number(e.target.value) || 60)
+                  }
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label>{t('orgAccounts.ttlMaxMin')}</Label>
+                <Input
+                  type="number"
+                  min={5}
+                  value={ttlMaxMin}
+                  onChange={(e) => setTtlMaxMin(Number(e.target.value) || 480)}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSettingsOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              onClick={() => void saveBrokerSettings()}
+              disabled={saveSettings.isPending}
             >
               {t('common.save')}
             </Button>

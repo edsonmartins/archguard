@@ -125,6 +125,14 @@ function migrate(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_org_checkouts_account ON org_checkouts (account_id);
     CREATE INDEX IF NOT EXISTS idx_org_checkouts_principal ON org_checkouts (principal);
     CREATE INDEX IF NOT EXISTS idx_org_checkouts_status ON org_checkouts (status);
+
+    -- Manager-only ops settings (key/value; never secrets of customers)
+    CREATE TABLE IF NOT EXISTS manager_settings (
+      key         TEXT PRIMARY KEY,
+      value       TEXT NOT NULL DEFAULT '',
+      updated_at  TEXT NOT NULL,
+      updated_by  TEXT
+    );
   `)
   // Migrate older DBs that lack multi-connector column
   try {
