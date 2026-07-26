@@ -25,6 +25,16 @@
 - [ ] **T-004** Seletor de tenant permanente no cabeçalho com distinção visual inequívoca do
       tenant ativo; troca reemite token e dispara step-up se a política do destino for mais
       restritiva.
+      - [x] **Parte A (backend)** — `POST /api/v1/session/tenant` (`internal/http/session_switch.go`
+        + wrapper `internal/boot/tenant_switch.go`, montado em mounts.go, op `session.switch_tenant`
+        L1): resolve o membership ATIVO do próprio chamador (nunca do request, INV-1) e delega ao
+        `postgres.TenantSwitcher` (política do destino → step-up denial; TokenGeneration++; auditoria
+        atômica). `ErrStepUpRequired` → 401 RFC 9470; negações → 403/409; fail-closed (política/
+        auditoria) → 503. `switchTenant()` no ControlPlaneBackend. Testes de todos os caminhos +
+        http/boot/contract/invariantes verdes.
+      - [ ] **Parte B (frontend)** — componente `TenantSelect` (selo fixo do tenant ativo; multi
+        vira dropdown); troca chama `switchTenant()` → 200 recarrega `/session`, 401 dispara step-up
+        (interplay com T-005).
 - [ ] **T-005** Interceptor global de step-up: captura garantia insuficiente, apresenta desafio
       WebAuthn e **retoma a operação** preservando o estado do formulário; cancelar mantém o form.
 

@@ -46,6 +46,9 @@ func MountCapabilities() error {
 	if err := mountTenants(p, f); err != nil {
 		return fmt.Errorf("montar tenants: %w", err)
 	}
+	if err := mountSessionSwitch(p, f); err != nil {
+		return fmt.Errorf("montar session-switch: %w", err)
+	}
 	if err := mountMemberships(p, f); err != nil {
 		return fmt.Errorf("montar memberships: %w", err)
 	}
@@ -129,6 +132,25 @@ func mountTenants(p *Pipeline, f *Factory) error {
 	global := postgres.NewGlobalRepository(f.Pool(), globalaccess.NewProfileAuthorizer(), globalaccess.NewMemoryAuditor())
 	handler := apihttp.NewTenantsHandler(postgres.NewMembershipReader(global))
 	RegisterAPIHandler("/tenants", p.Require(opID, handler))
+	return nil
+}
+
+// mountSessionSwitch mounts POST /api/v1/session/tenant (pacote 008, T-004 — troca
+// de tenant). Classified L1: qualquer sessão autenticada pode trocar entre os SEUS
+// tenants; o step-up quando o destino é mais restritivo é decidido pela POLÍTICA DO
+// DESTINO dentro do switcher (ErrStepUpRequired → 401 RFC 9470 no handler), não pelo
+// nível de operação do middleware. A troca reemite a geração de token (invalida a
+// anterior) e audita a troca atomicamente (design 002).
+func mountSessionSwitch(p *Pipeline, f *Factory) error {
+	const opID = "session.switch_tenant"
+	if err := p.RegisterOperation(domain.Operation{
+		ID:          opID,
+		Level:       domain.L1,
+		Description: "trocar o tenant ativo da própria sessão",
+	}); err != nil {
+		return err
+	}
+	RegisterAPIHandler("/session/tenant", p.Require(opID, apihttp.NewSessionSwitchHandler(newTenantSwitch(f))))
 	return nil
 }
 

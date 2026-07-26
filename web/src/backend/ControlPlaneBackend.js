@@ -103,6 +103,18 @@ export function getTenants() {
   return cpRequest("GET", "/tenants");
 }
 
+/**
+ * Troca o tenant ATIVO da sessão para `organizationId` (reemite o token; a sessão
+ * por cookie passa a apontar para o novo tenant — o console recarrega `/session`).
+ * Um destino mais restritivo lança `ControlPlaneError` com `.status === 401` (step-up
+ * necessário — RFC 9470); um destino do qual o usuário não é membro ativo lança 403.
+ * @param {string} organizationId
+ * @returns {Promise<object>} novo contexto de sessão
+ */
+export function switchTenant(organizationId) {
+  return cpRequest("POST", "/session/tenant", {body: {organization_id: organizationId}});
+}
+
 // --- Memberships (telas herdadas + revogação) ---
 
 /** Memberships de um tenant. */
