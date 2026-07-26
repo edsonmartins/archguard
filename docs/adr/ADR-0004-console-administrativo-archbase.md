@@ -1,7 +1,10 @@
 # ADR-0004 — Console administrativo próprio em React 19 + Mantine v9 + Archbase
 
-- **Status:** Aceito
+- **Status:** Superado por [ADR-0020](ADR-0020-evolucao-do-console-herdado.md) (2026-07-26)
 - **Data:** 2026-07-19
+- **Nota:** a decisão de reescrever o console em Mantine/Archbase foi **diferida** pelo ADR-0020
+  (evoluir o console herdado). O escopo funcional de PAM e os invariantes deste ADR permanecem
+  válidos; muda o *stack* de implementação. RFC-0005 vira referência da opção greenfield adiada.
 - **Invariantes tocados:** I-7.3, I-7.6
 - **Precedente:** DeskLenz (core Go mantido, frontend reescrito)
 

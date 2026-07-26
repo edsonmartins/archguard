@@ -1,5 +1,9 @@
 # Spec — Capability: admin-console
 
+> Re-escopo do 008 (evolução do console herdado) — base **ADR-0020** (ratificado 2026-07-26).
+> Os cenários são comportamentais e valem para qualquer stack; só o mecanismo de detecção de
+> *drift* muda (cliente gerado → teste de contrato no CI).
+
 ## ADDED Requirements
 
 ### Requirement: Console consome apenas a API pública
@@ -9,9 +13,9 @@ O sistema SHALL expor ao console exclusivamente endpoints públicos versionados.
 - **WHEN** um endpoint é criado para atender somente o console
 - **THEN** a revisão o rejeita, exigindo publicação como API versionada e documentada
 
-#### Scenario: Cliente defasado
-- **WHEN** o contrato OpenAPI muda e o cliente gerado não é regenerado
-- **THEN** o build do console falha
+#### Scenario: Contrato defasado
+- **WHEN** o contrato OpenAPI do `/api/v1` muda e as chamadas do console não acompanham
+- **THEN** o teste de contrato no CI falha
 
 ### Requirement: Contexto de tenant sempre visível
 O sistema SHALL indicar de forma inequívoca o tenant ativo.

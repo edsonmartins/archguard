@@ -1,8 +1,13 @@
 # RFC-0005 — ArchGuard Console: arquitetura frontend
 
-- **Status:** Proposto
+- **Status:** Diferido (referência da opção greenfield adiada pelo [ADR-0020](../adr/ADR-0020-evolucao-do-console-herdado.md), 2026-07-26)
 - **Data:** 2026-07-19
-- **ADRs relacionados:** ADR-0004, ADR-0006, ADR-0007, ADR-0008, ADR-0010
+- **ADRs relacionados:** ADR-0004 (superado), ADR-0006, ADR-0007, ADR-0008, ADR-0010, ADR-0020
+
+> ⚠️ Esta RFC descreve a arquitetura frontend **greenfield** (React 19 + Mantine v9 + Archbase).
+> O ADR-0020 diferiu esse rewrite e adotou a **evolução do console herdado**. Os requisitos
+> comportamentais (contrato, tenant, step-up, segurança, i18n) permanecem válidos; o *stack* de
+> implementação é o do console herdado até uma eventual reavaliação pós-piloto.
 
 ## 1. Objetivo
 
