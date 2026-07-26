@@ -95,6 +95,11 @@
     "secretRef": "Path do secret (backend)",
     "secretRefHint": "Opcional — “Gravar secret” preenche automaticamente se vazio."
   },
+  "guide": {
+    "button": "Guia",
+    "tooltip": "Guia desta tela — objetivo, fluxo e regras de negócio",
+    "title": "Guia do Módulo"
+  },
   "language": {
     "label": "Idioma",
     "ptBR": "Português (Brasil)",

@@ -16,6 +16,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
 import { UserMenu } from './user-menu'
 import { LanguageSwitcher } from './language-switcher'
+import { GuideButton } from '@/components/shared/guide-button'
 import type { SessionUser } from '@/server/auth'
 
 const routeLabelKeys: Record<string, string> = {
@@ -29,7 +30,10 @@ const routeLabelKeys: Record<string, string> = {
   '/_authed/sites': 'nav.sites',
   '/_authed/gateways': 'nav.gateways',
   '/_authed/secrets': 'nav.secrets',
+  '/_authed/org-accounts': 'nav.orgAccounts',
+  '/_authed/oracle': 'nav.oracle',
   '/_authed/platform': 'nav.platform',
+  '/_authed/integrations/mentors-axis': 'nav.mentorsAxis',
   '/_authed/audit': 'nav.audit',
   '/_authed/recycle-bin': 'nav.recycleBin',
   '/_authed/settings': 'nav.settings',
@@ -80,6 +84,9 @@ export function Header({ user, onSearchOpen }: HeaderProps) {
       </Breadcrumb>
 
       <LanguageSwitcher />
+
+      {/* Padrão RecomX: Guia contextual em todas as telas do admin */}
+      <GuideButton />
 
       <Button
         variant="outline"

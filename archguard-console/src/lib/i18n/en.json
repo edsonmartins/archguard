@@ -95,6 +95,11 @@
     "secretRef": "Secret path (backend)",
     "secretRefHint": "Optional — “Store secret” fills automatically if empty."
   },
+  "guide": {
+    "button": "Guide",
+    "tooltip": "Guide for this screen — goals, flow and business rules",
+    "title": "Module guide"
+  },
   "language": {
     "label": "Language",
     "ptBR": "Portuguese (Brazil)",
