@@ -92,11 +92,15 @@ export async function listUnifiedConnections(
         tenant: site.tenant_group,
         protocol: protocol.includes('postgres')
           ? 'postgres'
-          : protocol.includes('http')
-            ? 'http'
-            : protocol.includes('rdp')
-              ? 'rdp'
-              : 'ssh',
+          : protocol.includes('mysql') || protocol.includes('mariadb')
+            ? 'mysql'
+            : protocol.includes('http')
+              ? 'http'
+              : protocol.includes('rdp')
+                ? 'rdp'
+                : protocol.includes('vnc')
+                  ? 'vnc'
+                  : 'ssh',
         engine,
         target: t.nome,
         description: known
