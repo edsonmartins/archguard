@@ -15,8 +15,11 @@
       sem DB — toda rota `/api/v1` chamada pelo console (`cpRequest` em ControlPlaneBackend.js)
       DEVE estar montada no backend (`RegisterAPIHandler` em internal/boot/mounts.go). Falha o CI
       em *drift* (console chama rota não montada; I-7.6). `go test`/`go vet` verdes.
-- [ ] **T-003** Trava de revisão/lint: nenhum endpoint "só para a UI" (I-7.6); nenhuma decisão de
-      autorização no frontend.
+- [x] **T-003** Trava do ponto único: teste estático (`console_api_boundary_test.go`) proíbe
+      referência crua a `/api/v1` fora de `ControlPlaneBackend.js` — todo acesso passa pela camada
+      tipada. As demais garantias (nenhum endpoint "só para a UI" — I-7.6; nenhuma authz no
+      frontend) são de revisão de PR, ancoradas no gate de assurance/RequireAdmin do backend e na
+      spec (cenário "Elemento oculto"). `go test` verde.
 
 ## Contexto de operação (cross-cutting)
 - [ ] **T-004** Seletor de tenant permanente no cabeçalho com distinção visual inequívoca do
