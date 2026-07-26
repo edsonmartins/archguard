@@ -188,10 +188,20 @@ export async function deleteConnection(id: string): Promise<void> {
  * Mint a short-lived Guacamole authToken for an operator via header-auth
  * (ADR-007A: X-Forwarded-User = Kanidm preferred_username).
  * Never uses guacadmin for operator sessions.
+ *
+ * Note: header auth often returns dataSource="header". Connection inventory and
+ * Client.connect() must use a JDBC source from availableDataSources
+ * (typically "postgresql").
  */
 export async function mintOperatorAuthToken(
   username: string,
-): Promise<{ token: string; dataSource: string; username: string }> {
+): Promise<{
+  token: string
+  dataSource: string
+  authDataSource: string
+  availableDataSources: string[]
+  username: string
+}> {
   const user = username.trim()
   if (!user) {
     throw new Error('Guacamole operator username required')
@@ -217,14 +227,27 @@ export async function mintOperatorAuthToken(
   const data = (await res.json()) as {
     authToken?: string
     dataSource?: string
+    availableDataSources?: string[]
     username?: string
   }
   if (!data.authToken) {
     throw new Error(`Guacamole returned empty authToken for ${user}`)
   }
+  const available =
+    data.availableDataSources?.filter(Boolean) ||
+    (data.dataSource ? [data.dataSource] : ['postgresql'])
+  // Prefer JDBC for connections; "header" is auth-only and rejects connection lists.
+  const jdbc =
+    available.find((d) => d === 'postgresql' || d.startsWith('postgresql')) ||
+    available.find((d) => d === 'mysql' || d.startsWith('mysql')) ||
+    available.find((d) => d !== 'header') ||
+    available[0] ||
+    'postgresql'
   return {
     token: data.authToken,
-    dataSource: data.dataSource || 'postgresql',
+    dataSource: jdbc,
+    authDataSource: data.dataSource || 'header',
+    availableDataSources: available,
     username: data.username || user,
   }
 }
