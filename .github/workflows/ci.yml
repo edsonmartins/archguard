@@ -61,6 +61,10 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Histórico completo: o smoke test do Dockerfile (util.GetVersionInfo via go-git)
+          # resolve commit/tag e falha com "object not found" em checkout raso (depth 1).
+          fetch-depth: 0
       - name: Nome da imagem (GHCR exige minúsculas)
         id: img
         run: echo "name=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/archguard" >> "$GITHUB_OUTPUT"
