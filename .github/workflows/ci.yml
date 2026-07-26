@@ -38,8 +38,11 @@ jobs:
             tools/go.mod
       - name: Lint (gofmt + lintbaseline)
         run: make lint
-      - name: Testes (sem DB — Casdoor/MySQL excluído por skipCi; integração faz Skip sem DSN)
-        run: go test -tags skipCi ./...
+      - name: Testes ArchGuard (sem DB — integração faz Skip sem ARCHGUARD_TEST_DSN)
+        # Escopo: código do fork (internal/, contract, cmd). Os testes legados do Casdoor
+        # em ./object/... exigem DB (o CI do upstream provia MySQL); isso é coberto pelo
+        # `make test` LOCAL com Postgres migrado. test/invariants roda no passo dedicado abaixo.
+        run: go test -tags skipCi ./internal/... ./test/contract/... ./cmd/...
       - name: Invariantes INV-1..8
         run: make invariants
       - name: Regra de dependência (INV-3)
