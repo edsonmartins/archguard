@@ -31,6 +31,8 @@ export type OrgAccount = {
   requires_dual_control: boolean
   notes: string
   runbook_url: string
+  /** ISO time of last secret rotation in OpenBao (metadata only). */
+  rotated_at: string | null
   updated_at: string
   updated_by: string | null
 }

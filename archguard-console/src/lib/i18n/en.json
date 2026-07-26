@@ -70,7 +70,9 @@
     "storeSecretTitle": "OpenBao · {{name}}",
     "storeSecretHint": "Writes to path",
     "secretStored": "Secret stored at {{ref}}",
-    "secretStoreError": "Failed to write OpenBao"
+    "secretRotated": "Secret rotated at {{ref}}",
+    "secretStoreError": "Failed to write OpenBao",
+    "markRotated": "Mark as rotation (updates rotated_at)"
   },
   "language": {
     "label": "Language",

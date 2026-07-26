@@ -27,6 +27,7 @@ type Row = {
   requires_dual_control: number | boolean
   notes: string
   runbook_url: string
+  rotated_at: string | null
   updated_at: string
   updated_by: string | null
 }
@@ -55,6 +56,7 @@ function rowToAccount(row: Row): OrgAccount {
     requires_dual_control: !!row.requires_dual_control,
     notes: row.notes || '',
     runbook_url: row.runbook_url || '',
+    rotated_at: row.rotated_at || null,
     updated_at: row.updated_at,
     updated_by: row.updated_by,
   }
@@ -115,6 +117,7 @@ export function upsertOrgAccount(
     requires_dual_control: requiresDual ? 1 : 0,
     notes: (input.notes ?? existing?.notes ?? '').trim(),
     runbook_url: (input.runbook_url ?? existing?.runbook_url ?? '').trim(),
+    rotated_at: existing?.rotated_at ?? null,
     updated_at: now,
     updated_by: actor || existing?.updated_by || null,
   }
@@ -124,11 +127,11 @@ export function upsertOrgAccount(
       `INSERT INTO org_accounts (
         id, slug, name, category, product, url, login_hint, auth_kind,
         secret_ref, criticality, owner_group, requires_dual_control,
-        notes, runbook_url, updated_at, updated_by
+        notes, runbook_url, rotated_at, updated_at, updated_by
       ) VALUES (
         @id, @slug, @name, @category, @product, @url, @login_hint, @auth_kind,
         @secret_ref, @criticality, @owner_group, @requires_dual_control,
-        @notes, @runbook_url, @updated_at, @updated_by
+        @notes, @runbook_url, @rotated_at, @updated_at, @updated_by
       )
       ON CONFLICT(slug) DO UPDATE SET
         name = excluded.name,
@@ -158,6 +161,24 @@ export function deleteOrgAccount(idOrSlug: string): boolean {
   getDb().prepare(`DELETE FROM org_accounts WHERE id = ?`).run(acc.id)
   logger.info({ slug: acc.slug }, 'org account deleted')
   return true
+}
+
+/** Mark last secret rotation time (secret material only in OpenBao). */
+export function markOrgAccountRotated(
+  idOrSlug: string,
+  actor?: string,
+): OrgAccount | null {
+  const acc = getOrgAccount(idOrSlug)
+  if (!acc) return null
+  const now = new Date().toISOString()
+  getDb()
+    .prepare(
+      `UPDATE org_accounts
+       SET rotated_at = ?, updated_at = ?, updated_by = ?
+       WHERE id = ?`,
+    )
+    .run(now, now, actor || acc.updated_by, acc.id)
+  return getOrgAccount(acc.id)
 }
 
 /** Seed IntegrAllTech inventory placeholders (no secrets). */

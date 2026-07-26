@@ -73,6 +73,8 @@ export function useStoreOrgAccountSecret() {
       username?: string
       api_key?: string
       note?: string
+      rotate?: boolean
+      auth_kind?: 'password' | 'api_key' | 'oidc' | 'totp_password'
     }) => storeOrgAccountSecretFn({ data: input }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: orgAccountKeys.all })

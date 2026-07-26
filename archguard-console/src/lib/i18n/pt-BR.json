@@ -70,7 +70,9 @@
     "storeSecretTitle": "OpenBao · {{name}}",
     "storeSecretHint": "Grava no path",
     "secretStored": "Secret gravado em {{ref}}",
-    "secretStoreError": "Falha ao gravar no OpenBao"
+    "secretRotated": "Secret rotacionado em {{ref}}",
+    "secretStoreError": "Falha ao gravar no OpenBao",
+    "markRotated": "Marcar como rotação (atualiza rotated_at)"
   },
   "language": {
     "label": "Idioma",

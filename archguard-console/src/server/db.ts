@@ -100,6 +100,7 @@ function migrate(db: Database.Database): void {
       requires_dual_control   INTEGER NOT NULL DEFAULT 0,
       notes                   TEXT NOT NULL DEFAULT '',
       runbook_url             TEXT NOT NULL DEFAULT '',
+      rotated_at              TEXT,
       updated_at              TEXT NOT NULL,
       updated_by              TEXT
     );
@@ -133,6 +134,17 @@ function migrate(db: Database.Database): void {
     }
   } catch {
     /* ignore race / fresh create */
+  }
+  // org_accounts.rotated_at (OCB-3)
+  try {
+    const cols = db.prepare(`PRAGMA table_info(org_accounts)`).all() as {
+      name: string
+    }[]
+    if (cols.length && !cols.some((c) => c.name === 'rotated_at')) {
+      db.exec(`ALTER TABLE org_accounts ADD COLUMN rotated_at TEXT`)
+    }
+  } catch {
+    /* ignore */
   }
 }
 

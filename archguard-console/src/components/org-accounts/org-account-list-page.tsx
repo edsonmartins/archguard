@@ -119,6 +119,9 @@ export function OrgAccountListPage() {
   const [secretPw, setSecretPw] = useState('')
   const [secretUser, setSecretUser] = useState('')
   const [secretKey, setSecretKey] = useState('')
+  const [secretRotate, setSecretRotate] = useState(true)
+  const [secretAuthKind, setSecretAuthKind] =
+    useState<OrgAccountAuthKind>('password')
 
   const filtered = useMemo(() => {
     const list = data || []
@@ -242,12 +245,19 @@ export function OrgAccountListPage() {
         password: secretPw || undefined,
         username: secretUser || undefined,
         api_key: secretKey || undefined,
+        rotate: secretRotate,
+        auth_kind: secretAuthKind,
       })
-      toast.success(t('orgAccounts.secretStored', { ref: r.secret_ref }))
+      toast.success(
+        r.rotated
+          ? t('orgAccounts.secretRotated', { ref: r.secret_ref })
+          : t('orgAccounts.secretStored', { ref: r.secret_ref }),
+      )
       setSecretAcc(null)
       setSecretPw('')
       setSecretUser('')
       setSecretKey('')
+      setSecretRotate(true)
     } catch (e) {
       toast.error((e as Error).message || t('orgAccounts.secretStoreError'))
     }
@@ -406,6 +416,12 @@ export function OrgAccountListPage() {
                             · dual-control
                           </span>
                         ) : null}
+                        {a.rotated_at ? (
+                          <span className="ml-1 text-muted-foreground">
+                            · rot.{' '}
+                            {new Date(a.rotated_at).toLocaleDateString()}
+                          </span>
+                        ) : null}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -461,6 +477,8 @@ export function OrgAccountListPage() {
                                 setSecretPw('')
                                 setSecretUser(a.login_hint || '')
                                 setSecretKey('')
+                                setSecretRotate(true)
+                                setSecretAuthKind(a.auth_kind || 'password')
                               }}
                               title={t('orgAccounts.storeSecret')}
                             >
@@ -673,30 +691,77 @@ export function OrgAccountListPage() {
           </p>
           <div className="grid gap-3 py-2">
             <div className="grid gap-1.5">
+              <Label>{t('orgAccounts.colAuth')}</Label>
+              <Select
+                value={secretAuthKind}
+                onValueChange={(v) =>
+                  setSecretAuthKind(v as OrgAccountAuthKind)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ORG_AUTH_KINDS.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-1.5">
               <Label>username</Label>
               <Input
                 value={secretUser}
                 onChange={(e) => setSecretUser(e.target.value)}
               />
             </div>
-            <div className="grid gap-1.5">
-              <Label>password</Label>
-              <Input
-                type="password"
-                value={secretPw}
-                onChange={(e) => setSecretPw(e.target.value)}
-                autoComplete="new-password"
+            {secretAuthKind === 'api_key' || secretAuthKind === 'oidc' ? (
+              <div className="grid gap-1.5">
+                <Label>api_key / token</Label>
+                <Input
+                  type="password"
+                  value={secretKey}
+                  onChange={(e) => setSecretKey(e.target.value)}
+                  autoComplete="off"
+                  placeholder={
+                    secretAuthKind === 'api_key'
+                      ? 'AIza… / key_id:secret'
+                      : 'optional break-glass token'
+                  }
+                />
+              </div>
+            ) : (
+              <div className="grid gap-1.5">
+                <Label>password</Label>
+                <Input
+                  type="password"
+                  value={secretPw}
+                  onChange={(e) => setSecretPw(e.target.value)}
+                  autoComplete="new-password"
+                />
+              </div>
+            )}
+            {secretAuthKind === 'totp_password' ? (
+              <div className="grid gap-1.5">
+                <Label>api_key (TOTP seed opcional)</Label>
+                <Input
+                  type="password"
+                  value={secretKey}
+                  onChange={(e) => setSecretKey(e.target.value)}
+                  autoComplete="off"
+                />
+              </div>
+            ) : null}
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={secretRotate}
+                onChange={(e) => setSecretRotate(e.target.checked)}
               />
-            </div>
-            <div className="grid gap-1.5">
-              <Label>api_key</Label>
-              <Input
-                type="password"
-                value={secretKey}
-                onChange={(e) => setSecretKey(e.target.value)}
-                autoComplete="off"
-              />
-            </div>
+              {t('orgAccounts.markRotated')}
+            </label>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSecretAcc(null)}>
@@ -705,7 +770,10 @@ export function OrgAccountListPage() {
             <Button
               onClick={() => void doStoreSecret()}
               disabled={
-                storeSecret.isPending || (!secretPw && !secretKey)
+                storeSecret.isPending ||
+                (secretAuthKind === 'api_key'
+                  ? !secretKey
+                  : !secretPw && !secretKey)
               }
             >
               {t('common.save')}

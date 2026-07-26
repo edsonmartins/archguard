@@ -5,9 +5,11 @@ import {
   deleteOrgAccount,
   getOrgAccount,
   listOrgAccounts,
+  markOrgAccountRotated,
   seedDefaultOrgAccountsIfEmpty,
   upsertOrgAccount,
 } from './org-accounts'
+import { notifyPendingCheckout } from './org-notify'
 import {
   TTL_DEFAULT,
   TTL_MAX,
@@ -299,6 +301,15 @@ export const checkoutOrgAccountFn = createServerFn({ method: 'POST' })
           dual_control: true,
         },
       )
+      void notifyPendingCheckout({
+        checkout_id: checkout.id,
+        account_slug: acc.slug,
+        account_name: acc.name,
+        principal: actor,
+        reason,
+        ttl_seconds: ttl,
+        criticality: acc.criticality,
+      })
       return {
         checkout,
         openbao_configured: baoOk,
@@ -511,6 +522,11 @@ export const storeOrgAccountSecretFn = createServerFn({ method: 'POST' })
         username: z.string().max(256).optional(),
         api_key: z.string().max(8192).optional(),
         note: z.string().max(1000).optional(),
+        /** When true, mark rotated_at and keep previous value note in OpenBao field rotated_from. */
+        rotate: z.boolean().optional(),
+        auth_kind: z
+          .enum(['password', 'api_key', 'oidc', 'totp_password'])
+          .optional(),
       })
       .safeParse(data)
     if (!r.success) throw new Error(r.error.message)
@@ -527,6 +543,7 @@ export const storeOrgAccountSecretFn = createServerFn({ method: 'POST' })
     }
     const acc = getOrgAccount(data.id)
     if (!acc) throw new Error('Conta não encontrada')
+    const actor = sessionActor(s)
     let ref = acc.secret_ref
     if (!ref) {
       ref = `secret/data/org/${acc.category}/${acc.slug}`
@@ -538,7 +555,7 @@ export const storeOrgAccountSecretFn = createServerFn({ method: 'POST' })
           product: acc.product,
           url: acc.url,
           login_hint: acc.login_hint,
-          auth_kind: acc.auth_kind,
+          auth_kind: data.auth_kind || acc.auth_kind,
           secret_ref: ref,
           criticality: acc.criticality,
           owner_group: acc.owner_group,
@@ -546,23 +563,60 @@ export const storeOrgAccountSecretFn = createServerFn({ method: 'POST' })
           notes: acc.notes,
           runbook_url: acc.runbook_url,
         },
-        sessionActor(s),
+        actor,
+      )
+    } else if (data.auth_kind && data.auth_kind !== acc.auth_kind) {
+      upsertOrgAccount(
+        {
+          slug: acc.slug,
+          name: acc.name,
+          category: acc.category,
+          product: acc.product,
+          url: acc.url,
+          login_hint: acc.login_hint,
+          auth_kind: data.auth_kind,
+          secret_ref: acc.secret_ref,
+          criticality: acc.criticality,
+          owner_group: acc.owner_group,
+          requires_dual_control: acc.requires_dual_control,
+          notes: acc.notes,
+          runbook_url: acc.runbook_url,
+        },
+        actor,
       )
     }
+
     const fields: Record<string, string> = {}
     if (data.password) fields.password = data.password
     if (data.username) fields.username = data.username
     if (data.api_key) fields.api_key = data.api_key
     if (data.note) fields.note = data.note
+    if (data.rotate) {
+      fields.rotated_at = new Date().toISOString()
+      fields.rotated_by = actor
+    }
     const written = await writeSecretData(ref, fields)
-    const actor = sessionActor(s)
+    if (data.rotate) {
+      markOrgAccountRotated(acc.id, actor)
+    }
     recordActivity(
       'PUT',
       `/archgate/org-accounts/${acc.slug}/secret`,
       actor,
       'success',
       undefined,
-      { secret_ref: written.secret_ref, keys: Object.keys(fields) },
+      {
+        secret_ref: written.secret_ref,
+        keys: Object.keys(fields).filter(
+          (k) => !['password', 'api_key'].includes(k),
+        ),
+        rotated: !!data.rotate,
+        auth_kind: data.auth_kind || acc.auth_kind,
+      },
     )
-    return { ok: true as const, secret_ref: written.secret_ref }
+    return {
+      ok: true as const,
+      secret_ref: written.secret_ref,
+      rotated: !!data.rotate,
+    }
   })
