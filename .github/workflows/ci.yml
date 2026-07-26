@@ -36,6 +36,11 @@ jobs:
           cache-dependency-path: |
             go.mod
             tools/go.mod
+      - name: Aquece o cache do go vet (JSON determinístico p/ o lintbaseline)
+        # A 1ª execução de `go vet ./...` em cache frio intercala saída de build (não-JSON)
+        # com o `-json`, truncando o parse do lintbaseline → achados herdados somem e a trava b
+        # (obsoleto) dá falso-positivo. Aquecer aqui garante `go vet -json ./...` limpo no lint.
+        run: go vet ./... 2>/dev/null || true
       - name: Lint (gofmt + lintbaseline)
         run: make lint
       - name: Testes ArchGuard (sem DB — integração faz Skip sem ARCHGUARD_TEST_DSN)

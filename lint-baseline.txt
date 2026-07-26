@@ -4,8 +4,13 @@
 # SÓ ENCOLHE (trava c). Arquivo tocado por tarefa futura sai do baseline no mesmo commit
 # (trava d — boy scout ao tocar, nunca ao ver).
 #
-# Triagem de 2026-07-20 → entradas removidas em 2026-07-26: obsoletas sob a toolchain
-# canônica (go1.25.8 — go.mod/Dockerfile/CI). O `go vet` do 1.25.8 não reporta mais
-# `composites` em storage/casdoor.go:9 nem `unreachable` em service/proxy.go:39 (o baseline
-# fora gerado sob um Go anterior). Baseline agora VAZIO — trava b (obsoleta quebra o build)
-# exigia a remoção; trava c (só encolhe) satisfeita.
+# Nota de CI: o `go vet -json` só emite JSON limpo/completo com o cache aquecido — o CI roda
+# um `go vet ./...` de aquecimento antes do lint (senão a 1ª execução em cache frio trunca o
+# parse e estas entradas parecem obsoletas, gerando falso-positivo da trava b).
+#
+# Triagem de 2026-07-20:
+# - composites: literal sem chaves nomeadas; correto hoje, risco latente só se o upstream da
+#   lib casdoor/oss reordenar campos (dependência pinada). Estilo.
+# - unreachable: `return` morto após `panic(err)`; condição do erro está correta. Estilo.
+storage/casdoor.go:9:composites
+service/proxy.go:39:unreachable
