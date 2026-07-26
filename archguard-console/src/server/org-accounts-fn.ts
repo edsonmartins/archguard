@@ -59,6 +59,16 @@ const inputSchema = z.object({
   auth_kind: z
     .enum(['password', 'api_key', 'oidc', 'totp_password'])
     .optional(),
+  federation_status: z
+    .enum([
+      'password_only',
+      'oidc_primary',
+      'oidc_only',
+      'api_key_primary',
+      'external_idp',
+    ])
+    .optional(),
+  oidc_client_id: z.string().max(128).optional(),
   secret_ref: z.string().max(512).optional(),
   criticality: z.enum(['P0', 'P1', 'P2']).optional(),
   owner_group: z.string().max(128).optional(),

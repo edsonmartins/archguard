@@ -40,6 +40,7 @@
     "colCategory": "Categoria",
     "colCriticality": "Criticidade",
     "colAuth": "Auth",
+    "colFed": "Federação",
     "colLogin": "Login hint",
     "colActions": "Ações",
     "notes": "Notas",

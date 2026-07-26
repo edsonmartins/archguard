@@ -15,6 +15,21 @@ export type OrgAccountAuthKind =
   | 'oidc'
   | 'totp_password'
 
+/**
+ * OCB-4 — how far the product/cloud moved off shared passwords.
+ * - password_only: shared password is primary (bad)
+ * - oidc_primary: day-to-day via Kanidm/Workspace SSO; password only break-glass in OpenBao
+ * - oidc_only: no shared password (ideal)
+ * - api_key_primary: automation via key in OpenBao; human via individual SSO
+ * - external_idp: Google/Apple native IAM (not Kanidm) but no shared password
+ */
+export type OrgFederationStatus =
+  | 'password_only'
+  | 'oidc_primary'
+  | 'oidc_only'
+  | 'api_key_primary'
+  | 'external_idp'
+
 export type OrgAccount = {
   id: string
   slug: string
@@ -24,6 +39,9 @@ export type OrgAccount = {
   url: string
   login_hint: string
   auth_kind: OrgAccountAuthKind
+  federation_status: OrgFederationStatus
+  /** Kanidm OAuth2 client id when federated, e.g. vendax-admin */
+  oidc_client_id: string
   /** OpenBao path e.g. secret/data/org/store/apple-appstore — never the secret value */
   secret_ref: string
   criticality: OrgAccountCriticality
@@ -45,6 +63,8 @@ export type OrgAccountInput = {
   url?: string
   login_hint?: string
   auth_kind?: OrgAccountAuthKind
+  federation_status?: OrgFederationStatus
+  oidc_client_id?: string
   secret_ref?: string
   criticality?: OrgAccountCriticality
   owner_group?: string
@@ -68,4 +88,12 @@ export const ORG_AUTH_KINDS: OrgAccountAuthKind[] = [
   'api_key',
   'oidc',
   'totp_password',
+]
+
+export const ORG_FEDERATION_STATUSES: OrgFederationStatus[] = [
+  'password_only',
+  'oidc_primary',
+  'oidc_only',
+  'api_key_primary',
+  'external_idp',
 ]

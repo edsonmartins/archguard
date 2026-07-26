@@ -94,6 +94,8 @@ function migrate(db: Database.Database): void {
       url                     TEXT NOT NULL DEFAULT '',
       login_hint              TEXT NOT NULL DEFAULT '',
       auth_kind               TEXT NOT NULL DEFAULT 'password',
+      federation_status       TEXT NOT NULL DEFAULT 'password_only',
+      oidc_client_id          TEXT NOT NULL DEFAULT '',
       secret_ref              TEXT NOT NULL DEFAULT '',
       criticality             TEXT NOT NULL DEFAULT 'P2',
       owner_group             TEXT NOT NULL DEFAULT '',
@@ -135,13 +137,23 @@ function migrate(db: Database.Database): void {
   } catch {
     /* ignore race / fresh create */
   }
-  // org_accounts.rotated_at (OCB-3)
+  // org_accounts column migrations (OCB-3/4)
   try {
     const cols = db.prepare(`PRAGMA table_info(org_accounts)`).all() as {
       name: string
     }[]
     if (cols.length && !cols.some((c) => c.name === 'rotated_at')) {
       db.exec(`ALTER TABLE org_accounts ADD COLUMN rotated_at TEXT`)
+    }
+    if (cols.length && !cols.some((c) => c.name === 'federation_status')) {
+      db.exec(
+        `ALTER TABLE org_accounts ADD COLUMN federation_status TEXT NOT NULL DEFAULT 'password_only'`,
+      )
+    }
+    if (cols.length && !cols.some((c) => c.name === 'oidc_client_id')) {
+      db.exec(
+        `ALTER TABLE org_accounts ADD COLUMN oidc_client_id TEXT NOT NULL DEFAULT ''`,
+      )
     }
   } catch {
     /* ignore */

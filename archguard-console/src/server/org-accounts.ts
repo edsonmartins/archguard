@@ -8,6 +8,7 @@ import type {
   OrgAccountCategory,
   OrgAccountCriticality,
   OrgAccountInput,
+  OrgFederationStatus,
 } from '@/lib/api/types/org-account'
 import { getDb } from './db'
 import { logger } from './logger'
@@ -21,6 +22,8 @@ type Row = {
   url: string
   login_hint: string
   auth_kind: string
+  federation_status?: string | null
+  oidc_client_id?: string | null
   secret_ref: string
   criticality: string
   owner_group: string
@@ -50,6 +53,9 @@ function rowToAccount(row: Row): OrgAccount {
     url: row.url || '',
     login_hint: row.login_hint || '',
     auth_kind: row.auth_kind as OrgAccountAuthKind,
+    federation_status: (row.federation_status ||
+      'password_only') as OrgFederationStatus,
+    oidc_client_id: row.oidc_client_id || '',
     secret_ref: row.secret_ref || '',
     criticality: row.criticality as OrgAccountCriticality,
     owner_group: row.owner_group || '',
@@ -111,6 +117,15 @@ export function upsertOrgAccount(
     url: (input.url ?? existing?.url ?? '').trim(),
     login_hint: (input.login_hint ?? existing?.login_hint ?? '').trim(),
     auth_kind: input.auth_kind || existing?.auth_kind || 'password',
+    federation_status:
+      input.federation_status ||
+      existing?.federation_status ||
+      'password_only',
+    oidc_client_id: (
+      input.oidc_client_id ??
+      existing?.oidc_client_id ??
+      ''
+    ).trim(),
     secret_ref: (input.secret_ref ?? existing?.secret_ref ?? '').trim(),
     criticality,
     owner_group: (input.owner_group ?? existing?.owner_group ?? '').trim(),
@@ -126,10 +141,12 @@ export function upsertOrgAccount(
     .prepare(
       `INSERT INTO org_accounts (
         id, slug, name, category, product, url, login_hint, auth_kind,
+        federation_status, oidc_client_id,
         secret_ref, criticality, owner_group, requires_dual_control,
         notes, runbook_url, rotated_at, updated_at, updated_by
       ) VALUES (
         @id, @slug, @name, @category, @product, @url, @login_hint, @auth_kind,
+        @federation_status, @oidc_client_id,
         @secret_ref, @criticality, @owner_group, @requires_dual_control,
         @notes, @runbook_url, @rotated_at, @updated_at, @updated_by
       )
@@ -140,6 +157,8 @@ export function upsertOrgAccount(
         url = excluded.url,
         login_hint = excluded.login_hint,
         auth_kind = excluded.auth_kind,
+        federation_status = excluded.federation_status,
+        oidc_client_id = excluded.oidc_client_id,
         secret_ref = excluded.secret_ref,
         criticality = excluded.criticality,
         owner_group = excluded.owner_group,
@@ -197,10 +216,13 @@ export function seedDefaultOrgAccountsIfEmpty(actor = 'system'): number {
       category: 'store',
       criticality: 'P0',
       url: 'https://appstoreconnect.apple.com',
-      auth_kind: 'password',
+      auth_kind: 'api_key',
+      federation_status: 'api_key_primary',
       owner_group: 'archguard_super_admins',
       secret_ref: 'secret/data/org/store/apple-appstore',
-      notes: 'Owner / dual-control. Prefer individual users + API key.',
+      runbook_url: 'documentos/runbooks/org-product-oidc-federation.md',
+      notes:
+        'OCB-4: usuários individuais + App Store Connect API key no OpenBao; Apple ID owner dual-control break-glass.',
     },
     {
       slug: 'google-play-integrall',
@@ -208,10 +230,13 @@ export function seedDefaultOrgAccountsIfEmpty(actor = 'system'): number {
       category: 'store',
       criticality: 'P0',
       url: 'https://play.google.com/console',
-      auth_kind: 'password',
+      auth_kind: 'api_key',
+      federation_status: 'external_idp',
       owner_group: 'archguard_super_admins',
       secret_ref: 'secret/data/org/store/google-play',
-      notes: 'Prefer IAM individual; shared owner break-glass only.',
+      runbook_url: 'documentos/runbooks/org-product-oidc-federation.md',
+      notes:
+        'OCB-4: Google individual IAM; service account / API no OpenBao; owner compartilhado só break-glass.',
     },
     {
       slug: 'gcp-integrall-placeholder',
@@ -220,70 +245,95 @@ export function seedDefaultOrgAccountsIfEmpty(actor = 'system'): number {
       criticality: 'P0',
       url: 'https://console.cloud.google.com',
       auth_kind: 'oidc',
+      federation_status: 'external_idp',
       owner_group: 'archguard_super_admins',
       secret_ref: 'secret/data/org/cloud/gcp-placeholder',
-      notes: 'Prefer Workspace SSO + SA keys in OpenBao; not shared password.',
+      runbook_url: 'documentos/runbooks/org-product-oidc-federation.md',
+      notes:
+        'Workspace/SSO Google + SA keys no OpenBao. Sem senha compartilhada no dia a dia.',
     },
     {
       slug: 'vendax-admin',
-      name: 'Vendax · admin',
+      name: 'Vendax · admin (break-glass)',
       category: 'product_admin',
       product: 'vendax',
       criticality: 'P1',
-      auth_kind: 'password',
+      auth_kind: 'oidc',
+      federation_status: 'oidc_primary',
+      oidc_client_id: 'vendax-admin',
       owner_group: 'archguard_users',
       secret_ref: 'secret/data/org/product/vendax-admin',
+      runbook_url: 'documentos/runbooks/org-product-oidc-federation.md',
+      notes:
+        'Meta: SSO Kanidm. Password só break-glass dual-control até OIDC live.',
     },
     {
       slug: 'archflow-admin',
-      name: 'ArchFlow · admin',
+      name: 'ArchFlow · admin (break-glass)',
       category: 'product_admin',
       product: 'archflow',
       criticality: 'P1',
-      auth_kind: 'password',
+      auth_kind: 'oidc',
+      federation_status: 'oidc_primary',
+      oidc_client_id: 'archflow-admin',
       owner_group: 'archguard_users',
       secret_ref: 'secret/data/org/product/archflow-admin',
+      runbook_url: 'documentos/runbooks/org-product-oidc-federation.md',
+      notes: 'Meta: SSO Kanidm; senha só break-glass.',
     },
     {
       slug: 'archguard-admin-breakglass',
-      name: 'ArchGuard · break-glass (se houver)',
+      name: 'ArchGuard/Manager · break-glass',
       category: 'product_admin',
       product: 'archguard',
       criticality: 'P0',
-      auth_kind: 'password',
+      auth_kind: 'oidc',
+      federation_status: 'oidc_primary',
+      oidc_client_id: 'archguard-console',
       owner_group: 'archguard_super_admins',
       secret_ref: 'secret/data/org/product/archguard-breakglass',
-      notes: 'Prefer SSO Kanidm; password only break-glass.',
+      runbook_url: 'documentos/runbooks/org-product-oidc-federation.md',
+      notes:
+        'Já usa Kanidm OIDC (archguard-console). Secret = break-glass local se existir.',
     },
     {
       slug: 'brainsentry-admin',
-      name: 'BrainSentry · admin',
+      name: 'BrainSentry · admin (break-glass)',
       category: 'product_admin',
       product: 'brainsentry',
       criticality: 'P1',
-      auth_kind: 'password',
+      auth_kind: 'oidc',
+      federation_status: 'oidc_primary',
+      oidc_client_id: 'brainsentry-admin',
       owner_group: 'archguard_users',
       secret_ref: 'secret/data/org/product/brainsentry-admin',
+      runbook_url: 'documentos/runbooks/org-product-oidc-federation.md',
     },
     {
       slug: 'gestor-admin',
-      name: 'Gestor RQ · admin',
+      name: 'Gestor RQ · admin (break-glass)',
       category: 'product_admin',
       product: 'gestor',
       criticality: 'P1',
-      auth_kind: 'password',
+      auth_kind: 'oidc',
+      federation_status: 'oidc_primary',
+      oidc_client_id: 'gestor-admin',
       owner_group: 'archguard_users',
       secret_ref: 'secret/data/org/product/gestor-admin',
+      runbook_url: 'documentos/runbooks/org-product-oidc-federation.md',
     },
     {
       slug: 'alcada-admin',
-      name: 'Alçada · admin',
+      name: 'Alçada · admin (break-glass)',
       category: 'product_admin',
       product: 'alcada',
       criticality: 'P1',
-      auth_kind: 'password',
+      auth_kind: 'oidc',
+      federation_status: 'oidc_primary',
+      oidc_client_id: 'alcada-admin',
       owner_group: 'archguard_users',
       secret_ref: 'secret/data/org/product/alcada-admin',
+      runbook_url: 'documentos/runbooks/org-product-oidc-federation.md',
     },
   ]
 

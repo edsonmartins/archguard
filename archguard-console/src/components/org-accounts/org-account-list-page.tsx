@@ -22,7 +22,9 @@ import {
   ORG_AUTH_KINDS,
   ORG_CATEGORIES,
   ORG_CRITICALITIES,
+  ORG_FEDERATION_STATUSES,
 } from '@/lib/api/types/org-account'
+import type { OrgFederationStatus } from '@/lib/api/types/org-account'
 import {
   useApproveOrgCheckout,
   useCheckinOrgAccount,
@@ -75,6 +77,8 @@ function blank(): OrgAccountInput {
     category: 'other',
     criticality: 'P2',
     auth_kind: 'password',
+    federation_status: 'password_only',
+    oidc_client_id: '',
     product: '',
     url: '',
     login_hint: '',
@@ -153,6 +157,8 @@ export function OrgAccountListPage() {
       url: a.url,
       login_hint: a.login_hint,
       auth_kind: a.auth_kind,
+      federation_status: a.federation_status || 'password_only',
+      oidc_client_id: a.oidc_client_id || '',
       secret_ref: a.secret_ref,
       criticality: a.criticality,
       owner_group: a.owner_group,
@@ -397,6 +403,7 @@ export function OrgAccountListPage() {
                   <TableHead>{t('orgAccounts.colCategory')}</TableHead>
                   <TableHead>{t('orgAccounts.colCriticality')}</TableHead>
                   <TableHead>{t('orgAccounts.colAuth')}</TableHead>
+                  <TableHead>{t('orgAccounts.colFed')}</TableHead>
                   <TableHead>{t('orgAccounts.colLogin')}</TableHead>
                   <TableHead className="text-right">
                     {t('orgAccounts.colActions')}
@@ -433,6 +440,25 @@ export function OrgAccountListPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm">{a.auth_kind}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          a.federation_status === 'password_only'
+                            ? 'destructive'
+                            : a.federation_status === 'oidc_only' ||
+                                a.federation_status === 'api_key_primary'
+                              ? 'default'
+                              : 'secondary'
+                        }
+                      >
+                        {a.federation_status || 'password_only'}
+                      </Badge>
+                      {a.oidc_client_id ? (
+                        <div className="mt-0.5 font-mono text-[10px] text-muted-foreground">
+                          {a.oidc_client_id}
+                        </div>
+                      ) : null}
+                    </TableCell>
                     <TableCell className="max-w-[10rem] truncate text-sm text-muted-foreground">
                       {a.login_hint || '—'}
                     </TableCell>
@@ -860,28 +886,63 @@ export function OrgAccountListPage() {
                 </Select>
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-1.5">
+                <Label>{t('orgAccounts.colAuth')}</Label>
+                <Select
+                  value={form.auth_kind || 'password'}
+                  onValueChange={(v) =>
+                    setForm((f) => ({
+                      ...f,
+                      auth_kind: v as OrgAccountAuthKind,
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ORG_AUTH_KINDS.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-1.5">
+                <Label>{t('orgAccounts.colFed')}</Label>
+                <Select
+                  value={form.federation_status || 'password_only'}
+                  onValueChange={(v) =>
+                    setForm((f) => ({
+                      ...f,
+                      federation_status: v as OrgFederationStatus,
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ORG_FEDERATION_STATUSES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <div className="grid gap-1.5">
-              <Label>{t('orgAccounts.colAuth')}</Label>
-              <Select
-                value={form.auth_kind || 'password'}
-                onValueChange={(v) =>
-                  setForm((f) => ({
-                    ...f,
-                    auth_kind: v as OrgAccountAuthKind,
-                  }))
+              <Label>oidc_client_id (Kanidm)</Label>
+              <Input
+                value={form.oidc_client_id || ''}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, oidc_client_id: e.target.value }))
                 }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ORG_AUTH_KINDS.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="vendax-admin"
+              />
             </div>
             <div className="grid gap-1.5">
               <Label>URL</Label>
