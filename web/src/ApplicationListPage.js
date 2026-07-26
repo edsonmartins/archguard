@@ -15,7 +15,7 @@
 import React from "react";
 import {Link} from "react-router-dom";
 import {Button, Col, List, Row, Table, Tooltip} from "antd";
-import {EditOutlined} from "@ant-design/icons";
+import {EditOutlined} from "TablerIcons";
 import moment from "moment";
 import * as Setting from "./Setting";
 import * as ApplicationBackend from "./backend/ApplicationBackend";

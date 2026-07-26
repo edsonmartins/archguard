@@ -10,7 +10,7 @@ import {
   Tooltip,
   Typography
 } from "antd";
-import {FileTextOutlined, FullscreenExitOutlined, FullscreenOutlined} from "@ant-design/icons";
+import {FileTextOutlined, FullscreenExitOutlined, FullscreenOutlined} from "TablerIcons";
 import i18next from "i18next";
 import Loading from "./common/Loading";
 import ReactFlow, {

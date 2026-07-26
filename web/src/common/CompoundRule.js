@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import React from "react";
-import {DeleteOutlined, DownOutlined, UpOutlined} from "@ant-design/icons";
+import {DeleteOutlined, DownOutlined, UpOutlined} from "TablerIcons";
 import {Button, Col, Row, Select, Table, Tooltip} from "antd";
 import {getRules} from "../backend/RuleBackend";
 import * as Setting from "../Setting";

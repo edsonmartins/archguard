@@ -14,7 +14,7 @@
 
 import React from "react";
 import {Tooltip} from "antd";
-import {QuestionCircleOutlined} from "@ant-design/icons";
+import {QuestionCircleOutlined} from "TablerIcons";
 import i18next from "i18next";
 import * as TourConfig from "../TourConfig";
 import * as Setting from "../Setting";

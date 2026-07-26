@@ -16,7 +16,7 @@ import React from "react";
 import {Col, Input, Row, Select} from "antd";
 import * as Setting from "../Setting";
 import i18next from "i18next";
-import {LinkOutlined} from "@ant-design/icons";
+import {LinkOutlined} from "TablerIcons";
 
 const {Option} = Select;
 

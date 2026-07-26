@@ -17,7 +17,7 @@ import * as Setting from "../../Setting";
 import {Dropdown, Space} from "antd";
 import "../../App.less";
 import i18next from "i18next";
-import {CheckOutlined} from "@ant-design/icons";
+import {CheckOutlined} from "TablerIcons";
 import {CompactTheme, DarkTheme, Light} from "antd-token-previewer/es/icons";
 
 export const Themes = [

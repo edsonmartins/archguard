@@ -15,7 +15,7 @@
 import React from "react";
 import Loading from "./common/Loading";
 import {Button, Card, Col, Input, InputNumber, Modal, Row, Select, Table} from "antd";
-import {CopyOutlined} from "@ant-design/icons";
+import {CopyOutlined} from "TablerIcons";
 import * as InvitationBackend from "./backend/InvitationBackend";
 import * as OrganizationBackend from "./backend/OrganizationBackend";
 import * as ApplicationBackend from "./backend/ApplicationBackend";

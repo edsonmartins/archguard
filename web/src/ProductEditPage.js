@@ -18,7 +18,7 @@ import {Button, Card, Col, Input, InputNumber, Row, Select, Switch} from "antd";
 import * as ProductBackend from "./backend/ProductBackend";
 import * as Setting from "./Setting";
 import i18next from "i18next";
-import {LinkOutlined} from "@ant-design/icons";
+import {LinkOutlined} from "TablerIcons";
 import * as ProviderBackend from "./backend/ProviderBackend";
 import ProductBuyPage from "./ProductBuyPage";
 import * as OrganizationBackend from "./backend/OrganizationBackend";

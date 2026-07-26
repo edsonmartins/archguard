@@ -14,7 +14,7 @@
 
 import React from "react";
 import {Alert, Button, Card, Descriptions} from "antd";
-import {ArrowLeftOutlined} from "@ant-design/icons";
+import {ArrowLeftOutlined} from "TablerIcons";
 import i18next from "i18next";
 import * as EntryBackend from "./backend/EntryBackend";
 import * as Setting from "./Setting";

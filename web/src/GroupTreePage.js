@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {DeleteOutlined, EditOutlined, HolderOutlined, PlusOutlined, UsergroupAddOutlined} from "@ant-design/icons";
+import {DeleteOutlined, EditOutlined, HolderOutlined, PlusOutlined, UsergroupAddOutlined} from "TablerIcons";
 import {Button, Col, Empty, Row, Space, Tree} from "antd";
 import i18next from "i18next";
 import moment from "moment/moment";

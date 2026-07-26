@@ -22,7 +22,7 @@ import * as PermissionBackend from "./backend/PermissionBackend";
 import i18next from "i18next";
 import BaseListPage from "./BaseListPage";
 import PopconfirmModal from "./common/modal/PopconfirmModal";
-import {UploadOutlined} from "@ant-design/icons";
+import {UploadOutlined} from "TablerIcons";
 import * as XLSX from "xlsx";
 
 class PermissionListPage extends BaseListPage {

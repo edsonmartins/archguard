@@ -15,7 +15,7 @@
 import React from "react";
 import Loading from "./common/Loading";
 import {Button, Card, Col, Input, InputNumber, Radio, Row, Select, Switch} from "antd";
-import {LinkOutlined} from "@ant-design/icons";
+import {LinkOutlined} from "TablerIcons";
 import * as SyncerBackend from "./backend/SyncerBackend";
 import * as OrganizationBackend from "./backend/OrganizationBackend";
 import * as Setting from "./Setting";

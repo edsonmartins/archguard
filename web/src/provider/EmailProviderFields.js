@@ -14,7 +14,7 @@
 
 import React from "react";
 import {Button, Col, Input, InputNumber, Row, Select, Switch} from "antd";
-import {LinkOutlined} from "@ant-design/icons";
+import {LinkOutlined} from "TablerIcons";
 import * as Setting from "../Setting";
 import i18next from "i18next";
 import * as ProviderEditTestEmail from "../common/TestEmailWidget";

@@ -22,7 +22,7 @@ import i18next from "i18next";
 import BaseListPage from "./BaseListPage";
 import * as Provider from "./auth/Provider";
 import PopconfirmModal from "./common/modal/PopconfirmModal";
-import {EditOutlined} from "@ant-design/icons";
+import {EditOutlined} from "TablerIcons";
 
 class PaymentListPage extends BaseListPage {
   newPayment() {

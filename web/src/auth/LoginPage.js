@@ -15,7 +15,7 @@
 import React, {Suspense, lazy} from "react";
 import {Button, Checkbox, Col, Form, Input, Result, Tabs, message} from "antd";
 import Loading from "../common/Loading";
-import {ArrowLeftOutlined, LockOutlined, UserOutlined} from "@ant-design/icons";
+import {ArrowLeftOutlined, LockOutlined, UserOutlined} from "TablerIcons";
 import {withRouter} from "react-router-dom";
 import * as UserWebauthnBackend from "../backend/UserWebauthnBackend";
 import OrganizationSelect from "../common/select/OrganizationSelect";

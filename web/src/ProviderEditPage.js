@@ -15,7 +15,7 @@
 import React from "react";
 import Loading from "./common/Loading";
 import {Button, Card, Col, Input, Row, Select, Switch} from "antd";
-import {LinkOutlined} from "@ant-design/icons";
+import {LinkOutlined} from "TablerIcons";
 import * as ProviderBackend from "./backend/ProviderBackend";
 import * as ServerBackend from "./backend/ServerBackend";
 import * as OrganizationBackend from "./backend/OrganizationBackend";

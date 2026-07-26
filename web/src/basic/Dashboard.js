@@ -15,7 +15,7 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {Card, Col, Progress, Row, Statistic, Tour} from "antd";
 import Loading from "../common/Loading";
-import {ApartmentOutlined, AppstoreOutlined, ArrowUpOutlined, KeyOutlined, SafetyOutlined, TeamOutlined} from "@ant-design/icons";
+import {ApartmentOutlined, AppstoreOutlined, ArrowUpOutlined, KeyOutlined, SafetyOutlined, TeamOutlined} from "TablerIcons";
 import * as echarts from "echarts";
 import i18next from "i18next";
 import * as DashboardBackend from "../backend/DashboardBackend";

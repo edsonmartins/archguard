@@ -14,7 +14,7 @@
 
 import React from "react";
 import {Button, Input, Space, Table} from "antd";
-import {SearchOutlined} from "@ant-design/icons";
+import {SearchOutlined} from "TablerIcons";
 import Highlighter from "react-highlight-words";
 import i18next from "i18next";
 import {getTransactionTableColumns} from "./TransactionTableColumns";

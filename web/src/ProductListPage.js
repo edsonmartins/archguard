@@ -20,7 +20,7 @@ import * as Setting from "./Setting";
 import * as ProductBackend from "./backend/ProductBackend";
 import i18next from "i18next";
 import BaseListPage from "./BaseListPage";
-import {EditOutlined} from "@ant-design/icons";
+import {EditOutlined} from "TablerIcons";
 import PopconfirmModal from "./common/modal/PopconfirmModal";
 
 class ProductListPage extends BaseListPage {

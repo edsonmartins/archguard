@@ -14,7 +14,7 @@
 
 import React from "react";
 import {Badge, Button, InputNumber} from "antd";
-import {MinusOutlined, PlusOutlined, ShoppingCartOutlined} from "@ant-design/icons";
+import {MinusOutlined, PlusOutlined, ShoppingCartOutlined} from "TablerIcons";
 
 export class QuantityStepper extends React.Component {
   render() {

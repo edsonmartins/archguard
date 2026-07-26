@@ -1,4 +1,4 @@
-import {UserOutlined} from "@ant-design/icons";
+import {UserOutlined} from "TablerIcons";
 import {Button, Checkbox, Form, Input, Space} from "antd";
 import i18next from "i18next";
 import React, {useEffect} from "react";

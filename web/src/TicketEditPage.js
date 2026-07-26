@@ -15,7 +15,7 @@
 import React from "react";
 import Loading from "./common/Loading";
 import {Avatar, Button, Card, Col, Divider, Input, List, Row, Select, Space, Tag} from "antd";
-import {SendOutlined, UserOutlined} from "@ant-design/icons";
+import {SendOutlined, UserOutlined} from "TablerIcons";
 import * as TicketBackend from "./backend/TicketBackend";
 import * as Setting from "./Setting";
 import i18next from "i18next";

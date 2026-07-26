@@ -18,7 +18,7 @@ import {Helmet} from "react-helmet";
 import * as Setting from "./Setting";
 import {setOrgIsTourVisible, setTourLogo} from "./TourConfig";
 import {StyleProvider, legacyLogicalPropertiesTransformer} from "@ant-design/cssinjs";
-import {GithubOutlined, InfoCircleFilled, ShareAltOutlined} from "@ant-design/icons";
+import {GithubOutlined, InfoCircleFilled, ShareAltOutlined} from "TablerIcons";
 import {Alert, Button, ConfigProvider, Drawer, FloatButton, Layout, Result, Tooltip} from "antd";
 import {AiDots} from "./common/Loading";
 import {Route, Switch, withRouter} from "react-router-dom";
@@ -38,7 +38,7 @@ import {withTranslation} from "react-i18next";
 const ManagementPage = lazy(() => import("./ManagementPage"));
 const {Footer, Content} = Layout;
 
-import {setTwoToneColor} from "@ant-design/icons";
+import {setTwoToneColor} from "TablerIcons";
 import * as ApplicationBackend from "./backend/ApplicationBackend";
 import * as Cookie from "cookie";
 

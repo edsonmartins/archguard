@@ -19,7 +19,7 @@ import * as ApplicationBackend from "../backend/ApplicationBackend";
 import * as Setting from "../Setting";
 import i18next from "i18next";
 import * as MfaBackend from "../backend/MfaBackend";
-import {CheckOutlined, KeyOutlined, UserOutlined} from "@ant-design/icons";
+import {CheckOutlined, KeyOutlined, UserOutlined} from "TablerIcons";
 import CheckPasswordForm from "./mfa/CheckPasswordForm";
 import MfaEnableForm from "./mfa/MfaEnableForm";
 import {MfaVerifyForm} from "./mfa/MfaVerifyForm";

@@ -27,7 +27,7 @@ import {
   MenuFoldOutlined, MenuUnfoldOutlined,
   SafetyCertificateOutlined, SettingOutlined,
   WalletOutlined
-} from "@ant-design/icons";
+} from "TablerIcons";
 import Dashboard from "./basic/Dashboard";
 import AppListPage from "./basic/AppListPage";
 import ShortcutsPage from "./basic/ShortcutsPage";

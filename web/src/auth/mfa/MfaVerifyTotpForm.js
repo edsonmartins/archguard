@@ -1,4 +1,4 @@
-import {CopyOutlined} from "@ant-design/icons";
+import {CopyOutlined} from "TablerIcons";
 import {Button, Checkbox, Col, Form, Input, QRCode, Space} from "antd";
 import copy from "copy-to-clipboard";
 import i18next from "i18next";

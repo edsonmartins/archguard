@@ -14,7 +14,7 @@
 
 import React, {useState} from "react";
 import {Button, Input, Modal} from "antd";
-import {UploadOutlined} from "@ant-design/icons";
+import {UploadOutlined} from "TablerIcons";
 import copy from "copy-to-clipboard";
 import i18next from "i18next";
 import * as Setting from "../Setting";

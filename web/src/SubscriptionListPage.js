@@ -15,7 +15,7 @@
 import React from "react";
 import {Link} from "react-router-dom";
 import {Button, Table} from "antd";
-import {ClockCircleOutlined, CloseCircleOutlined, ExclamationCircleOutlined, MinusCircleOutlined, SyncOutlined} from "@ant-design/icons";
+import {ClockCircleOutlined, CloseCircleOutlined, ExclamationCircleOutlined, MinusCircleOutlined, SyncOutlined} from "TablerIcons";
 import moment from "moment";
 import * as Setting from "./Setting";
 import * as SubscriptionBackend from "./backend/SubscriptionBackend";

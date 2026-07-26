@@ -14,7 +14,7 @@
 
 import React from "react";
 import {Button, Card, List, Result, Space} from "antd";
-import {CheckOutlined, LockOutlined} from "@ant-design/icons";
+import {CheckOutlined, LockOutlined} from "TablerIcons";
 import * as ApplicationBackend from "../backend/ApplicationBackend";
 import * as ConsentBackend from "../backend/ConsentBackend";
 import * as Setting from "../Setting";

@@ -14,7 +14,7 @@
 
 import React from "react";
 import {Button, Image, Table, Upload} from "antd";
-import {UploadOutlined} from "@ant-design/icons";
+import {UploadOutlined} from "TablerIcons";
 import copy from "copy-to-clipboard";
 import * as Setting from "./Setting";
 import * as ResourceBackend from "./backend/ResourceBackend";

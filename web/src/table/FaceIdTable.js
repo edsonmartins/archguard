@@ -16,7 +16,7 @@ import React, {Suspense, lazy} from "react";
 import {Button, Col, Input, Row, Table, Upload} from "antd";
 import i18next from "i18next";
 import * as Setting from "../Setting";
-import {CameraOutlined, UploadOutlined} from "@ant-design/icons";
+import {CameraOutlined, UploadOutlined} from "TablerIcons";
 import * as ResourceBackend from "../backend/ResourceBackend";
 const FaceRecognitionModal = lazy(() => import("../common/modal/FaceRecognitionModal"));
 

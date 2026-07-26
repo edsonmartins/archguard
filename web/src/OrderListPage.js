@@ -21,7 +21,7 @@ import * as OrderBackend from "./backend/OrderBackend";
 import i18next from "i18next";
 import BaseListPage from "./BaseListPage";
 import PopconfirmModal from "./common/modal/PopconfirmModal";
-import {EditOutlined} from "@ant-design/icons";
+import {EditOutlined} from "TablerIcons";
 
 class OrderListPage extends BaseListPage {
   newOrder() {

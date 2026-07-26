@@ -19,7 +19,7 @@ import i18next from "i18next";
 import * as ProviderEditTestSms from "../common/TestSmsWidget";
 import {CountryCodeSelect} from "../common/select/CountryCodeSelect";
 import HttpHeaderTable from "../table/HttpHeaderTable";
-import {LinkOutlined} from "@ant-design/icons";
+import {LinkOutlined} from "TablerIcons";
 
 const {Option} = Select;
 

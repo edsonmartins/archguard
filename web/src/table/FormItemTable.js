@@ -14,7 +14,7 @@
 
 import React from "react";
 import {Button, Col, Input, Row, Select, Switch, Table, Tooltip} from "antd";
-import {DeleteOutlined, DownOutlined, UpOutlined} from "@ant-design/icons";
+import {DeleteOutlined, DownOutlined, UpOutlined} from "TablerIcons";
 import * as Setting from "../Setting";
 import i18next from "i18next";
 

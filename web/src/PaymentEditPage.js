@@ -15,7 +15,7 @@
 import React from "react";
 import Loading from "./common/Loading";
 import {Button, Card, Col, Descriptions, Input, Modal, Row, Select} from "antd";
-import {InfoCircleTwoTone} from "@ant-design/icons";
+import {InfoCircleTwoTone} from "TablerIcons";
 import * as PaymentBackend from "./backend/PaymentBackend";
 import * as Setting from "./Setting";
 import i18next from "i18next";

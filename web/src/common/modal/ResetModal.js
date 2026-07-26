@@ -18,7 +18,7 @@ import React from "react";
 import * as Setting from "../../Setting";
 import * as UserBackend from "../../backend/UserBackend";
 import {SendCodeInput} from "../SendCodeInput";
-import {MailOutlined, PhoneOutlined} from "@ant-design/icons";
+import {MailOutlined, PhoneOutlined} from "TablerIcons";
 
 export const ResetModal = (props) => {
   const [visible, setVisible] = React.useState(false);

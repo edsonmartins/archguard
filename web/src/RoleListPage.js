@@ -21,7 +21,7 @@ import * as RoleBackend from "./backend/RoleBackend";
 import i18next from "i18next";
 import BaseListPage from "./BaseListPage";
 import PopconfirmModal from "./common/modal/PopconfirmModal";
-import {UploadOutlined} from "@ant-design/icons";
+import {UploadOutlined} from "TablerIcons";
 import * as XLSX from "xlsx";
 
 class RoleListPage extends BaseListPage {

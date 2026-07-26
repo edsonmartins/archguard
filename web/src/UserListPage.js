@@ -15,7 +15,7 @@
 import React from "react";
 import {Link} from "react-router-dom";
 import {Button, Modal, Space, Switch, Table, Upload} from "antd";
-import {UploadOutlined} from "@ant-design/icons";
+import {UploadOutlined} from "TablerIcons";
 import moment from "moment";
 import * as OrganizationBackend from "./backend/OrganizationBackend";
 import * as Setting from "./Setting";

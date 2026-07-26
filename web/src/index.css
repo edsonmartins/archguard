@@ -57,7 +57,7 @@ code {
   padding: 8px 12px !important;
 }
 
-/* Size the small toolbar buttons in table title bars (Add, Upload, ...) like default buttons, matching the row action buttons */
+/* Size the small toolbar buttons in table title bars (Add, Upload) like the row action buttons */
 .ant-table-title .ant-btn-sm {
   height: 32px;
   padding-inline: 15px;
@@ -262,6 +262,21 @@ a[href^="mailto:"]:active {
 .ant-layout-sider .ant-menu-light .ant-menu-item-selected,
 .ant-layout-sider .ant-menu-light > .ant-menu .ant-menu-item-selected {
   background-color: #dcfce7 !important;
+}
+
+/* Tabler webfont icons (shim TablerIcons.js): alinhar como os ícones antd + spin */
+.ti {
+  display: inline-block;
+  vertical-align: -0.125em;
+  line-height: 1;
+}
+
+@keyframes ti-spin {
+  to { transform: rotate(360deg); }
+}
+
+.ti-spin {
+  animation: ti-spin 1s linear infinite;
 }
 
 /* Dropdown menus (theme selector etc.): selected item readable green in both themes */

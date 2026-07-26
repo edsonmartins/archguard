@@ -16,7 +16,7 @@ import React from "react";
 import * as Setting from "../../Setting";
 import {Dropdown, Select} from "antd";
 import "../../App.less";
-import {GlobalOutlined} from "@ant-design/icons";
+import {GlobalOutlined} from "TablerIcons";
 
 function flagIcon(country, alt) {
   return (

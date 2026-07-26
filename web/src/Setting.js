@@ -16,7 +16,7 @@ import React from "react";
 import {useEffect, useRef} from "react";
 import {Link} from "react-router-dom";
 import {Button, Select, Tag, Tooltip, message, theme} from "antd";
-import {QuestionCircleOutlined} from "@ant-design/icons";
+import {QuestionCircleOutlined} from "TablerIcons";
 import {isMobile as isMobileDevice} from "react-device-detect";
 import "./i18n";
 import i18next from "i18next";

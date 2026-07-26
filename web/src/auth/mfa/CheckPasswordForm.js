@@ -1,4 +1,4 @@
-import {LockOutlined} from "@ant-design/icons";
+import {LockOutlined} from "TablerIcons";
 import {Button, Form, Input} from "antd";
 import i18next from "i18next";
 import React from "react";

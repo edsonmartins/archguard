@@ -22,7 +22,7 @@ import * as Setting from "./Setting";
 import * as Conf from "./Conf";
 import * as Obfuscator from "./auth/Obfuscator";
 import i18next from "i18next";
-import {LinkOutlined} from "@ant-design/icons";
+import {LinkOutlined} from "TablerIcons";
 import LdapTable from "./table/LdapTable";
 import AccountTable from "./table/AccountTable";
 import ThemeEditor from "./common/theme/ThemeEditor";

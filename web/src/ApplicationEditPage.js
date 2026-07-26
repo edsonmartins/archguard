@@ -34,7 +34,7 @@ import {
   Tabs,
   Upload, message
 } from "antd";
-import {CopyOutlined, DownloadOutlined, HolderOutlined, LinkOutlined, UploadOutlined, UsergroupAddOutlined} from "@ant-design/icons";
+import {CopyOutlined, DownloadOutlined, HolderOutlined, LinkOutlined, UploadOutlined, UsergroupAddOutlined} from "TablerIcons";
 import * as ApplicationBackend from "./backend/ApplicationBackend";
 import {ApplicationImportModal, exportApplicationJson} from "./common/ApplicationImportExport";
 import * as CertBackend from "./backend/CertBackend";

@@ -18,7 +18,7 @@ import i18next from "i18next";
 import * as UserBackend from "../backend/UserBackend";
 import * as AuthBackend from "../auth/AuthBackend";
 import * as Setting from "../Setting";
-import {SafetyOutlined} from "@ant-design/icons";
+import {SafetyOutlined} from "TablerIcons";
 import {CaptchaModal} from "./modal/CaptchaModal";
 
 export const SendCodeInput = ({value, disabled, captchaValue, useInlineCaptcha, textBefore, onChange, onButtonClickArgs, application, method, countryCode, refreshCaptcha}) => {

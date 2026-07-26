@@ -17,7 +17,7 @@ import i18next from "i18next";
 import React, {useEffect} from "react";
 import * as UserBackend from "../../backend/UserBackend";
 import {CaptchaWidget} from "../CaptchaWidget";
-import {SafetyOutlined} from "@ant-design/icons";
+import {SafetyOutlined} from "TablerIcons";
 
 export const CaptchaModal = (props) => {
   const {owner, name, visible, onOk, onUpdateToken, onCancel, isCurrentProvider, noModal, innerRef} = props;

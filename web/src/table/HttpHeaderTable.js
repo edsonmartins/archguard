@@ -15,7 +15,7 @@
 import React from "react";
 import {Button, Input, Table} from "antd";
 import i18next from "i18next";
-import {DeleteOutlined} from "@ant-design/icons";
+import {DeleteOutlined} from "TablerIcons";
 import * as Setting from "../Setting";
 
 class HttpHeaderTable extends React.Component {

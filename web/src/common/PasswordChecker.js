@@ -14,7 +14,7 @@
 
 import i18next from "i18next";
 import React from "react";
-import {CheckCircleTwoTone, CloseCircleTwoTone} from "@ant-design/icons";
+import {CheckCircleTwoTone, CloseCircleTwoTone} from "TablerIcons";
 
 function isValidOption_AtLeast6(password) {
   if (password.length < 6) {

@@ -17,6 +17,7 @@ import "react-app-polyfill/ie9";
 import "react-app-polyfill/stable";
 import React from "react";
 import {createRoot} from "react-dom/client";
+import "@tabler/icons-webfont/dist/tabler-icons.min.css";
 import "./index.css";
 import "./App.less";
 import App from "./App";

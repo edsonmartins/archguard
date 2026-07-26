@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {CopyOutlined} from "@ant-design/icons";
+import {CopyOutlined} from "TablerIcons";
 import copy from "copy-to-clipboard";
 import React from "react";
 import Loading from "./common/Loading";

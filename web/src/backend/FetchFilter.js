@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import {Modal} from "antd";
-import {ExclamationCircleFilled} from "@ant-design/icons";
+import {ExclamationCircleFilled} from "TablerIcons";
 import i18next from "i18next";
 import * as Conf from "../Conf";
 import * as Setting from "../Setting";
