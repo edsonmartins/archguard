@@ -6,8 +6,11 @@
 > (Greenfield anterior no histórico git.)
 
 ## Fundação e travas (mantêm os invariantes do ADR-0004)
-- [ ] **T-001** Camada de API tipada do console para o `/api/v1` (plano de controle, pacote 011):
-      módulo dedicado; nenhuma chamada crua a `fetch` de PAM fora dele.
+- [x] **T-001** Camada de API tipada do console para o `/api/v1` (plano de controle, pacote 011):
+      módulo dedicado `web/src/backend/ControlPlaneBackend.js` (helper `cpRequest` + funções
+      tipadas por JSDoc: session/tenants/memberships/grants/audit-timeline/audit-verify/
+      access-effective/health/stepup/factors; sessão por cookie; distinção denied×error).
+      Ponto único de acesso ao `/api/v1` (base da trava T-003). eslint verde.
 - [ ] **T-002** Teste de contrato no CI: as chamadas do console ao `/api/v1` conferem com o
       OpenAPI publicado (detecta *drift* contrato↔console). Falha o CI se defasar.
 - [ ] **T-003** Trava de revisão/lint: nenhum endpoint "só para a UI" (I-7.6); nenhuma decisão de
