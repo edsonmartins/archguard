@@ -740,7 +740,13 @@
     "You must select a picture first": "You must select a picture first",
     "empty": "empty",
     "remove": "remove",
-    "{total} in total": "{total} in total"
+    "{total} in total": "{total} in total",
+    "Revoke": "Revoke",
+    "Grant revoked": "Grant revoked",
+    "Revoke this grant?": "Revoke this grant?",
+    "This revokes the grant and ends its derived sessions. Irreversible.": "This revokes the grant and ends its derived sessions. Irreversible.",
+    "You are not allowed to revoke this grant": "You are not allowed to revoke this grant",
+    "Could not revoke the grant": "Could not revoke the grant"
   },
   "group": {
     "Edit Group": "Edit Group",

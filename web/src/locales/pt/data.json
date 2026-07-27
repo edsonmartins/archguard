@@ -739,7 +739,13 @@
     "You must select a picture first": "Você deve selecionar uma imagem primeiro",
     "empty": "vazio",
     "remove": "remover",
-    "{total} in total": "{total} no total"
+    "{total} in total": "{total} no total",
+    "Revoke": "Revogar",
+    "Grant revoked": "Concessão revogada",
+    "Revoke this grant?": "Revogar esta concessão?",
+    "This revokes the grant and ends its derived sessions. Irreversible.": "Isto revoga a concessão e encerra as sessões derivadas dela. Irreversível.",
+    "You are not allowed to revoke this grant": "Você não tem permissão para revogar esta concessão",
+    "Could not revoke the grant": "Não foi possível revogar a concessão"
   },
   "group": {
     "Edit Group": "Editar Grupo",

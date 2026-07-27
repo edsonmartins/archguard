@@ -18,7 +18,7 @@
 // que exige expor o endpoint no /api/v1 (I-7.6: capacidade do pacote 004 existe,
 // falta a rota HTTP).
 import React from "react";
-import {Card, Table, Tag} from "antd";
+import {Button, Card, Popconfirm, Table, Tag, message} from "antd";
 import i18next from "i18next";
 import * as ControlPlane from "./backend/ControlPlaneBackend";
 
@@ -41,7 +41,7 @@ function formatRemaining(expiresAt, nowSec) {
 class GrantsPage extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {grants: [], loading: true, now: Math.floor(Date.now() / 1000)};
+    this.state = {grants: [], loading: true, now: Math.floor(Date.now() / 1000), revoking: null};
   }
 
   componentDidMount() {
@@ -66,6 +66,25 @@ class GrantsPage extends React.Component {
         // Fail-closed: em dev/perfil sem projeção o PDP/lister nega — mostra vazio, não
         // uma lista parcial como se fosse completa. 401 = sem contexto /api/v1.
         this.setState({grants: [], loading: false, denied: err && err.status});
+      });
+  }
+
+  revoke(grantId) {
+    this.setState({revoking: grantId});
+    ControlPlane.revokeGrant(grantId)
+      .then(() => {
+        message.success(i18next.t("general:Grant revoked"));
+        this.setState({revoking: null});
+        this.fetch();
+      })
+      .catch((err) => {
+        // O 401 de step-up é tratado de forma transparente pelo interceptor (T-005);
+        // aqui só caem negação (403), conflito (409 = já não ativa) e falhas (5xx).
+        this.setState({revoking: null});
+        const denied = err && err.status === 403;
+        message.error(denied
+          ? i18next.t("general:You are not allowed to revoke this grant")
+          : (err && err.message) || i18next.t("general:Could not revoke the grant"));
       });
   }
 
@@ -100,6 +119,30 @@ class GrantsPage extends React.Component {
           const c = formatRemaining(r.expires_at, now);
           return <Tag color={c.color}>{c.text}</Tag>;
         },
+      },
+      {
+        title: i18next.t("general:Action"),
+        key: "action",
+        width: 120,
+        // Só concessões ativas são revogáveis; o Popconfirm explicita a consequência
+        // destrutiva (revoga + encerra sessões derivadas). A autorização é do backend
+        // (L3 + RequireAdmin) — esconder o botão não é controle de acesso.
+        render: (_, r) => (
+          r.status === "active" ? (
+            <Popconfirm
+              title={i18next.t("general:Revoke this grant?")}
+              description={i18next.t("general:This revokes the grant and ends its derived sessions. Irreversible.")}
+              okText={i18next.t("general:Revoke")}
+              cancelText={i18next.t("general:Cancel")}
+              okButtonProps={{danger: true}}
+              onConfirm={() => this.revoke(r.grant_id)}
+            >
+              <Button danger size="small" loading={this.state.revoking === r.grant_id}>
+                {i18next.t("general:Revoke")}
+              </Button>
+            </Popconfirm>
+          ) : null
+        ),
       },
     ];
     return (

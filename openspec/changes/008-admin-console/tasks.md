@@ -49,15 +49,22 @@
       é refinamento posterior. i18n en+pt. Build local + contrato verdes.
 
 ## Telas críticas de PAM (o que o herdado não tem)
-- [ ] **T-006** Concessões vigentes (privileged grants) com contagem regressiva e revogação.
+- [x] **T-006** Concessões vigentes (privileged grants) com contagem regressiva e revogação.
       - [x] **Parte A (lista)** — `web/src/GrantsPage.js`: tabela das concessões vigentes do tenant
         ativo (GET `/api/v1/grants`, lê a org da sessão) com **contagem regressiva ao vivo** até
         `expires_at` (verde / laranja <5min / vermelho expirado), alvo/origem/status. Rota `/grants`
         + grupo de menu "Acesso Privilegiado" (ícone Tabler `key`). i18n en+pt. Fail-closed (sem
         contexto/negação → vazio). Build local verde.
-      - [ ] **Parte B (revogação)** — expor `POST /api/v1/grants/revoke` (I-7.6; capacidade do pacote
-        004 existe — `privileged_access_service`/`grant_expirer`) + botão de revogar na tabela (L2/L3,
-        via step-up transparente da T-005).
+      - [x] **Parte B (revogação)** — `POST /api/v1/grants/revoke` (`internal/http/grants_write.go` +
+        wrapper `internal/boot/grant_revoke.go`, montado em mounts.go, op `grant.revoke` **L3**):
+        delega ao `PrivilegedAccessService.Revoke` (revoga a concessão + cascateia a revogação das
+        sessões derivadas + auditoria `privileged.grant.revoke`, atômico — I-5.4). Grant escopado
+        pela RLS do tenant da sessão (INV-5: outro org → not-found); ator/org da sessão, nunca do
+        request (INV-1). `ErrGrantNotFound`→404, não-ativa→409, fail-closed→500. `revokeGrant()` no
+        ControlPlaneBackend + botão **Revogar** no GrantsPage (só em `active`, `Popconfirm` que
+        explicita a consequência destrutiva — cenário "Operações destrutivas explicitadas"; L3 via
+        step-up transparente da T-005). i18n en+pt. Build/boot/http/contrato/invariantes + yarn build
+        verdes.
 - [ ] **T-007** Solicitação de break-glass com justificativa e incidente.
 - [ ] **T-008** Fila de aprovação de break-glass (separação de deveres; sem autoaprovação).
 - [ ] **T-009** Timeline de auditoria com filtros + **indicador de integridade da cadeia sempre

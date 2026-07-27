@@ -58,6 +58,9 @@ func MountCapabilities() error {
 	if err := mountGrants(p, f); err != nil {
 		return fmt.Errorf("montar grants: %w", err)
 	}
+	if err := mountGrantRevoke(p, f); err != nil {
+		return fmt.Errorf("montar grant-revoke: %w", err)
+	}
 	if err := mountAccessReview(p, f); err != nil {
 		return fmt.Errorf("montar access-review: %w", err)
 	}
@@ -275,6 +278,26 @@ func mountGrants(p *Pipeline, f *Factory) error {
 	}
 	handler := apihttp.NewGrantsHandler(postgres.NewTenantGrantLister(f.Pool()))
 	RegisterAPIHandler("/grants", p.Require(opID, apihttp.RequireAdmin(handler)))
+	return nil
+}
+
+// mountGrantRevoke mounts POST /api/v1/grants/revoke (pacote 008, T-006 Parte B —
+// revogação de concessão privilegiada). Administration write: L3 + RequireAdmin. Revokes
+// an active grant of the session's tenant and cascade-revokes its derived sessions,
+// atomically with the audit event (I-5.4). L3 requires step-up (RFC 9470), which the
+// console conducts transparently (T-005). The grant is scoped to the caller's active
+// tenant by the RLS (INV-5), never taken from the request.
+func mountGrantRevoke(p *Pipeline, f *Factory) error {
+	const opID = "grant.revoke"
+	if err := p.RegisterOperation(domain.Operation{
+		ID:          opID,
+		Level:       domain.L3,
+		Description: "revogar uma concessão privilegiada do tenant (administração)",
+	}); err != nil {
+		return err
+	}
+	handler := apihttp.NewGrantRevokeHandler(newGrantRevoker(f))
+	RegisterAPIHandler("/grants/revoke", p.Require(opID, apihttp.RequireAdmin(handler)))
 	return nil
 }
 

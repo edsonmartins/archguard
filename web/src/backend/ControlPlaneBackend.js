@@ -172,6 +172,18 @@ export function getGrants() {
   return cpRequest("GET", "/grants");
 }
 
+/**
+ * Revoga uma concessão privilegiada VIGENTE do tenant ATIVO (POST; operação L3 → o
+ * interceptor de step-up da T-005 conduz o desafio transparente). É DESTRUTIVA: revoga
+ * a concessão E encerra as sessões derivadas dela. O backend lê a org da sessão; só o
+ * `grantId` vai no corpo. 404 = inexistente/outro tenant; 409 = já não ativa; 403 = negada.
+ * @param {string} grantId
+ * @returns {Promise<{revoked: boolean}>}
+ */
+export function revokeGrant(grantId) {
+  return cpRequest("POST", "/grants/revoke", {body: {grant_id: grantId}});
+}
+
 // --- Auditoria (T-009) ---
 
 /**
