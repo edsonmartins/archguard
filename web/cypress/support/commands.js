@@ -53,6 +53,9 @@ Cypress.Commands.add('cpLogin', (username = 'admin', password = '123') => {
       organization: 'built-in',
       username,
       password,
+      // Explícito: sem isso o Casdoor pode cair no path de telefone ("Phone number is
+      // invalid in your region") em apps cuja config de signin não priorize senha.
+      signinMethod: 'Password',
       autoSignin: true,
       type: 'login',
     },
