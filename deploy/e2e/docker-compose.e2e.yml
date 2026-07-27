@@ -25,7 +25,9 @@ services:
       retries: 12
 
   e2e-core:
-    image: ghcr.io/edsonmartins/archguard:latest
+    # Default = :latest (uso local). No CI, ARCHGUARD_IMAGE aponta para a imagem recém-
+    # buildada por SHA (valida o código do commit, não o último :latest).
+    image: ${ARCHGUARD_IMAGE:-ghcr.io/edsonmartins/archguard:latest}
     depends_on:
       e2e-postgres:
         condition: service_healthy
