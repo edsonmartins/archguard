@@ -109,6 +109,11 @@ func main() {
 		}
 	}
 
+	// ArchGuard (ADR-0021): o plano de controle NUNCA permite auto-registro — força o flag
+	// off no boot (self-healing) se tiver derivado para ativo (default do Casdoor ou toggle
+	// acidental na UI). Identidades são provisionadas, nunca self-signup.
+	object.EnforceNoSelfSignupOnControlPlane()
+
 	// Seed the built-in admin's domain identity + membership (pacote 011, T-004b)
 	// so the console works for the inherited admin. Runs only where custody is
 	// available (dev); conformant profiles skip it until OpenBao is wired. Idempotent

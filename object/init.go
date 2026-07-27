@@ -213,7 +213,9 @@ func initBuiltInApplication() {
 		Organization:   "built-in",
 		Cert:           "cert-built-in",
 		EnablePassword: true,
-		EnableSignUp:   true,
+		// ArchGuard (ADR-0021): o plano de controle NÃO permite auto-registro — identidades
+		// são provisionadas (seed/admin/SCIM), nunca self-signup. Casdoor default era true.
+		EnableSignUp: false,
 		Providers: []*ProviderItem{
 			{Name: "provider_captcha_default", CanSignUp: false, CanSignIn: false, CanUnlink: false, Prompted: false, SignupGroup: "", Rule: "None", Provider: nil},
 		},
