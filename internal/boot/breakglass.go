@@ -68,9 +68,15 @@ func newBreakglassRequester(f *Factory) *breakglassRequester {
 // membership (INV-1). A missing notification channel is surfaced as
 // apihttp.ErrBreakglassChannelUnavailable (503); a domain validation failure as
 // apihttp.ErrBreakglassInvalid (422).
-func (b *breakglassRequester) RequestBreakglass(ctx context.Context, actor apihttp.RevokeActor, orgID uuid.UUID, target domain.GrantTarget, justification, incidentRef string, notBefore, expiresAt time.Time) error {
+func (b *breakglassRequester) RequestBreakglass(ctx context.Context, actor apihttp.RevokeActor, provenAAL domain.AAL, phishingResistant bool, orgID uuid.UUID, target domain.GrantTarget, justification, incidentRef string, notBefore, expiresAt time.Time) error {
 	if actor.MembershipID == nil {
 		return apihttp.ErrBreakglassInvalid
+	}
+	// Break-glass requires a phishing-resistant step-up (WebAuthn); TOTP does not qualify.
+	// The L3 pipeline gate already enforced it — refuse EARLY here (before any grant is
+	// created or any alert is emitted) if it was somehow bypassed. Defense-in-depth.
+	if !phishingResistant || !provenAAL.AtLeast(domain.AAL2) {
+		return apihttp.ErrBreakglassNeedsWebAuthn
 	}
 	idn, err := postgres.NewIdentityStore(b.pool).Get(ctx, actor.IdentityID)
 	if err != nil {
@@ -91,18 +97,27 @@ func (b *breakglassRequester) RequestBreakglass(ctx context.Context, actor apiht
 	if err != nil {
 		return err
 	}
-	orch := postgres.NewBreakglassOrchestrator(
-		postgres.NewTenantRepository(b.pool, scope),
-		domain.NewBreakglassRequester(b.notifier),
-		b.audit,
-	)
-	switch _, err := orch.Request(ctx, *actor.MembershipID, target, policy, justification, incidentRef, notBefore, expiresAt); {
+	repo := postgres.NewTenantRepository(b.pool, scope)
+	orch := postgres.NewBreakglassOrchestrator(repo, domain.NewBreakglassRequester(b.notifier), b.audit)
+	grant, err := orch.Request(ctx, *actor.MembershipID, target, policy, justification, incidentRef, notBefore, expiresAt)
+	switch {
 	case err == nil:
-		return nil
+		// created 'requested' + alerted + audited — advance past the step-up gate below.
 	case errors.Is(err, domain.ErrNoNotificationChannel):
 		return apihttp.ErrBreakglassChannelUnavailable
 	case errors.Is(err, domain.ErrInvalidGrant):
 		return apihttp.ErrBreakglassInvalid
+	default:
+		return err
+	}
+	// The pipeline already performed the WebAuthn step-up, so advance the fresh grant to
+	// awaiting_approval (or active when zero approvals are required) using the session's
+	// proven AAL. The pre-check above makes this fail only on a genuine inconsistency.
+	switch err := postgres.NewPrivilegedAccessService(repo, b.audit).PassStepUp(ctx, grant.ID, provenAAL, phishingResistant); {
+	case err == nil:
+		return nil
+	case errors.Is(err, domain.ErrStepUpNotPhishingResistant):
+		return apihttp.ErrBreakglassNeedsWebAuthn
 	default:
 		return err
 	}

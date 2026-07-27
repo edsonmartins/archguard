@@ -36,7 +36,7 @@ type fakeBreakglassRequester struct {
 	gotIncident string
 }
 
-func (f *fakeBreakglassRequester) RequestBreakglass(_ context.Context, actor RevokeActor, org uuid.UUID, target domain.GrantTarget, justification, incidentRef string, _, _ time.Time) error {
+func (f *fakeBreakglassRequester) RequestBreakglass(_ context.Context, actor RevokeActor, _ domain.AAL, _ bool, org uuid.UUID, target domain.GrantTarget, justification, incidentRef string, _, _ time.Time) error {
 	f.gotActor, f.gotOrg, f.gotTarget = actor, org, target
 	f.gotJustif, f.gotIncident = justification, incidentRef
 	return f.err
@@ -98,6 +98,16 @@ func TestBreakglassChannelUnavailableIs503(t *testing.T) {
 		ServeHTTP(rr, bgRequest(session, futureBody()))
 	if rr.Code != http.StatusServiceUnavailable {
 		t.Fatalf("channel unavailable: status %d, want 503", rr.Code)
+	}
+}
+
+func TestBreakglassNeedsWebAuthnIs403(t *testing.T) {
+	session := sessionWithMembership(uuid.New())
+	rr := httptest.NewRecorder()
+	NewBreakglassRequestHandler(&fakeBreakglassRequester{err: ErrBreakglassNeedsWebAuthn}).
+		ServeHTTP(rr, bgRequest(session, futureBody()))
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("needs webauthn: status %d, want 403", rr.Code)
 	}
 }
 

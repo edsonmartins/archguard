@@ -88,6 +88,27 @@ func (s *PrivilegedAccessService) Revoke(ctx context.Context, grantID uuid.UUID)
 	})
 }
 
+// PassStepUp advances a just-requested break-glass grant past the reinforced-auth
+// gate to awaiting_approval (or active when zero approvals are required), consuming
+// the caller session's PROVEN, phishing-resistant AAL. In the /api/v1 flow this is
+// the automatic continuation of the request — the L3 pipeline already performed the
+// WebAuthn step-up — so it carries no separate audit beyond the request's; the
+// resulting status lives on the grant. Refuses a non-phishing-resistant step-up
+// (domain.ErrStepUpNotPhishingResistant: TOTP does not qualify for break-glass).
+func (s *PrivilegedAccessService) PassStepUp(ctx context.Context, grantID uuid.UUID, provenAAL domain.AAL, phishingResistant bool) error {
+	return s.repo.WithTenantTx(ctx, func(ttx *TenantTx) error {
+		store := NewPrivilegedGrantStore(ttx)
+		g, err := store.Get(ctx, grantID)
+		if err != nil {
+			return err
+		}
+		if err := g.PassStepUp(provenAAL, phishingResistant); err != nil {
+			return err
+		}
+		return store.SaveDecision(ctx, g)
+	})
+}
+
 // RecordReview persists a post-use review and audits privileged.review —
 // atomically.
 func (s *PrivilegedAccessService) RecordReview(ctx context.Context, review domain.PostUseReview) error {

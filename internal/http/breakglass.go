@@ -34,10 +34,17 @@ var ErrBreakglassChannelUnavailable = errors.New("nenhum canal de notificação 
 // (missing justification/incident, invalid window) — boot maps the domain sentinel.
 var ErrBreakglassInvalid = errors.New("solicitação de break-glass inválida")
 
+// ErrBreakglassNeedsWebAuthn lets the handler answer 403 when the caller's step-up is not
+// phishing-resistant (TOTP does not qualify for break-glass). The L3 pipeline gate already
+// requires WebAuthn; this is the defense-in-depth denial if it was bypassed.
+var ErrBreakglassNeedsWebAuthn = errors.New("break-glass exige step-up WebAuthn")
+
 // BreakglassRequester opens a break-glass request on behalf of an actor (boot composes it
-// over postgres.BreakglassOrchestrator + the notifier + the audit writer).
+// over postgres.BreakglassOrchestrator + the notifier + the audit writer). provenAAL and
+// phishingResistant come from the caller's session — the request advances the grant past
+// the step-up gate (requested → awaiting_approval) with them.
 type BreakglassRequester interface {
-	RequestBreakglass(ctx context.Context, actor RevokeActor, organizationID uuid.UUID, target domain.GrantTarget, justification, incidentRef string, notBefore, expiresAt time.Time) error
+	RequestBreakglass(ctx context.Context, actor RevokeActor, provenAAL domain.AAL, phishingResistant bool, organizationID uuid.UUID, target domain.GrantTarget, justification, incidentRef string, notBefore, expiresAt time.Time) error
 }
 
 // BreakglassRequestHandler serves POST /breakglass/request: it opens an emergency-access
@@ -107,10 +114,12 @@ func (h *BreakglassRequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 		MembershipID: session.MembershipID,
 		SessionID:    session.ID,
 	}
-	err := h.requester.RequestBreakglass(r.Context(), actor, *session.OrganizationID, target, body.Justification, body.IncidentRef, notBefore, expiresAt)
+	err := h.requester.RequestBreakglass(r.Context(), actor, session.ProvenAAL, session.PhishingResistant(), *session.OrganizationID, target, body.Justification, body.IncidentRef, notBefore, expiresAt)
 	switch {
 	case err == nil:
 		writeJSON(w, http.StatusCreated, map[string]any{"requested": true})
+	case errors.Is(err, ErrBreakglassNeedsWebAuthn):
+		writeError(w, http.StatusForbidden, "break-glass exige step-up com fator resistente a phishing (WebAuthn)")
 	case errors.Is(err, ErrBreakglassChannelUnavailable):
 		// Fail-closed: an emergency access that cannot be announced is denied (T-013).
 		writeError(w, http.StatusServiceUnavailable, "nenhum canal de notificação disponível para alertar — solicitação negada")
