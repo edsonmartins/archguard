@@ -130,6 +130,18 @@
 ## Verificação
 - [ ] **T-020** E2E dos fluxos privilegiados (break-glass, revisão de acesso, verificação de
       trilha) + auditoria de acessibilidade por teclado nos fluxos L3.
+      - [x] **Fase A (smoke L1) — Cypress (sem dep nova, ADR-0002):** `web/cypress/e2e/archguard/
+        pam_smoke.cy.js` (login de API `cpLogin` → navega grants/audit/breakglass-queue/breakglass-
+        request; afirma render + `/api/v1` 200 + banner de integridade sempre visível). Config
+        dedicada `cypress.archguard.config.js` (baseUrl `ARCHGUARD_E2E_URL`, default :8000). Harness
+        `deploy/e2e/docker-compose.e2e.yml` (Postgres efêmero + imagem do fork em perfil DEV —
+        keystore local, SEM OpenBao; semeia admin/123) + alvos `make e2e`/`e2e-up`/`e2e-down`.
+        **NÃO validado end-to-end pelo autor (sem Docker na máquina); sintaxe/YAML/eslint verdes —
+        o run é do usuário/CI.** Não roda no CI ainda (Fase C).
+      - [ ] **Fase B (fluxos L3):** stack completa (perfil pilot + OpenBao) + autenticador WebAuthn
+        virtual (CDP `WebAuthn.addVirtualAuthenticator`); break-glass request→step-up→fila→aprovar
+        (separação de deveres), revogar, verificar cadeia (íntegra e divergência com fixture).
+      - [ ] **Fase C (CI):** job de E2E no `ci.yml` que sobe o compose e roda as specs.
 - [ ] **T-021** ADR-0020 ratificado; ADR-0004 marcado Superado; RFC-0005 marcado diferido.
 
 ## Gate de verificação

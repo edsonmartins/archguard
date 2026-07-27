@@ -40,3 +40,21 @@ Cypress.Commands.add('login', ()=>{
   cy.get(selector.loginButton).click();
   cy.url().should("eq", "http://localhost:7001/");
 })
+
+// cpLogin: login de API contra a baseUrl (ArchGuard E2E). O POST /api/login estabelece a
+// sessão do Casdoor E dispara a ponte que cria a auth_session do plano de controle — o
+// cookie resultante resolve o /api/v1. Credenciais dev built-in (admin/123).
+Cypress.Commands.add('cpLogin', (username = 'admin', password = '123') => {
+  cy.request({
+    method: 'POST',
+    url: '/api/login',
+    body: {
+      application: 'app-built-in',
+      organization: 'built-in',
+      username,
+      password,
+      autoSignin: true,
+      type: 'login',
+    },
+  }).its('body.status').should('eq', 'ok');
+})

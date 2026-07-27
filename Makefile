@@ -47,3 +47,15 @@ sbom:
 build:
 	@test -f go.mod || { echo "build: árvore Go ausente (go.mod não encontrado). O fork point é congelado em T-002."; exit 1; }
 	go build ./...
+
+# E2E smoke do console PAM (pacote 008, T-020 Fase A — fluxos L1, sem step-up). Requer a
+# stack sob teste no ar em ARCHGUARD_E2E_URL (default http://localhost:8000). Suba a stack
+# com `make e2e-up` (compose em deploy/e2e/) OU aponte para um backend+console já rodando.
+e2e:
+	cd web && yarn run e2e:archguard
+
+# Sobe/derruba a stack de E2E (Postgres + imagem do fork em perfil dev, servindo :8000).
+e2e-up:
+	docker compose -f deploy/e2e/docker-compose.e2e.yml up -d --wait
+e2e-down:
+	docker compose -f deploy/e2e/docker-compose.e2e.yml down -v
