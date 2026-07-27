@@ -73,6 +73,9 @@ func MountCapabilities() error {
 	if err := mountStepUp(p, f); err != nil {
 		return fmt.Errorf("montar step-up: %w", err)
 	}
+	if err := mountStepUpWebAuthn(p, f); err != nil {
+		return fmt.Errorf("montar step-up-webauthn: %w", err)
+	}
 	if err := mountMembershipRevoke(p, f); err != nil {
 		return fmt.Errorf("montar membership-revoke: %w", err)
 	}
@@ -211,6 +214,24 @@ func mountStepUp(p *Pipeline, f *Factory) error {
 	}
 	handler := apihttp.NewStepUpHandler(stepUp)
 	RegisterAPIHandler("/stepup/totp", p.RequireSession(http.HandlerFunc(handler.TOTP)))
+	return nil
+}
+
+// mountStepUpWebAuthn mounts POST /api/v1/stepup/webauthn/{begin,finish} (pacote 008,
+// T-005b — step-up phishing-resistant). Like the TOTP step-up it is exempt from the
+// assurance middleware (the assertion IS the control) and uses RequireSession, not Require.
+// This is the ONLY step-up that satisfies an L3 operation (grant.revoke, breakglass.*):
+// TOTP caps at AAL2. Fail-closed where the relying party cannot be configured.
+func mountStepUpWebAuthn(p *Pipeline, f *Factory) error {
+	stepUp, err := newWebauthnStepUp(f)
+	if err != nil {
+		RegisterAPIHandler("/stepup/webauthn/begin", p.RequireSession(unavailableHandler("step-up WebAuthn indisponível: relying party não configurado")))
+		RegisterAPIHandler("/stepup/webauthn/finish", p.RequireSession(unavailableHandler("step-up WebAuthn indisponível: relying party não configurado")))
+		return nil
+	}
+	handler := apihttp.NewStepUpWebAuthnHandler(stepUp)
+	RegisterAPIHandler("/stepup/webauthn/begin", p.RequireSession(http.HandlerFunc(handler.Begin)))
+	RegisterAPIHandler("/stepup/webauthn/finish", p.RequireSession(http.HandlerFunc(handler.Finish)))
 	return nil
 }
 
