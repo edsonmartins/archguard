@@ -85,6 +85,7 @@ import OrganizationSelect from "./common/select/OrganizationSelect";
 import TenantSelect from "./common/select/TenantSelect";
 import GrantsPage from "./GrantsPage";
 import BreakglassRequestPage from "./BreakglassRequestPage";
+import BreakglassQueuePage from "./BreakglassQueuePage";
 import AccountAvatar from "./account/AccountAvatar";
 import BreadcrumbBar from "./common/BreadcrumbBar";
 import {Content, Header} from "antd/es/layout/layout";
@@ -376,6 +377,7 @@ function ManagementPage(props) {
     res.push(Setting.getItem(<Link style={{color: textColor}} to="/grants">{i18next.t("general:Privileged Access")}</Link>, "/pam", <KeyOutlined />, [
       Setting.getItem(<Link to="/grants">{i18next.t("general:Active grants")}</Link>, "/grants"),
       Setting.getItem(<Link to="/breakglass/request">{i18next.t("general:Request break-glass")}</Link>, "/breakglass/request"),
+      Setting.getItem(<Link to="/breakglass/queue">{i18next.t("general:Approval queue")}</Link>, "/breakglass/queue"),
     ]));
 
     res.push(Setting.getItem(<Link style={{color: textColor}} to="/sites">{i18next.t("general:LLM AI")}</Link>, "/gateway", <CheckCircleOutlined />, [
@@ -523,6 +525,7 @@ function ManagementPage(props) {
         <Route exact path="/verifications" render={(props) => renderLoginIfNotLoggedIn(<VerificationListPage account={account} {...props} />)} />
         <Route exact path="/grants" render={(props) => renderLoginIfNotLoggedIn(<GrantsPage account={account} {...props} />)} />
         <Route exact path="/breakglass/request" render={(props) => renderLoginIfNotLoggedIn(<BreakglassRequestPage account={account} {...props} />)} />
+        <Route exact path="/breakglass/queue" render={(props) => renderLoginIfNotLoggedIn(<BreakglassQueuePage account={account} {...props} />)} />
         <Route exact path="/roles" render={(props) => renderLoginIfNotLoggedIn(<RoleListPage account={account} {...props} />)} />
         <Route exact path="/roles/:organizationName/:roleName" render={(props) => renderLoginIfNotLoggedIn(<RoleEditPage account={account} {...props} />)} />
         <Route exact path="/permissions" render={(props) => renderLoginIfNotLoggedIn(<PermissionListPage account={account} {...props} />)} />

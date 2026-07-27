@@ -55,3 +55,25 @@ func (r *TenantGrantLister) ListActive(ctx context.Context, orgID uuid.UUID) ([]
 	}
 	return out, nil
 }
+
+// ListAwaitingApproval returns the tenant's break-glass grants awaiting peer approval —
+// the approval queue (T-008). The caller must pass the session's active tenant.
+func (r *TenantGrantLister) ListAwaitingApproval(ctx context.Context, orgID uuid.UUID) ([]domain.PrivilegedGrant, error) {
+	scope, err := domain.NewTenantScope(orgID)
+	if err != nil {
+		return nil, err
+	}
+	var out []domain.PrivilegedGrant
+	err = NewTenantRepository(r.pool, scope).WithTenantTx(ctx, func(ttx *TenantTx) error {
+		gs, lerr := NewPrivilegedGrantStore(ttx).ListAwaitingApproval(ctx)
+		if lerr != nil {
+			return lerr
+		}
+		out = gs
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}

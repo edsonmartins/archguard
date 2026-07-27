@@ -78,7 +78,19 @@
       obrigatórios, janela; Alert explicita ser acesso de emergência auditado; L3 via step-up T-005).
       Rota `/breakglass/request` no grupo "Acesso Privilegiado". i18n en+pt. Build/boot/http/
       contrato/invariantes + yarn build verdes.
-- [ ] **T-008** Fila de aprovação de break-glass (separação de deveres; sem autoaprovação).
+- [x] **T-008** Fila de aprovação de break-glass (separação de deveres; sem autoaprovação).
+      Precedida da fundação **T-005b (step-up WebAuthn, 4 fases)**: sem ela nenhum grant chegava a
+      `awaiting_approval` (o pipeline exige phishing-resistant em L3 e o TOTP só chega a AAL2).
+      `GET /api/v1/breakglass/pending` (op `breakglass.pending` L1, `ListAwaitingApproval` novo no
+      grant store/reader — expõe justificativa+incidente, que o aprovador precisa) + `POST
+      /api/v1/breakglass/approve` (op `breakglass.approve` **L3**, `internal/http/breakglass_approve.go`
+      + wrapper `breakglassApprover` no boot → `PrivilegedAccessService.Approve`). **Separação de
+      deveres imposta pelo DOMÍNIO**: solicitante não aprova (`ErrSelfApproval`→403), aprovadores
+      DISTINTOS (`ErrGrantDuplicateApproval`→409), só de `awaiting_approval` (→409); quórum atingido
+      ⇒ ativa, atômico com a auditoria. Aprovador = membership da sessão (INV-1). `BreakglassQueuePage`
+      (tabela com solicitante/alvo/justificativa/incidente; botão Aprovar via step-up transparente;
+      o botão NÃO é o controle — a API nega). i18n en+pt. Build/boot/http/contrato/invariantes +
+      yarn build verdes.
 - [ ] **T-009** Timeline de auditoria com filtros + **indicador de integridade da cadeia sempre
       visível**, com divergência em destaque máximo; acionamento da verificação (L3).
 - [ ] **T-010** Visão de correlação por `pcid` (ArchGuard + componentes); ator real vs sujeito em

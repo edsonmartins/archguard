@@ -122,3 +122,57 @@ func (b *breakglassRequester) RequestBreakglass(ctx context.Context, actor apiht
 		return err
 	}
 }
+
+// breakglassApprover records a peer approval on a break-glass grant (L3, T-008): it
+// establishes the acting principal, then delegates to postgres.PrivilegedAccessService,
+// which enforces the domain rules (distinct approver, NOT the requester, quorum → active)
+// and records the approval audit ATOMICALLY with the state change (I-5.4). The approver is
+// the caller's own membership (INV-1), never taken from the request.
+type breakglassApprover struct {
+	pool  *pgxpool.Pool
+	audit postgres.AuditEmitter
+}
+
+// newBreakglassApprover composes the approver over the runtime pool and the audit writer.
+func newBreakglassApprover(f *Factory) *breakglassApprover {
+	return &breakglassApprover{pool: f.Pool(), audit: postgres.NewAuditWriter(f.Pool(), nil)}
+}
+
+// ApproveBreakglass records actor's approval on grantID in orgID. Separation of duties and
+// the quorum are enforced by the domain: the requester approving is apihttp.ErrSelfApproval
+// (403), a repeat approver apihttp.ErrDuplicateApproval (409), a grant not awaiting approval
+// apihttp.ErrGrantNotActive (409), an absent grant apihttp.ErrGrantNotFound (404).
+func (a *breakglassApprover) ApproveBreakglass(ctx context.Context, actor apihttp.RevokeActor, orgID, grantID uuid.UUID) error {
+	if actor.MembershipID == nil {
+		return apihttp.ErrGrantNotActive
+	}
+	idn, err := postgres.NewIdentityStore(a.pool).Get(ctx, actor.IdentityID)
+	if err != nil {
+		return err
+	}
+	principal := domain.AuditActor{
+		IdentitySubject: idn.Subject,
+		MembershipID:    actor.MembershipID,
+		SessionID:       &actor.SessionID,
+	}
+	ctx = domain.WithPrincipal(ctx, principal)
+	scope, err := domain.NewTenantScope(orgID)
+	if err != nil {
+		return err
+	}
+	svc := postgres.NewPrivilegedAccessService(postgres.NewTenantRepository(a.pool, scope), a.audit)
+	switch _, err := svc.Approve(ctx, grantID, *actor.MembershipID); {
+	case err == nil:
+		return nil
+	case errors.Is(err, postgres.ErrGrantNotFound):
+		return apihttp.ErrGrantNotFound
+	case errors.Is(err, domain.ErrSelfApproval):
+		return apihttp.ErrSelfApproval
+	case errors.Is(err, domain.ErrGrantDuplicateApproval):
+		return apihttp.ErrDuplicateApproval
+	case errors.Is(err, domain.ErrGrantTransition):
+		return apihttp.ErrGrantNotActive
+	default:
+		return err
+	}
+}

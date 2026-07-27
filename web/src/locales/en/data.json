@@ -765,7 +765,20 @@
     "Authenticate": "Authenticate",
     "WebAuthn is not available in this browser": "WebAuthn is not available in this browser",
     "Authentication failed or cancelled": "Authentication failed or cancelled",
-    "This operation requires a phishing-resistant factor (security key). TOTP is not sufficient.": "This operation requires a phishing-resistant factor (security key). TOTP is not sufficient."
+    "This operation requires a phishing-resistant factor (security key). TOTP is not sufficient.": "This operation requires a phishing-resistant factor (security key). TOTP is not sufficient.",
+    "Approval queue": "Approval queue",
+    "Break-glass approval queue": "Break-glass approval queue",
+    "Requester": "Requester",
+    "Approvals": "Approvals",
+    "Requires {n}": "Requires {n}",
+    "Approve this break-glass request?": "Approve this break-glass request?",
+    "You must not be the requester and each approver counts once. The backend enforces this.": "You must not be the requester and each approver counts once. The backend enforces this.",
+    "Approve": "Approve",
+    "Approval recorded": "Approval recorded",
+    "You cannot approve your own request": "You cannot approve your own request",
+    "Already approved or no longer pending": "Already approved or no longer pending",
+    "Could not record the approval": "Could not record the approval",
+    "No break-glass requests awaiting approval": "No break-glass requests awaiting approval"
   },
   "group": {
     "Edit Group": "Edit Group",

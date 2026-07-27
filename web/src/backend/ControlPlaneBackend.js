@@ -214,6 +214,28 @@ export function requestBreakglass(payload) {
   return cpRequest("POST", "/breakglass/request", {body: payload});
 }
 
+/**
+ * Solicitações de break-glass do TENANT ATIVO aguardando aprovação (fila da T-008). Cada
+ * item traz o membership solicitante, o alvo, a **justificativa e o incidente** (o aprovador
+ * decide com eles) e `required_approvals`. Leitura L1 (admin); a org vem da sessão.
+ * @returns {Promise<{pending: Array<{grant_id: string, subject_membership_id: string, target_type: string, target_id: string, target_scope?: string, justification: string, incident_ref: string, required_approvals: number, not_before: number, expires_at: number}>}>}
+ */
+export function getBreakglassPending() {
+  return cpRequest("GET", "/breakglass/pending");
+}
+
+/**
+ * Registra a aprovação do CHAMADOR numa solicitação de break-glass (POST; operação L3 →
+ * step-up transparente da T-005/T-005b). Separação de deveres imposta pelo backend: o
+ * solicitante não pode aprovar (403), aprovador repetido (409); ao atingir o quórum a
+ * concessão é ativada. 404 = inexistente/outro tenant; 409 = não está aguardando.
+ * @param {string} grantId
+ * @returns {Promise<{approved: boolean}>}
+ */
+export function approveBreakglass(grantId) {
+  return cpRequest("POST", "/breakglass/approve", {body: {grant_id: grantId}});
+}
+
 // --- Auditoria (T-009) ---
 
 /**

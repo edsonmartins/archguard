@@ -64,6 +64,12 @@ func MountCapabilities() error {
 	if err := mountBreakglassRequest(p, f); err != nil {
 		return fmt.Errorf("montar breakglass-request: %w", err)
 	}
+	if err := mountBreakglassPending(p, f); err != nil {
+		return fmt.Errorf("montar breakglass-pending: %w", err)
+	}
+	if err := mountBreakglassApprove(p, f); err != nil {
+		return fmt.Errorf("montar breakglass-approve: %w", err)
+	}
 	if err := mountAccessReview(p, f); err != nil {
 		return fmt.Errorf("montar access-review: %w", err)
 	}
@@ -343,6 +349,42 @@ func mountBreakglassRequest(p *Pipeline, f *Factory) error {
 	}
 	handler := apihttp.NewBreakglassRequestHandler(newBreakglassRequester(f))
 	RegisterAPIHandler("/breakglass/request", p.Require(opID, apihttp.RequireAdmin(handler)))
+	return nil
+}
+
+// mountBreakglassPending mounts GET /api/v1/breakglass/pending (pacote 008, T-008 — fila de
+// aprovação). Administration read: L1 + RequireAdmin. Lists the session tenant's break-glass
+// grants awaiting peer approval, with justification and incident so the approver can decide.
+func mountBreakglassPending(p *Pipeline, f *Factory) error {
+	const opID = "breakglass.pending"
+	if err := p.RegisterOperation(domain.Operation{
+		ID:          opID,
+		Level:       domain.L1,
+		Description: "listar as solicitações de break-glass aguardando aprovação (administração)",
+	}); err != nil {
+		return err
+	}
+	handler := apihttp.NewBreakglassPendingHandler(postgres.NewTenantGrantLister(f.Pool()))
+	RegisterAPIHandler("/breakglass/pending", p.Require(opID, apihttp.RequireAdmin(handler)))
+	return nil
+}
+
+// mountBreakglassApprove mounts POST /api/v1/breakglass/approve (pacote 008, T-008 —
+// aprovação com separação de deveres). Administration write: L3 + RequireAdmin. Records the
+// caller's approval; the domain refuses self-approval and duplicate approvers and activates
+// the grant on quorum, atomically with the audit. L3 requires step-up (conduzido transparente
+// pela T-005/T-005b) e é negado em dev. Aprovador e tenant vêm da sessão (INV-1).
+func mountBreakglassApprove(p *Pipeline, f *Factory) error {
+	const opID = "breakglass.approve"
+	if err := p.RegisterOperation(domain.Operation{
+		ID:          opID,
+		Level:       domain.L3,
+		Description: "aprovar uma solicitação de break-glass do tenant (administração)",
+	}); err != nil {
+		return err
+	}
+	handler := apihttp.NewBreakglassApproveHandler(newBreakglassApprover(f))
+	RegisterAPIHandler("/breakglass/approve", p.Require(opID, apihttp.RequireAdmin(handler)))
 	return nil
 }
 
