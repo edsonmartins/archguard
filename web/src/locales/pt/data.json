@@ -759,7 +759,12 @@
     "Fill target, justification and incident": "Preencha alvo, justificativa e incidente",
     "Break-glass requested — pending approval": "Break-glass solicitado — pendente de aprovação",
     "No notification channel — request denied (fail-closed)": "Sem canal de notificação — solicitação negada (fail-closed)",
-    "Could not request break-glass": "Não foi possível solicitar o break-glass"
+    "Could not request break-glass": "Não foi possível solicitar o break-glass",
+    "Security key required": "Chave de segurança necessária",
+    "Authenticate": "Autenticar",
+    "WebAuthn is not available in this browser": "WebAuthn não está disponível neste navegador",
+    "Authentication failed or cancelled": "Autenticação falhou ou foi cancelada",
+    "This operation requires a phishing-resistant factor (security key). TOTP is not sufficient.": "Esta operação exige um fator resistente a phishing (chave de segurança). TOTP não é suficiente."
   },
   "group": {
     "Edit Group": "Editar Grupo",

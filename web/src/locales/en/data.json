@@ -760,7 +760,12 @@
     "Fill target, justification and incident": "Fill target, justification and incident",
     "Break-glass requested — pending approval": "Break-glass requested — pending approval",
     "No notification channel — request denied (fail-closed)": "No notification channel — request denied (fail-closed)",
-    "Could not request break-glass": "Could not request break-glass"
+    "Could not request break-glass": "Could not request break-glass",
+    "Security key required": "Security key required",
+    "Authenticate": "Authenticate",
+    "WebAuthn is not available in this browser": "WebAuthn is not available in this browser",
+    "Authentication failed or cancelled": "Authentication failed or cancelled",
+    "This operation requires a phishing-resistant factor (security key). TOTP is not sufficient.": "This operation requires a phishing-resistant factor (security key). TOTP is not sufficient."
   },
   "group": {
     "Edit Group": "Edit Group",

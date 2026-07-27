@@ -33,8 +33,10 @@ const BASE = "/api/v1";
 let stepUpHandler = null;
 
 /**
- * Registra (ou limpa com null) o handler de step-up: `() => Promise<boolean>`.
- * @param {null | (() => Promise<boolean>)} fn
+ * Registra (ou limpa com null) o handler de step-up. Recebe o contexto do desafio
+ * (`needsPhishingResistant` = a operação é L3 e exige WebAuthn, não TOTP) e resolve
+ * `true` no sucesso (a operação original é repetida) ou `false` se cancelado.
+ * @param {null | ((challenge: {needsPhishingResistant: boolean}) => Promise<boolean>)} fn
  */
 export function setStepUpHandler(fn) {
   stepUpHandler = fn;
@@ -46,6 +48,16 @@ function isStepUpChallenge(res, parsed) {
   const wa = res.headers.get("WWW-Authenticate") || "";
   const err = (parsed && (parsed.error || "")) || "";
   return wa.includes("insufficient_user_authentication") || err.includes("insufficient_user_authentication");
+}
+
+// stepUpNeedsPhishingResistant lê do desafio se a operação exige fator phishing-resistant
+// (L3 ⇒ WebAuthn; TOTP não satisfaz — só chega a AAL2). Sinal: `needs_phishing_resistant`
+// no corpo ou `acr_values="aal3"` no header WWW-Authenticate / no corpo.
+function stepUpNeedsPhishingResistant(res, parsed) {
+  if (parsed && parsed.needs_phishing_resistant === true) {return true;}
+  if (parsed && parsed.acr_values === "aal3") {return true;}
+  const wa = res.headers.get("WWW-Authenticate") || "";
+  return /acr_values="?aal3/i.test(wa);
 }
 
 /**
@@ -106,9 +118,11 @@ export async function cpRequest(method, path, opts = {}, _retried = false) {
   }
   if (!res.ok) {
     // Step-up transparente (T-005): 401 de garantia insuficiente ⇒ conduz o desafio e
-    // repete a operação UMA vez. Nunca no próprio /stepup/totp (evita recursão).
-    if (res.status === 401 && !_retried && path !== "/stepup/totp" && stepUpHandler && isStepUpChallenge(res, parsed)) {
-      const ok = await stepUpHandler();
+    // repete a operação UMA vez. O handler recebe se a operação exige fator phishing-
+    // resistant (WebAuthn, L3) vs TOTP (L2). Nunca nos próprios /stepup/* (evita recursão).
+    const isStepUpPath = path === "/stepup/totp" || path === "/stepup/webauthn/begin" || path === "/stepup/webauthn/finish";
+    if (res.status === 401 && !_retried && !isStepUpPath && stepUpHandler && isStepUpChallenge(res, parsed)) {
+      const ok = await stepUpHandler({needsPhishingResistant: stepUpNeedsPhishingResistant(res, parsed)});
       if (ok) {
         return cpRequest(method, path, opts, true);
       }
@@ -234,9 +248,28 @@ export function getHealth() {
 
 // --- Step-up e fatores (T-005) ---
 
-/** Conclui step-up por TOTP (eleva o nível de garantia da sessão). */
+/** Conclui step-up por TOTP (eleva a sessão a AAL2). Não satisfaz operações L3. */
 export function stepupTotp(payload) {
   return cpRequest("POST", "/stepup/totp", {body: payload});
+}
+
+/**
+ * Inicia o step-up por WebAuthn (fator phishing-resistant; único que satisfaz L3).
+ * Devolve as opções de asserção (`{publicKey: {...}}`) para o `navigator.credentials.get`.
+ * @returns {Promise<{publicKey: object}>}
+ */
+export function stepupWebauthnBegin() {
+  return cpRequest("POST", "/stepup/webauthn/begin");
+}
+
+/**
+ * Conclui o step-up por WebAuthn enviando a asserção do autenticador. No sucesso, eleva
+ * a sessão ao AAL do autenticador (AAL3 hardware / AAL2 passkey) — phishing-resistant.
+ * @param {object} assertion asserção no formato WebAuthn (id/rawId/type/response)
+ * @returns {Promise<{aal: string}>}
+ */
+export function stepupWebauthnFinish(assertion) {
+  return cpRequest("POST", "/stepup/webauthn/finish", {body: assertion});
 }
 
 /** Inicia enrollment/desafio TOTP. */
