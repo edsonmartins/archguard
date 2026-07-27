@@ -91,8 +91,18 @@
       (tabela com solicitante/alvo/justificativa/incidente; botão Aprovar via step-up transparente;
       o botão NÃO é o controle — a API nega). i18n en+pt. Build/boot/http/contrato/invariantes +
       yarn build verdes.
-- [ ] **T-009** Timeline de auditoria com filtros + **indicador de integridade da cadeia sempre
+- [x] **T-009** Timeline de auditoria com filtros + **indicador de integridade da cadeia sempre
       visível**, com divergência em destaque máximo; acionamento da verificação (L3).
+      `AuditPage.js`: banner de integridade SEMPRE visível no topo (neutro "não verificada" / verde
+      "íntegra — N eventos, M selos" / **VERMELHO banner** em divergência com seq/tipo/detalhe) +
+      botão "Verificar cadeia" (op `audit.verify` L3 → step-up WebAuthn transparente; divergência =
+      409 no `ControlPlaneError.body`). Tabela do timeline (`/audit/timeline`, org da sessão) com
+      colunas quando/ação/desfecho(cor)/ator/alvo/motivo/pcid, filtro client-side + seletor de
+      limite. **Correção de segurança junto:** `/audit/verify` passou a ler a org da **sessão**
+      (era do query — admin podia verificar outro tenant, BOLA cross-tenant), consistente com o
+      timeline (INV-5); teste do handler atualizado. `getAuditTimeline`/`verifyAuditChain`
+      simplificados. Rota `/audit` + grupo de menu "Auditoria". i18n en+pt. Build/http/contrato/
+      invariantes + yarn build verdes.
 - [ ] **T-010** Visão de correlação por `pcid` (ArchGuard + componentes); ator real vs sujeito em
       delegação.
 - [ ] **T-011** Exportação assinada da trilha (L3).

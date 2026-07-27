@@ -239,19 +239,25 @@ export function approveBreakglass(grantId) {
 // --- Auditoria (T-009) ---
 
 /**
- * Linha do tempo de auditoria (eventos), com filtros.
- * @param {{organizationId: string, limit?: number}} params
- * @returns {Promise<{events: Array<object>}>}
+ * Linha do tempo de auditoria do TENANT ATIVO (o backend lê a org da sessão). `limit` é
+ * limitado a [1, 200] (default 50). Eventos: seq, occurred_at (Unix), action, outcome,
+ * actor_subject (opaco), target_*, reason, pcid — sem hashes da cadeia, sem dado pessoal.
+ * @param {{limit?: number}} [params]
+ * @returns {Promise<{events: Array<{seq: number, occurred_at: number, action: string, outcome: string, actor_subject: string, target_type?: string, target_id?: string, target_label?: string, reason?: string, pcid?: string}>}>}
  */
-export function getAuditTimeline({organizationId, limit} = {}) {
-  return cpRequest("GET", "/audit/timeline", {query: {organization_id: organizationId, limit}});
+export function getAuditTimeline({limit} = {}) {
+  return cpRequest("GET", "/audit/timeline", {query: {limit}});
 }
 
 /**
- * Verificação de integridade da cadeia de auditoria (L3). Divergência vem no corpo.
+ * Verificação de integridade da cadeia de auditoria do TENANT ATIVO (op **L3** → step-up
+ * WebAuthn transparente; a org vem da sessão). Íntegra → resolve `{ok:true, events_checked,
+ * seals_checked, ...}`; **divergência → 409**, e o `ControlPlaneError.body` traz
+ * `{ok:false, first_divergence_seq, divergence_kind, detail}`.
+ * @returns {Promise<{ok: boolean, events_checked: number, seals_checked: number, seal_signatures_checked: boolean}>}
  */
-export function verifyAuditChain(organizationId) {
-  return cpRequest("GET", "/audit/verify", {query: {organization_id: organizationId}});
+export function verifyAuditChain() {
+  return cpRequest("GET", "/audit/verify");
 }
 
 // --- Revisão de acesso (T-012) ---

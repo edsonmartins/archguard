@@ -35,10 +35,14 @@ func (f fakeVerifier) VerifyOrganization(_ context.Context, _ uuid.UUID) (domain
 	return f.rep, f.err
 }
 
-func get(t *testing.T, h http.Handler, url string) (*httptest.ResponseRecorder, verifyResponse) {
+func get(t *testing.T, h http.Handler, session *domain.AuthSession) (*httptest.ResponseRecorder, verifyResponse) {
 	t.Helper()
 	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, url, nil))
+	req := httptest.NewRequest(http.MethodGet, "/audit/verify", nil)
+	if session != nil {
+		req = req.WithContext(withSession(req.Context(), session))
+	}
+	h.ServeHTTP(rec, req)
 	var body verifyResponse
 	_ = json.Unmarshal(rec.Body.Bytes(), &body)
 	return rec, body
@@ -46,7 +50,7 @@ func get(t *testing.T, h http.Handler, url string) (*httptest.ResponseRecorder, 
 
 func TestAuditVerifyHandlerIntact(t *testing.T) {
 	h := NewAuditVerifyHandler(fakeVerifier{rep: domain.VerifyReport{OK: true, EventsChecked: 3, SealsChecked: 1}})
-	rec, body := get(t, h, "/audit/verify?organization_id="+uuid.NewString())
+	rec, body := get(t, h, sessionWithOrg(uuid.New()))
 	if rec.Code != http.StatusOK || !body.OK || body.EventsChecked != 3 {
 		t.Fatalf("íntegra: code=%d body=%+v", rec.Code, body)
 	}
@@ -56,25 +60,30 @@ func TestAuditVerifyHandlerDivergence(t *testing.T) {
 	h := NewAuditVerifyHandler(fakeVerifier{rep: domain.VerifyReport{
 		OK: false, FirstDivergence: 2, Kind: domain.DivergenceAltered, Detail: "seq 2",
 	}})
-	rec, body := get(t, h, "/audit/verify?organization_id="+uuid.NewString())
+	rec, body := get(t, h, sessionWithOrg(uuid.New()))
 	// Divergência ⇒ 409 (um monitor alerta só pelo status).
 	if rec.Code != http.StatusConflict || body.OK || body.Kind != "altered" || body.FirstDivergence != 2 {
 		t.Fatalf("divergência: code=%d body=%+v", rec.Code, body)
 	}
 }
 
-func TestAuditVerifyHandlerBadRequest(t *testing.T) {
-	h := NewAuditVerifyHandler(fakeVerifier{})
-	rec, _ := get(t, h, "/audit/verify?organization_id=not-a-uuid")
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("org inválido: code=%d, quero 400", rec.Code)
+// O org vem da SESSÃO (INV-5): sem tenant ativo é 409, não uma verificação de org arbitrário.
+func TestAuditVerifyHandlerNoActiveTenant(t *testing.T) {
+	h := NewAuditVerifyHandler(fakeVerifier{rep: domain.VerifyReport{OK: true}})
+	rec, _ := get(t, h, &domain.AuthSession{IdentityID: uuid.New(), Status: domain.SessionPendingSelection})
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("sem tenant ativo: code=%d, quero 409", rec.Code)
+	}
+	recNoSession, _ := get(t, h, nil)
+	if recNoSession.Code != http.StatusUnauthorized {
+		t.Fatalf("sem sessão: code=%d, quero 401", recNoSession.Code)
 	}
 }
 
 // Fail-closed: verificação que não pôde rodar vira 500, nunca "íntegra".
 func TestAuditVerifyHandlerVerifierError(t *testing.T) {
 	h := NewAuditVerifyHandler(fakeVerifier{err: errors.New("banco fora")})
-	rec, _ := get(t, h, "/audit/verify?organization_id="+uuid.NewString())
+	rec, _ := get(t, h, sessionWithOrg(uuid.New()))
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("erro de verificação: code=%d, quero 500", rec.Code)
 	}

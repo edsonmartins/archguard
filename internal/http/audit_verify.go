@@ -41,11 +41,12 @@ type OrganizationVerifier interface {
 	VerifyOrganization(ctx context.Context, organizationID uuid.UUID) (domain.VerifyReport, error)
 }
 
-// AuditVerifyHandler serves GET /audit/verify?organization_id=<uuid>: it runs
-// the trail verification for the organization and returns the report as JSON.
-// A divergence is reported with HTTP 409 (Conflict) so a monitor can alert on
-// the status alone; an intact trail returns 200. The handler is thin — it
-// parses the request, calls the verifier, and encodes the report.
+// AuditVerifyHandler serves GET /audit/verify: it runs the trail verification for
+// the caller's ACTIVE tenant (read from the session, never the request — INV-5, so
+// an admin cannot verify another tenant's chain) and returns the report as JSON.
+// A divergence is reported with HTTP 409 (Conflict) so a monitor can alert on the
+// status alone; an intact trail returns 200. The handler is thin — it resolves the
+// session, calls the verifier, and encodes the report.
 type AuditVerifyHandler struct {
 	verifier OrganizationVerifier
 }
@@ -72,14 +73,17 @@ func (h *AuditVerifyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, "método não suportado")
 		return
 	}
-	orgParam := r.URL.Query().Get("organization_id")
-	orgID, err := uuid.Parse(orgParam)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "organization_id inválido")
+	session, ok := SessionFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "sessão não resolvida")
+		return
+	}
+	if session.OrganizationID == nil {
+		writeError(w, http.StatusConflict, "nenhum tenant ativo na sessão")
 		return
 	}
 
-	rep, err := h.verifier.VerifyOrganization(r.Context(), orgID)
+	rep, err := h.verifier.VerifyOrganization(r.Context(), *session.OrganizationID)
 	if err != nil {
 		// A verification that could not run is fail-closed: report it as a
 		// server error, never as "intact".
@@ -88,7 +92,7 @@ func (h *AuditVerifyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := verifyResponse{
-		OrganizationID:        orgID.String(),
+		OrganizationID:        session.OrganizationID.String(),
 		OK:                    rep.OK,
 		EventsChecked:         rep.EventsChecked,
 		SealsChecked:          rep.SealsChecked,

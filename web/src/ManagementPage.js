@@ -86,6 +86,7 @@ import TenantSelect from "./common/select/TenantSelect";
 import GrantsPage from "./GrantsPage";
 import BreakglassRequestPage from "./BreakglassRequestPage";
 import BreakglassQueuePage from "./BreakglassQueuePage";
+import AuditPage from "./AuditPage";
 import AccountAvatar from "./account/AccountAvatar";
 import BreadcrumbBar from "./common/BreadcrumbBar";
 import {Content, Header} from "antd/es/layout/layout";
@@ -109,6 +110,7 @@ function getMenuParentKey(uri) {
   if (uri === "/" || uri.includes("/shortcuts") || uri.includes("/apps")) {return "/home";}
   if (uri.includes("/grants")) {return "/pam";}
   if (uri.includes("/breakglass")) {return "/pam";}
+  if (uri.includes("/audit")) {return "/audit-group";}
   if (uri.includes("/organizations") || uri.includes("/trees") || uri.includes("/groups") || uri.includes("/users") || uri.includes("/invitations")) {return "/orgs";}
   if (uri.includes("/applications") || uri.includes("/providers") || uri.includes("/resources") || uri.includes("/certs") || uri.includes("/keys")) {return "/identity";}
   if (uri.includes("/entries") || uri.includes("/sites") || uri.includes("/rules")) {return "/gateway";}
@@ -380,6 +382,10 @@ function ManagementPage(props) {
       Setting.getItem(<Link to="/breakglass/queue">{i18next.t("general:Approval queue")}</Link>, "/breakglass/queue"),
     ]));
 
+    res.push(Setting.getItem(<Link style={{color: textColor}} to="/audit">{i18next.t("general:Audit")}</Link>, "/audit-group", <SafetyCertificateOutlined />, [
+      Setting.getItem(<Link to="/audit">{i18next.t("general:Audit timeline")}</Link>, "/audit"),
+    ]));
+
     res.push(Setting.getItem(<Link style={{color: textColor}} to="/sites">{i18next.t("general:LLM AI")}</Link>, "/gateway", <CheckCircleOutlined />, [
       Setting.getItem(<Link to="/entries">{i18next.t("general:Entries")}</Link>, "/entries"),
       Setting.getItem(<Link to="/sites">{i18next.t("general:Sites")}</Link>, "/sites"),
@@ -526,6 +532,7 @@ function ManagementPage(props) {
         <Route exact path="/grants" render={(props) => renderLoginIfNotLoggedIn(<GrantsPage account={account} {...props} />)} />
         <Route exact path="/breakglass/request" render={(props) => renderLoginIfNotLoggedIn(<BreakglassRequestPage account={account} {...props} />)} />
         <Route exact path="/breakglass/queue" render={(props) => renderLoginIfNotLoggedIn(<BreakglassQueuePage account={account} {...props} />)} />
+        <Route exact path="/audit" render={(props) => renderLoginIfNotLoggedIn(<AuditPage account={account} {...props} />)} />
         <Route exact path="/roles" render={(props) => renderLoginIfNotLoggedIn(<RoleListPage account={account} {...props} />)} />
         <Route exact path="/roles/:organizationName/:roleName" render={(props) => renderLoginIfNotLoggedIn(<RoleEditPage account={account} {...props} />)} />
         <Route exact path="/permissions" render={(props) => renderLoginIfNotLoggedIn(<PermissionListPage account={account} {...props} />)} />
