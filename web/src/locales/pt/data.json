@@ -745,7 +745,21 @@
     "Revoke this grant?": "Revogar esta concessão?",
     "This revokes the grant and ends its derived sessions. Irreversible.": "Isto revoga a concessão e encerra as sessões derivadas dela. Irreversível.",
     "You are not allowed to revoke this grant": "Você não tem permissão para revogar esta concessão",
-    "Could not revoke the grant": "Não foi possível revogar a concessão"
+    "Could not revoke the grant": "Não foi possível revogar a concessão",
+    "Request break-glass": "Solicitar break-glass",
+    "Request break-glass access": "Solicitar acesso break-glass",
+    "Emergency access": "Acesso de emergência",
+    "This is audited emergency access. A real-time alert is sent immediately and the grant requires approval by distinct peers before it becomes active. Justification and incident are mandatory.": "Este é um acesso de emergência auditado. Um alerta em tempo real é enviado imediatamente e a concessão exige aprovação de pares distintos antes de ficar ativa. Justificativa e incidente são obrigatórios.",
+    "Target type": "Tipo do alvo",
+    "Target id": "ID do alvo",
+    "Target scope": "Escopo do alvo",
+    "Justification": "Justificativa",
+    "Incident reference": "Referência do incidente",
+    "Access window": "Janela de acesso",
+    "Fill target, justification and incident": "Preencha alvo, justificativa e incidente",
+    "Break-glass requested — pending approval": "Break-glass solicitado — pendente de aprovação",
+    "No notification channel — request denied (fail-closed)": "Sem canal de notificação — solicitação negada (fail-closed)",
+    "Could not request break-glass": "Não foi possível solicitar o break-glass"
   },
   "group": {
     "Edit Group": "Editar Grupo",

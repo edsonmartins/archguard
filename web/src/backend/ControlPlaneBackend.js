@@ -184,6 +184,22 @@ export function revokeGrant(grantId) {
   return cpRequest("POST", "/grants/revoke", {body: {grant_id: grantId}});
 }
 
+// --- Break-glass (T-007/T-008) ---
+
+/**
+ * Abre uma solicitação de acesso de emergência (break-glass) para o PRÓPRIO operador
+ * (POST; operação L3 → o interceptor de step-up da T-005 conduz o desafio transparente).
+ * Fail-closed: se o tenant não tem canal de notificação → 503 (a solicitação é negada, o
+ * alerta é pré-condição). O sujeito é o membership da sessão; a org vem da sessão. Campos:
+ * alvo opaco (`target_type`/`target_id`/`target_scope?`), `justification` e `incident_ref`
+ * obrigatórios, `expires_at` (Unix — a janela do acesso).
+ * @param {{target_type: string, target_id: string, target_scope?: string, justification: string, incident_ref: string, expires_at: number}} payload
+ * @returns {Promise<{requested: boolean}>}
+ */
+export function requestBreakglass(payload) {
+  return cpRequest("POST", "/breakglass/request", {body: payload});
+}
+
 // --- Auditoria (T-009) ---
 
 /**

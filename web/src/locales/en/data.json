@@ -746,7 +746,21 @@
     "Revoke this grant?": "Revoke this grant?",
     "This revokes the grant and ends its derived sessions. Irreversible.": "This revokes the grant and ends its derived sessions. Irreversible.",
     "You are not allowed to revoke this grant": "You are not allowed to revoke this grant",
-    "Could not revoke the grant": "Could not revoke the grant"
+    "Could not revoke the grant": "Could not revoke the grant",
+    "Request break-glass": "Request break-glass",
+    "Request break-glass access": "Request break-glass access",
+    "Emergency access": "Emergency access",
+    "This is audited emergency access. A real-time alert is sent immediately and the grant requires approval by distinct peers before it becomes active. Justification and incident are mandatory.": "This is audited emergency access. A real-time alert is sent immediately and the grant requires approval by distinct peers before it becomes active. Justification and incident are mandatory.",
+    "Target type": "Target type",
+    "Target id": "Target id",
+    "Target scope": "Target scope",
+    "Justification": "Justification",
+    "Incident reference": "Incident reference",
+    "Access window": "Access window",
+    "Fill target, justification and incident": "Fill target, justification and incident",
+    "Break-glass requested — pending approval": "Break-glass requested — pending approval",
+    "No notification channel — request denied (fail-closed)": "No notification channel — request denied (fail-closed)",
+    "Could not request break-glass": "Could not request break-glass"
   },
   "group": {
     "Edit Group": "Edit Group",

@@ -61,6 +61,9 @@ func MountCapabilities() error {
 	if err := mountGrantRevoke(p, f); err != nil {
 		return fmt.Errorf("montar grant-revoke: %w", err)
 	}
+	if err := mountBreakglassRequest(p, f); err != nil {
+		return fmt.Errorf("montar breakglass-request: %w", err)
+	}
 	if err := mountAccessReview(p, f); err != nil {
 		return fmt.Errorf("montar access-review: %w", err)
 	}
@@ -298,6 +301,27 @@ func mountGrantRevoke(p *Pipeline, f *Factory) error {
 	}
 	handler := apihttp.NewGrantRevokeHandler(newGrantRevoker(f))
 	RegisterAPIHandler("/grants/revoke", p.Require(opID, apihttp.RequireAdmin(handler)))
+	return nil
+}
+
+// mountBreakglassRequest mounts POST /api/v1/breakglass/request (pacote 008, T-007 —
+// solicitação de break-glass). Administration write: L3 + RequireAdmin. Opens an
+// emergency-access grant for the caller over an opaque target with a mandatory
+// justification and incident reference, fail-closed on the notification channel (the
+// alert fires at request time) and on the audit (atomic with the grant). L3 requires
+// step-up (RFC 9470), conducted transparently by the console (T-005), and is denied
+// outright in the dev profile. The subject and organization come from the session (INV-1).
+func mountBreakglassRequest(p *Pipeline, f *Factory) error {
+	const opID = "breakglass.request"
+	if err := p.RegisterOperation(domain.Operation{
+		ID:          opID,
+		Level:       domain.L3,
+		Description: "solicitar acesso de emergência (break-glass) no tenant (administração)",
+	}); err != nil {
+		return err
+	}
+	handler := apihttp.NewBreakglassRequestHandler(newBreakglassRequester(f))
+	RegisterAPIHandler("/breakglass/request", p.Require(opID, apihttp.RequireAdmin(handler)))
 	return nil
 }
 

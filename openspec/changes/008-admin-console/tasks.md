@@ -65,7 +65,19 @@
         explicita a consequência destrutiva — cenário "Operações destrutivas explicitadas"; L3 via
         step-up transparente da T-005). i18n en+pt. Build/boot/http/contrato/invariantes + yarn build
         verdes.
-- [ ] **T-007** Solicitação de break-glass com justificativa e incidente.
+- [x] **T-007** Solicitação de break-glass com justificativa e incidente. Fundação + request.
+      Fundação: adaptador `Notifier` concreto (`internal/adapters/notification`) sobre os
+      provedores de notificação do tenant (fail-closed: `Available`=há canal; `Notify`=entrega
+      ou falha) + `BreakglassPolicy` por perfil (prod exige `DefaultBreakglassApprovals`=2; dev=1).
+      `POST /api/v1/breakglass/request` (`internal/http/breakglass.go` + wrapper
+      `internal/boot/breakglass.go`, op `breakglass.request` **L3** + RequireAdmin; `DeniesL3()`
+      bloqueia dev): delega ao `BreakglassOrchestrator` (alerta em tempo real ANTES da concessão;
+      grant+auditoria atômicos). Sujeito = membership da sessão (INV-1); org da sessão (INV-5).
+      `ErrNoNotificationChannel`→**503** fail-closed, validação de domínio→422. `requestBreakglass()`
+      no ControlPlaneBackend + `BreakglassRequestPage` (alvo opaco, justificativa/incidente
+      obrigatórios, janela; Alert explicita ser acesso de emergência auditado; L3 via step-up T-005).
+      Rota `/breakglass/request` no grupo "Acesso Privilegiado". i18n en+pt. Build/boot/http/
+      contrato/invariantes + yarn build verdes.
 - [ ] **T-008** Fila de aprovação de break-glass (separação de deveres; sem autoaprovação).
 - [ ] **T-009** Timeline de auditoria com filtros + **indicador de integridade da cadeia sempre
       visível**, com divergência em destaque máximo; acionamento da verificação (L3).
