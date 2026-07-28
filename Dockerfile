@@ -35,11 +35,15 @@ RUN apk add tzdata
 RUN apk add curl
 RUN apk add ca-certificates && update-ca-certificates
 
+# /files is where the Storage provider (Local File System) writes uploads such as user
+# avatars; the process runs as UID 1000, so create /files/avatar owned by it. A named
+# volume mounted at /files inherits this ownership from the image on first init.
 RUN adduser -D $USER -u 1000 \
     && echo "$USER ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/$USER \
     && chmod 0440 /etc/sudoers.d/$USER \
     && mkdir logs \
-    && chown -R $USER:$USER logs
+    && mkdir -p files/avatar \
+    && chown -R $USER:$USER logs files
 
 USER 1000
 WORKDIR /

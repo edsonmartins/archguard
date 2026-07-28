@@ -50,6 +50,34 @@ O perfil é **obrigatório** (`deploymentProfile`). Subir sem perfil válido é 
 - **Repositório:** o histórico git é distribuído; `git bundle` periódico de `main` e
   `vendor/upstream` para storage independente (ADR-0018).
 
+## Armazenamento de arquivos (avatar / upload do console)
+
+Uploads do console (avatar de usuário, logos etc.) usam um **provider de Storage** herdado do
+Casdoor. Não é dependência de segurança do plano de controle — é conveniência de UI — mas precisa
+estar configurado, senão o upload falha com *"Nenhum provedor da categoria: Storage encontrado
+para o aplicativo: app-built-in"*.
+
+**Provider (uma vez, via console ou API):**
+
+- Category `Storage`, Type **`Local File System`**. O tipo `Casdoor` **exige um cert** (assina as
+  URLs) e falha com *"no cert for ..."* — não usar sem cert.
+- Owner **`admin`** (global): `GetProviderByCategory` só enxerga providers de owner `admin` **ou**
+  da organização da app.
+- **Vincular à app** `app-built-in` (aba Providers → Add → **Save da aplicação**). O provider só
+  resolve se estiver **na lista de providers da app** — criar sem vincular não basta.
+
+**Persistência e permissão (infra):**
+
+- O provider grava em **`/files/`** no container (ex.: `/files/avatar/<org>/...`).
+- O processo roda como **UID 1000**; a imagem já cria `/files/avatar` com esse dono (Dockerfile).
+  Sem isso: *"mkdir /files/avatar: permission denied"*.
+- Em `pilot`/`production`, `/files` é um **volume nomeado** (`archguard-files`) para o upload
+  **sobreviver a redeploy**. Volume nomeado pode nascer `root:root` — o deploy do
+  `archguard-devops` (`50-deploy-archguard.sh`) faz `chown -R 1000:1000 /files` (mesma armadilha
+  do volume do OpenBao).
+- **DR:** inclua `archguard-files` no backup se os avatares importarem; são recriáveis (re-upload),
+  logo prioridade menor que o banco.
+
 ## Triagem de upstream (ADR-0003)
 
 - Cadência **semanal**: `make upstream-triage` atualiza o espelho e emite a fila classificada.
