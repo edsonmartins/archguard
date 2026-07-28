@@ -22,7 +22,7 @@
       spec (cenário "Elemento oculto"). `go test` verde.
 
 ## Contexto de operação (cross-cutting)
-- [ ] **T-004** Seletor de tenant permanente no cabeçalho com distinção visual inequívoca do
+- [x] **T-004** Seletor de tenant permanente no cabeçalho com distinção visual inequívoca do
       tenant ativo; troca reemite token e dispara step-up se a política do destino for mais
       restritiva.
       - [x] **Parte A (backend)** — `POST /api/v1/session/tenant` (`internal/http/session_switch.go`
@@ -108,8 +108,15 @@
 - [ ] **T-011** Exportação assinada da trilha (L3).
 - [ ] **T-012** Campanhas de revisão de acesso: acesso efetivo do PDP com origem
       (direto/herdado/concessão); decisões em lote, cada uma auditada.
-- [ ] **T-013** Saúde dos subsistemas (PDP, cofre, auditoria) — agregado honesto (sem verde no
-      topo com divergência no detalhe).
+- [x] **T-013** Saúde dos subsistemas (PDP, cofre, auditoria) — agregado honesto (sem verde no
+      topo com divergência no detalhe). `web/src/SubsystemHealthPage.js` consome
+      `GET /api/v1/health` (op `access`/`health.read` L1, já montado): selo de topo = o PIOR
+      entre o agregado do backend e o pior subsistema (o cliente reforça o invariante — verde no
+      topo NUNCA coexiste com pendência), card por subsistema (ok/degraded/unavailable com cor +
+      detalhe), fail-closed (erro → `unavailable` + alerta, nunca falso "ok"). Ligado no menu
+      (grupo Auditoria) + rota `/health` no ManagementPage. i18n en+pt. Cypress smoke
+      `subsystem_health.cy.js` (no perfil dev o `deployment` é degraded → valida o cenário do
+      agregado honesto). `yarn build` + eslint (src) verdes; Go inalterado.
 - [ ] **T-014** Chaves e rotação (L3).
 
 ## UX, segurança e conformidade

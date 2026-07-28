@@ -794,7 +794,16 @@
     "Outcome": "Outcome",
     "Actor": "Actor",
     "Reason": "Reason",
-    "No audit events": "No audit events"
+    "No audit events": "No audit events",
+    "Subsystem health": "Subsystem health",
+    "Subsystem": "Subsystem",
+    "Operational": "Operational",
+    "Degraded": "Degraded",
+    "Unavailable": "Unavailable",
+    "All subsystems operational": "All subsystems operational",
+    "A subsystem needs attention": "A subsystem needs attention",
+    "A critical subsystem is unavailable": "A critical subsystem is unavailable",
+    "Could not read subsystem health": "Could not read subsystem health"
   },
   "group": {
     "Edit Group": "Edit Group",

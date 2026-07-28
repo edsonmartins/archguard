@@ -793,7 +793,16 @@
     "Outcome": "Desfecho",
     "Actor": "Ator",
     "Reason": "Motivo",
-    "No audit events": "Nenhum evento de auditoria"
+    "No audit events": "Nenhum evento de auditoria",
+    "Subsystem health": "Saúde dos subsistemas",
+    "Subsystem": "Subsistema",
+    "Operational": "Operacional",
+    "Degraded": "Degradado",
+    "Unavailable": "Indisponível",
+    "All subsystems operational": "Todos os subsistemas operacionais",
+    "A subsystem needs attention": "Um subsistema requer atenção",
+    "A critical subsystem is unavailable": "Um subsistema crítico está indisponível",
+    "Could not read subsystem health": "Não foi possível ler a saúde dos subsistemas"
   },
   "group": {
     "Edit Group": "Editar Grupo",
