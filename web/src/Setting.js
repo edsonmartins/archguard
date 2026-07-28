@@ -223,7 +223,7 @@ export const OtherProviderInfo = {
       url: "https://www.synology.com/en-global/dsm/feature/file_sharing",
     },
     "Casdoor": {
-      logo: `${StaticBaseUrl}/img/casdoor.png`,
+      logo: "/img/archguard-icon.png",
       url: "",
     },
     "CUCloud OSS": {
@@ -2131,7 +2131,6 @@ export function getDefaultHtmlEmailContent() {
 <div class="email-container">
   <div class="header">
         <h3>ArchGuard</h3>
-        <img src="${StaticBaseUrl}/img/casdoor-logo_1185x256.png" alt="ArchGuard Logo" width="300">
     </div>
     <p><strong>%{user.friendlyName}</strong>, here is your verification code</p>
     <p>Use this code for your transaction. It's valid for 5 minutes</p>
@@ -2174,7 +2173,6 @@ export function getDefaultInvitationHtmlEmailContent() {
 <div class="email-container">
   <div class="header">
         <h3>ArchGuard</h3>
-        <img src="${StaticBaseUrl}/img/casdoor-logo_1185x256.png" alt="ArchGuard Logo" width="300">
     </div>
     <p>You have been invited into ArchGuard</p>
     <div class="code">

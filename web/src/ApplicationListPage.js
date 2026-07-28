@@ -41,7 +41,7 @@ class ApplicationListPage extends BaseListPage {
       category: "Default",
       type: "All",
       scopes: [],
-      logo: `${Setting.StaticBaseUrl}/img/casdoor-logo_1185x256.png`,
+      logo: "/img/archguard-logo.png",
       enablePassword: true,
       enableSignUp: true,
       disableSignin: false,

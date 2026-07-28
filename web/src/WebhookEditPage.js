@@ -32,7 +32,7 @@ const applicationTemplate = {
   organization: "built-in",
   createdTime: "2022-01-01T01:03:42+08:00",
   displayName: "New Application - 123",
-  logo: `${Setting.StaticBaseUrl}/img/casdoor-logo_1185x256.png`,
+  logo: "/img/archguard-logo.png",
   enablePassword: true,
   enableSignUp: true,
   disableSignin: false,
