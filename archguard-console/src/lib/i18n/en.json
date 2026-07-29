@@ -716,5 +716,11 @@
     "forbidden": "You do not have permission to access this resource.",
     "network": "Could not reach the server. Check your connection.",
     "retry": "Try again"
+  },
+  "unauthorized": {
+    "title": "Access Denied",
+    "noAdmin": "Your account does not have administrator permissions to access ArchGate Manager.",
+    "contactAdmin": "Contact your system administrator to request access.",
+    "backToLogin": "Back to Login"
   }
 }

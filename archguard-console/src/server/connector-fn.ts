@@ -1,5 +1,6 @@
 // CP-5 — connector checklist + admin-first agent control (no day-2 SSH)
 
+import type { JsonObject } from '@/lib/json'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { lookup } from 'node:dns/promises'
@@ -287,7 +288,7 @@ export const deployConnectorFn = createServerFn({ method: 'POST' })
     ok: true
     connector_id: string
     started: boolean
-    start: Record<string, unknown> | null
+    start: JsonObject | null
     runtime: Awaited<ReturnType<typeof agentListConnectors>>
   }> => {
     const s = requireSession()
@@ -311,12 +312,12 @@ export const deployConnectorFn = createServerFn({ method: 'POST' })
     }
 
     await agentPutConfig(data.connector_id, data.stack, conf)
-    let startResult: Record<string, unknown> | null = null
+    let startResult: JsonObject | null = null
     if (data.start) {
       startResult = (await agentStart(
         data.connector_id,
         data.stack,
-      )) as Record<string, unknown>
+      )) as JsonObject
     }
 
     const actor = sessionActor(s)
@@ -396,7 +397,7 @@ export const stopConnectorFn = createServerFn({ method: 'POST' })
     const result = (await agentStop(
       data.connector_id,
       data.stack,
-    )) as Record<string, unknown>
+    )) as JsonObject
     recordActivity(
       'POST',
       `/archgate/connector/${data.slug}/stop`,

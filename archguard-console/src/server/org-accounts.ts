@@ -367,12 +367,16 @@ export function backfillOrgAccountFederation(actor = 'system'): number {
       !!d.oidc_client_id && !existing.oidc_client_id && fed !== 'oidc_only'
     if (!needsFed && !needsOidc) continue
 
+    // `name` is mandatory on upsert (it throws without one). The oidc-only
+    // branch used to omit it, so backfilling an account that needed just the
+    // client id failed at runtime — carry the stored name through.
     upsertOrgAccount(
       {
         slug: d.slug,
+        name: needsFed ? d.name || existing.name : existing.name,
+        category: existing.category,
         ...(needsFed
           ? {
-              name: d.name,
               auth_kind: d.auth_kind,
               federation_status: d.federation_status,
               runbook_url: d.runbook_url || existing.runbook_url,

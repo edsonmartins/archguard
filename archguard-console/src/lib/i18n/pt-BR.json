@@ -716,5 +716,11 @@
     "forbidden": "Você não tem permissão para acessar este recurso.",
     "network": "Não foi possível conectar ao servidor. Verifique sua conexão.",
     "retry": "Tentar novamente"
+  },
+  "unauthorized": {
+    "title": "Acesso Negado",
+    "noAdmin": "Sua conta não possui permissões de administrador para acessar o ArchGate Manager.",
+    "contactAdmin": "Entre em contato com o administrador do sistema para solicitar acesso.",
+    "backToLogin": "Voltar ao Login"
   }
 }

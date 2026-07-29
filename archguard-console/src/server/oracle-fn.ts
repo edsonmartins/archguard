@@ -1,5 +1,6 @@
 // W-C4 — Oracle credentials via oracle-proxy (+ optional OpenBao database role)
 
+import type { JsonObject, JsonValue } from '@/lib/json'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { randomBytes } from 'node:crypto'
@@ -30,7 +31,7 @@ async function proxyApi(
   method: string,
   path: string,
   body?: unknown,
-): Promise<{ status: number; data: Record<string, unknown>; text: string }> {
+): Promise<{ status: number; data: JsonObject; text: string }> {
   const res = await integrationFetch(`${ORACLE_PROXY_URL}${path}`, {
     method,
     integration: 'oracle-proxy',
@@ -38,9 +39,9 @@ async function proxyApi(
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
   const text = await res.text()
-  let data: Record<string, unknown> = {}
+  let data: JsonObject = {}
   try {
-    data = text ? (JSON.parse(text) as Record<string, unknown>) : {}
+    data = text ? (JSON.parse(text) as JsonObject) : {}
   } catch {
     data = { raw: text }
   }
@@ -72,7 +73,7 @@ export const getOracleStatusFn = createServerFn({ method: 'GET' }).handler(
     let proxy: {
       ok: boolean
       url: string
-      health?: unknown
+      health?: JsonValue
       error?: string
     } = { ok: false, url: ORACLE_PROXY_URL }
 

@@ -5,7 +5,9 @@
 // inside containers. Use WARPGATE_CONNECT_HOST (e.g. archgate-edge_traefik) as
 // TCP peer and WARPGATE_HOST as Host/SNI so Traefik routes + session cookies work.
 
+import type { JsonObject } from '@/lib/json'
 import https from 'node:https'
+import type { IncomingHttpHeaders } from 'node:http'
 import { logger } from './logger'
 import { getCachedAuth, invalidateAuthCache } from './http-integration-client'
 
@@ -124,7 +126,7 @@ function connectPort(): number {
 
 type HttpResult = {
   status: number
-  headers: https.IncomingHttpHeaders
+  headers: IncomingHttpHeaders
   body: string
 }
 
@@ -196,7 +198,7 @@ function warpgateHttps(
   })
 }
 
-function parseSetCookie(headers: https.IncomingHttpHeaders): string {
+function parseSetCookie(headers: IncomingHttpHeaders): string {
   const raw = headers['set-cookie']
   if (!raw) return ''
   const list = Array.isArray(raw) ? raw : [raw]
@@ -595,10 +597,10 @@ export type WarpgateSession = {
   protocol?: string
   started_at?: string
   address?: string
-  raw?: Record<string, unknown>
+  raw?: JsonObject
 }
 
-function normalizeSession(raw: Record<string, unknown>): WarpgateSession {
+function normalizeSession(raw: JsonObject): WarpgateSession {
   const id = String(
     raw.id || raw.session_id || raw.uuid || raw.ticket_id || '',
   )
@@ -654,7 +656,7 @@ export async function listWarpgateSessions(): Promise<WarpgateSession[]> {
             ? (data as { items: unknown[] }).items
             : []
       return arr
-        .map((x) => normalizeSession(x as Record<string, unknown>))
+        .map((x) => normalizeSession(x as JsonObject))
         .filter((s) => s.id)
     } catch (e) {
       lastErr = e as Error

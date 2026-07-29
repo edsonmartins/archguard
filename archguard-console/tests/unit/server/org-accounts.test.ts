@@ -80,6 +80,32 @@ describe('org-accounts persistence', () => {
     expect(backfillOrgAccountFederation('migrate')).toBe(0)
   })
 
+  // Regression (audit 2026-07-28): when only the client id was missing, the
+  // backfill omitted `name` from the upsert, which throws "name required".
+  it('backfills a missing client id without losing name or category', () => {
+    upsertOrgAccount(
+      {
+        slug: 'vendax-admin',
+        name: 'Vendax · admin',
+        category: 'product_admin',
+        product: 'vendax',
+        criticality: 'P1',
+        auth_kind: 'oidc',
+        // Already federated, so only the client id is missing.
+        federation_status: 'oidc_primary',
+      },
+      'legacy',
+    )
+
+    expect(() => backfillOrgAccountFederation('migrate')).not.toThrow()
+
+    const v = getOrgAccount('vendax-admin')!
+    expect(v.oidc_client_id).toBe('vendax-admin')
+    expect(v.name).toBe('Vendax · admin')
+    expect(v.category).toBe('product_admin')
+    expect(v.federation_status).toBe('oidc_primary')
+  })
+
   it('does not overwrite explicit oidc_only federation', () => {
     upsertOrgAccount(
       {
