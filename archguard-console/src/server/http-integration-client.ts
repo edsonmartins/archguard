@@ -60,6 +60,29 @@ export type IntegrationFetchInit = RequestInit & {
 }
 
 /**
+ * Service credentials the console presents to control-plane APIs that now
+ * authenticate every call (audit 2026-07-28, P0-3). Applied centrally so no
+ * call site can forget the header.
+ */
+const SERVICE_TOKENS: Record<string, () => string | undefined> = {
+  orchestration: () => process.env.ORCH_API_TOKEN,
+  'agent-control': () => process.env.AGENT_API_TOKEN,
+}
+
+function withServiceAuth(
+  integration: string | undefined,
+  headers: HeadersInit | undefined,
+): HeadersInit | undefined {
+  const token = integration ? SERVICE_TOKENS[integration]?.() : undefined
+  if (!token) return headers
+  const merged = new Headers(headers)
+  if (!merged.has('Authorization')) {
+    merged.set('Authorization', `Bearer ${token}`)
+  }
+  return merged
+}
+
+/**
  * fetch with timeout. Does not retry; callers decide auth-retry policy.
  */
 export async function integrationFetch(
@@ -73,6 +96,7 @@ export async function integrationFetch(
   try {
     const res = await fetch(url, {
       ...rest,
+      headers: withServiceAuth(integration, rest.headers),
       signal: rest.signal ?? controller.signal,
     })
     if (integration && res.status >= 500) {
