@@ -4,21 +4,10 @@ import { createFileRoute } from '@tanstack/react-router'
 import { listUnifiedConnections } from '@/server/unified-bff'
 import { resolveOperatorSession } from '@/server/operator-session'
 import { logger } from '@/server/logger'
+import { unifiedCorsHeaders } from '@/server/unified-cors'
 
-function corsHeaders(request: Request): HeadersInit {
-  const origin = request.headers.get('Origin') || ''
-  const allow =
-    process.env.UNIFIED_UI_ORIGIN ||
-    process.env.CORS_ALLOW_ORIGIN ||
-    origin ||
-    '*'
-  return {
-    'Access-Control-Allow-Origin': allow === '*' ? '*' : allow,
-    'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Allow-Headers':
-      'Content-Type, Authorization, X-ArchGate-User, X-ArchGate-Tenants',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  }
+function corsHeaders(request: Request): Record<string, string> {
+  return unifiedCorsHeaders(request, { methods: 'GET, OPTIONS' })
 }
 
 export const Route = createFileRoute('/api/unified/v1/connections')({
@@ -32,7 +21,7 @@ export const Route = createFileRoute('/api/unified/v1/connections')({
           ...corsHeaders(request),
         }
         try {
-          // Cookie (browser) or Bearer / lab-* (Connect desktop) — same as sessions.
+          // Cookie (browser) or Bearer OIDC (Connect desktop) — same as sessions.
           const session = await resolveOperatorSession(request)
           const connections = await listUnifiedConnections(session)
           return new Response(JSON.stringify({ connections }), {
