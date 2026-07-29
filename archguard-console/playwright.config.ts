@@ -36,5 +36,10 @@ export default defineConfig({
         reuseExistingServer: !process.env.CI,
         stdout: 'pipe',
         stderr: 'pipe',
+        env: {
+          // Rate limiting has its own opt-out so that enabling the E2E login
+          // helper never disables brute-force protection on a real deploy.
+          ARCHGUARD_E2E_DISABLE_RATE_LIMIT: '1',
+        },
       },
 })

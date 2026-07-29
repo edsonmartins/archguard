@@ -1,6 +1,6 @@
 // POST /api/lab/v1/grant-target — lab/UAT smoke for Manager grant path.
-// Gated by ARCHGATE_LAB=1 or ARCHGUARD_E2E_LOGIN=1. Requires session cookie
-// (use GET /test-login?u=testadmin first).
+// Gated by ARCHGATE_LAB=1 and still requires an authenticated session with
+// grant permissions (use GET /test-login?u=testadmin first in lab).
 
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
@@ -13,10 +13,7 @@ import { runGrantPersonTarget } from '@/server/lifecycle-fn'
 import { logger } from '@/server/logger'
 
 function labEnabled(): boolean {
-  return (
-    process.env.ARCHGATE_LAB === '1' ||
-    process.env.ARCHGUARD_E2E_LOGIN === '1'
-  )
+  return process.env.ARCHGATE_LAB === '1'
 }
 
 const bodySchema = z.object({

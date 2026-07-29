@@ -21,19 +21,19 @@ const LAB_USERS = [
 
 type LabUser = (typeof LAB_USERS)[number]
 
+// No password is ever hardcoded here. A missing env var means the persona is
+// unavailable and the route falls back to /login (audit 2026-07-28, P0-2).
 function passwordFor(u: LabUser): string | undefined {
   switch (u) {
     case 'testadmin':
       return (
         process.env.ARCHGUARD_TESTADMIN_PASSWORD ||
-        process.env.TESTADMIN_PASSWORD ||
-        'ArchGuard2026TestAdmin'
+        process.env.TESTADMIN_PASSWORD
       )
     case 'testuser':
       return (
         process.env.ARCHGUARD_TESTUSER_PASSWORD ||
-        process.env.TESTUSER_PASSWORD ||
-        'ArchGuard2026TestUser'
+        process.env.TESTUSER_PASSWORD
       )
     case 'uat-admin':
       return process.env.UAT_PASS_uat_admin

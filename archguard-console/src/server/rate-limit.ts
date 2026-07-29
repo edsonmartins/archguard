@@ -21,10 +21,12 @@ function clientKey(scope: string): string {
 
 // E2E pumps several API calls per test through one IP, which trips the
 // proxy rate limit halfway through the suite and starts cascading factory
-// timeouts. The same env flag that gates the programmatic test-login also
-// disables rate-limit enforcement — the variable is never set in real
-// production, so this is safe to short-circuit here.
-const E2E_DISABLED = process.env.ARCHGUARD_E2E_LOGIN === '1'
+// timeouts. This has its OWN opt-in flag, set only by the Playwright harness.
+//
+// It used to piggyback on ARCHGUARD_E2E_LOGIN, but the staging deploy sets
+// that flag by default, which silently disabled brute-force protection on a
+// public host (audit 2026-07-28, P0-2). The two concerns are now independent.
+const E2E_DISABLED = process.env.ARCHGUARD_E2E_DISABLE_RATE_LIMIT === '1'
 
 /**
  * Throws if the caller exceeded `limit` calls in the trailing `windowMs`.
