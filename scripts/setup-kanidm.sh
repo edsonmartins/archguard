@@ -283,6 +283,16 @@ ARCHGUARD_SA_TOKEN=$SA_TOKEN
 ARCHGUARD_VAULT_URL=$VAULT_URL
 VITE_ARCHGUARD_ID_URL=$KANIDM_URL
 SESSION_SECRET=a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2
+
+# Programmatic login for the Playwright suite. The route stays disabled unless
+# ARCHGUARD_E2E_LOGIN=1, and since the 2026-07-28 audit it no longer falls back
+# to a hardcoded password — each persona must be named here explicitly.
+ARCHGUARD_E2E_LOGIN=1
+ARCHGUARD_TESTADMIN_PASSWORD=$TESTADMIN_PASSWORD
+ARCHGUARD_TESTUSER_PASSWORD=$TESTUSER_PASSWORD
+# Rate limiting has its own opt-out, so enabling test-login never disables
+# brute-force protection on a real deploy.
+ARCHGUARD_E2E_DISABLE_RATE_LIMIT=1
 EOF
 
 log "Written to $ENV_FILE"
