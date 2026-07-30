@@ -13,20 +13,20 @@
 // limitations under the License.
 
 // AppearanceEditorPage: editor AMIGÁVEL da aparência da página de login de UMA aplicação
-// (pacote 008, T-022). É uma tela NOSSA e ADITIVA — NÃO refatora a ApplicationEditPage
-// herdada (1855 linhas; reescrever encareceria todo cherry-pick do upstream, CLAUDE.md §7/§8).
-// Compõe peças que já existem: a prévia ao vivo reusa <LoginPage>/<SignupPage> (mesmo
-// mecanismo do renderSignupSigninPreview herdado) e as cores reusam <ThemeEditor>. Grava os
-// MESMOS campos via updateApplication (logo, themeData, formCss, formBackgroundUrl, ...). O
-// botão "Edição avançada" abre a tela herdada com todos os campos.
+// (pacote 008, T-022). Tela NOSSA e ADITIVA — NÃO refatora a ApplicationEditPage herdada
+// (1855 linhas; reescrever encareceria cherry-pick do upstream, CLAUDE.md §7/§8). A prévia
+// ao vivo reusa <LoginPage>/<SignupPage> (mesmo mecanismo do renderSignupSigninPreview) sob
+// um <ConfigProvider> alimentado pelo themeData. O painel usa controles COMPACTOS (cor/raio/
+// tema/logo/fundo/CSS) com fiação direta — evita o <ThemeEditor> herdado, que é 800px fixos e
+// estourava o layout. Grava os MESMOS campos via updateApplication. "Edição avançada" abre a
+// tela herdada.
 import React from "react";
-import {Button, Card, Col, ConfigProvider, Divider, Input, Row, Segmented, Space, Spin, message} from "antd";
+import {Button, Card, Col, ConfigProvider, Divider, Input, InputNumber, Row, Segmented, Space, Spin, message} from "antd";
 import {SettingOutlined} from "@ant-design/icons";
 import i18next from "i18next";
 import * as ApplicationBackend from "./backend/ApplicationBackend";
 import * as Setting from "./Setting";
 import * as Conf from "./Conf";
-import ThemeEditor from "./common/theme/ThemeEditor";
 import LoginPage from "./auth/LoginPage";
 import SignupPage from "./auth/SignupPage";
 
@@ -62,10 +62,11 @@ class AppearanceEditorPage extends React.Component {
     this.setState({application: {...this.state.application, [field]: value}});
   }
 
-  // O ThemeEditor emite (changedValues, allValues); persistimos o tema completo e o marcamos
-  // habilitado, senão a página de login real ignora a cor.
-  onThemeChange(_, themeData) {
-    this.updateField("themeData", {...themeData, isEnabled: true});
+  // Fiação direta do tema: mescla no themeData atual e marca habilitado (senão a página de
+  // login real ignora a cor). O preview reage na hora porque lê application.themeData.
+  updateTheme(key, value) {
+    const base = this.state.application.themeData ?? {...Conf.ThemeDefault};
+    this.updateField("themeData", {...base, [key]: value, isEnabled: true});
   }
 
   save() {
@@ -98,12 +99,12 @@ class AppearanceEditorPage extends React.Component {
           borderRadius: themeData.borderRadius,
         },
       }}>
-        {/* mesma moldura da prévia herdada: fundo do formulário + máscara que impede interação */}
-        <div style={{position: "relative", border: "1px solid rgb(217,217,217)", boxShadow: "6px 6px 5px #888888", overflow: "auto", minHeight: "620px"}}>
-          <div className="loginBackground" style={{backgroundImage: `url(${application.formBackgroundUrl})`, overflow: "auto"}}>
+        {/* moldura da prévia: rola por dentro (não empurra a página) + máscara sem interação */}
+        <div style={{position: "relative", border: "1px solid rgb(217,217,217)", boxShadow: "4px 4px 8px rgba(0,0,0,0.15)", overflow: "auto", height: "640px", maxWidth: "100%"}}>
+          <div className="loginBackground" style={{backgroundImage: `url(${application.formBackgroundUrl})`}}>
             {previewComponent}
           </div>
-          <div style={{position: "absolute", top: 0, left: 0, height: "100%", width: "100%", background: "rgba(0,0,0,0.02)", zIndex: 10}} />
+          <div style={{position: "absolute", top: 0, left: 0, height: "100%", width: "100%", background: "rgba(0,0,0,0.01)", zIndex: 10}} />
         </div>
       </ConfigProvider>
     );
@@ -111,16 +112,38 @@ class AppearanceEditorPage extends React.Component {
 
   renderPanel() {
     const application = this.state.application;
+    const themeData = application.themeData ?? Conf.ThemeDefault;
+    const color = themeData.colorPrimary || "#1677FF";
     return (
       <Space direction="vertical" size="middle" style={{width: "100%"}}>
         <Divider orientation="left" style={{margin: "4px 0"}}>{i18next.t("general:Brand")}</Divider>
         <div>
           <div style={{marginBottom: 4}}>{i18next.t("general:Logo URL")}</div>
           <Input value={application.logo} onChange={(e) => this.updateField("logo", e.target.value)} placeholder="https://.../logo.png" />
-          {application.logo ? <img src={application.logo} alt="logo" style={{maxHeight: 48, marginTop: 8}} /> : null}
+          {application.logo ? <img src={application.logo} alt="logo" style={{maxHeight: 44, marginTop: 8, maxWidth: "100%"}} /> : null}
         </div>
-        {/* cores/raio/tema reusam o ThemeEditor herdado */}
-        <ThemeEditor themeData={application.themeData ?? Conf.ThemeDefault} onThemeChange={(changed, all) => this.onThemeChange(changed, all)} />
+        <div>
+          <div style={{marginBottom: 4}}>{i18next.t("theme:Primary color")}</div>
+          <Space>
+            <input type="color" value={/^#[0-9a-fA-F]{6}$/.test(color) ? color : "#1677FF"} onChange={(e) => this.updateTheme("colorPrimary", e.target.value)} style={{width: 44, height: 32, padding: 0, border: "1px solid #d9d9d9", borderRadius: 4, cursor: "pointer"}} />
+            <Input value={color} onChange={(e) => this.updateTheme("colorPrimary", e.target.value)} style={{width: 120}} />
+          </Space>
+        </div>
+        <Row gutter={16}>
+          <Col span={12}>
+            <div style={{marginBottom: 4}}>{i18next.t("theme:Border radius")}</div>
+            <InputNumber min={0} max={24} value={themeData.borderRadius} onChange={(v) => this.updateTheme("borderRadius", v ?? 0)} style={{width: "100%"}} />
+          </Col>
+          <Col span={12}>
+            <div style={{marginBottom: 4}}>{i18next.t("theme:Theme")}</div>
+            <Segmented
+              block
+              value={themeData.themeType === "dark" ? "dark" : "default"}
+              onChange={(v) => this.updateTheme("themeType", v)}
+              options={[{label: i18next.t("theme:Light"), value: "default"}, {label: i18next.t("theme:Dark"), value: "dark"}]}
+            />
+          </Col>
+        </Row>
 
         <Divider orientation="left" style={{margin: "4px 0"}}>{i18next.t("general:Background")}</Divider>
         <div>
@@ -140,8 +163,8 @@ class AppearanceEditorPage extends React.Component {
     }
     const {owner, name, application} = this.state;
     return (
-      <div style={{padding: "16px"}}>
-        <Row justify="space-between" align="middle" style={{marginBottom: "12px"}}>
+      <div style={{padding: "16px", maxWidth: "100%", overflowX: "hidden"}}>
+        <Row justify="space-between" align="middle" gutter={[8, 8]} style={{marginBottom: "12px"}}>
           <Col>
             <h2 style={{margin: 0}}>{i18next.t("general:Appearance")} — {application.displayName || name}</h2>
             <div style={{color: "rgba(0,0,0,0.45)"}}>{i18next.t("general:Customize the hosted login page for this application")}</div>
@@ -166,9 +189,9 @@ class AppearanceEditorPage extends React.Component {
           ]}
         />
 
-        <Row gutter={16}>
-          <Col span={14}>{this.renderPreview()}</Col>
-          <Col span={10}><Card size="small">{this.renderPanel()}</Card></Col>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} lg={14}>{this.renderPreview()}</Col>
+          <Col xs={24} lg={10}><Card size="small">{this.renderPanel()}</Card></Col>
         </Row>
       </div>
     );

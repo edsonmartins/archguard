@@ -1659,7 +1659,8 @@
     "Is compact": "É compacto",
     "Primary color": "Cor primária",
     "Theme": "Tema",
-    "Theme - Tooltip": "Tema de estilo do aplicativo"
+    "Theme - Tooltip": "Tema de estilo do aplicativo",
+    "Light": "Claro"
   },
   "ticket": {
     "Closed": "Fechado",
