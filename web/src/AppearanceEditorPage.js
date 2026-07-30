@@ -23,6 +23,7 @@
 import React from "react";
 import {Button, Card, Col, ConfigProvider, Divider, Input, InputNumber, Row, Segmented, Space, Spin, message} from "antd";
 import {StyleProvider, legacyLogicalPropertiesTransformer} from "@ant-design/cssinjs";
+import {TinyColor} from "@ctrl/tinycolor";
 import {SettingOutlined} from "@ant-design/icons";
 import i18next from "i18next";
 import * as ApplicationBackend from "./backend/ApplicationBackend";
@@ -84,6 +85,9 @@ class AppearanceEditorPage extends React.Component {
   renderPreview() {
     const application = this.state.application;
     const themeData = application.themeData ?? Conf.ThemeDefault;
+    // Cor segura: enquanto o usuário digita o hex, o valor pode ser inválido — cai no default
+    // para o TinyColor não quebrar o render.
+    const safeColor = new TinyColor(themeData.colorPrimary).isValid ? themeData.colorPrimary : "#1677FF";
 
     // O antd não re-tematiza um <LoginPage> já montado quando só o token muda (estilo em
     // cache). A key força REMONTAR o preview a cada mudança de tema, então o botão/links
@@ -105,10 +109,20 @@ class AppearanceEditorPage extends React.Component {
       <StyleProvider hashPriority="high" transformers={[legacyLogicalPropertiesTransformer]}>
         <ConfigProvider theme={{
           token: {
-            colorPrimary: themeData.colorPrimary,
-            colorInfo: themeData.colorPrimary,
-            colorLink: themeData.colorPrimary,
+            colorPrimary: safeColor,
+            colorInfo: safeColor,
+            colorLink: safeColor,
             borderRadius: themeData.borderRadius,
+          },
+          // O tema shadcn do console passa components.Button; o botão primário do preview não
+          // pegava só o token. Sobrescreve a cor do Button explicitamente (API oficial),
+          // derivando hover/active — é o que faz o botão "Entrar" refletir a cor.
+          components: {
+            Button: {
+              colorPrimary: safeColor,
+              colorPrimaryHover: new TinyColor(safeColor).lighten(8).toHexString(),
+              colorPrimaryActive: new TinyColor(safeColor).darken(8).toHexString(),
+            },
           },
         }}>
           {/* moldura da prévia: rola por dentro (não empurra a página) + máscara sem interação */}
