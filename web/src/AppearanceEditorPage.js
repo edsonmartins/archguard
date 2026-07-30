@@ -22,6 +22,7 @@
 // tela herdada.
 import React from "react";
 import {Button, Card, Col, ConfigProvider, Divider, Input, InputNumber, Row, Segmented, Space, Spin, message} from "antd";
+import {StyleProvider, legacyLogicalPropertiesTransformer} from "@ant-design/cssinjs";
 import {SettingOutlined} from "@ant-design/icons";
 import i18next from "i18next";
 import * as ApplicationBackend from "./backend/ApplicationBackend";
@@ -97,21 +98,28 @@ class AppearanceEditorPage extends React.Component {
     }
 
     return (
-      <ConfigProvider theme={{
-        token: {
-          colorPrimary: themeData.colorPrimary,
-          colorInfo: themeData.colorPrimary,
-          borderRadius: themeData.borderRadius,
-        },
-      }}>
-        {/* moldura da prévia: rola por dentro (não empurra a página) + máscara sem interação */}
-        <div style={{position: "relative", border: "1px solid rgb(217,217,217)", boxShadow: "4px 4px 8px rgba(0,0,0,0.15)", overflow: "auto", height: "640px", maxWidth: "100%"}}>
-          <div className="loginBackground" style={{backgroundImage: `url(${application.formBackgroundUrl})`}}>
-            {previewComponent}
+      // O root do app usa StyleProvider hashPriority="high", então o CSS do botão vem com
+      // especificidade alta e o token do meu ConfigProvider aninhado (só) perdia. Envolver o
+      // preview no PRÓPRIO StyleProvider high dá a mesma especificidade — e, injetado depois,
+      // a cor escolhida vence. Junto com a key (remonta), o preview reflete a cor na hora.
+      <StyleProvider hashPriority="high" transformers={[legacyLogicalPropertiesTransformer]}>
+        <ConfigProvider theme={{
+          token: {
+            colorPrimary: themeData.colorPrimary,
+            colorInfo: themeData.colorPrimary,
+            colorLink: themeData.colorPrimary,
+            borderRadius: themeData.borderRadius,
+          },
+        }}>
+          {/* moldura da prévia: rola por dentro (não empurra a página) + máscara sem interação */}
+          <div style={{position: "relative", border: "1px solid rgb(217,217,217)", boxShadow: "4px 4px 8px rgba(0,0,0,0.15)", overflow: "auto", height: "640px", maxWidth: "100%"}}>
+            <div className="loginBackground" style={{backgroundImage: `url(${application.formBackgroundUrl})`}}>
+              {previewComponent}
+            </div>
+            <div style={{position: "absolute", top: 0, left: 0, height: "100%", width: "100%", background: "rgba(0,0,0,0.01)", zIndex: 10}} />
           </div>
-          <div style={{position: "absolute", top: 0, left: 0, height: "100%", width: "100%", background: "rgba(0,0,0,0.01)", zIndex: 10}} />
-        </div>
-      </ConfigProvider>
+        </ConfigProvider>
+      </StyleProvider>
     );
   }
 
