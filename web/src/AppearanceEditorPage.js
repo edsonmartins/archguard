@@ -68,7 +68,29 @@ class AppearanceEditorPage extends React.Component {
   // login real ignora a cor). O preview reage na hora porque lê application.themeData.
   updateTheme(key, value) {
     const base = this.state.application.themeData ?? {...Conf.ThemeDefault};
-    this.updateField("themeData", {...base, [key]: value, isEnabled: true});
+    const next = {application: {...this.state.application, themeData: {...base, [key]: value, isEnabled: true}}};
+    // A cor do botão "Entrar" NÃO vem do tema: o signinItem "Login button" traz um customCss
+    // semeado com background-color fixo + !important, que vence qualquer token do antd (e é o
+    // MESMO CSS que a página de login real usa). Então, ao mudar a cor primária, regeneramos
+    // esse customCss com a cor escolhida — corrige preview E página real de uma vez.
+    if (key === "colorPrimary" && new TinyColor(value).isValid) {
+      next.application.signinItems = this.withLoginButtonColor(this.state.application.signinItems, value);
+    }
+    this.setState(next);
+  }
+
+  // Reescreve o customCss do signinItem "Login button" para pintar o botão com `color`.
+  // Preserva os demais itens; se não houver esse item, retorna a lista intacta.
+  withLoginButtonColor(signinItems, color) {
+    if (!Array.isArray(signinItems)) {
+      return signinItems;
+    }
+    const hover = new TinyColor(color).darken(8).toHexString();
+    const css =
+      ".login-button-box { margin-bottom: 5px; } " +
+      `.login-button { width: 100%; background-color: ${color} !important; border-color: ${color} !important; color: #ffffff !important; } ` +
+      `.login-button:hover { background-color: ${hover} !important; border-color: ${hover} !important; }`;
+    return signinItems.map((item) => (item.name === "Login button" ? {...item, customCss: css} : item));
   }
 
   save() {
