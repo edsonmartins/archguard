@@ -53,6 +53,7 @@ func (b *SessionBridge) EstablishSession(ctx context.Context, identity domain.Id
 	err := b.global.WithGlobalTx(ctx, domain.GlobalAccess{
 		Principal: identity.Subject,
 		Reason:    "login: resolução de memberships da própria identidade",
+		Scope:     domain.ScopeSelf, // confinado à própria identidade (ADR-0022)
 	}, func(tx pgx.Tx) error {
 		var e error
 		memberships, e = NewMembershipStore(tx).ListByIdentity(ctx, identity.ID)

@@ -45,6 +45,7 @@ func (r *MembershipReader) ListByIdentity(ctx context.Context, identityID uuid.U
 	err := r.global.WithGlobalTx(ctx, domain.GlobalAccess{
 		Principal: identityID.String(),
 		Reason:    "console: listar os tenants do próprio chamador",
+		Scope:     domain.ScopeSelf, // confinado à própria identidade (ADR-0022)
 	}, func(tx pgx.Tx) error {
 		ms, err := NewMembershipStore(tx).ListByIdentity(ctx, identityID)
 		if err != nil {

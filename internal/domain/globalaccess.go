@@ -20,10 +20,25 @@ import (
 	"fmt"
 )
 
+// GlobalAccessScope declares how far a cross-tenant access reaches (ADR-0022).
+type GlobalAccessScope int
+
+const (
+	// ScopeCrossTenant is a broad read across tenants (global reports, an admin
+	// reading another principal's data). It is the DEFAULT — the conservative one,
+	// so a call-site that forgets to declare its scope falls into the restricted
+	// path, never the permissive one.
+	ScopeCrossTenant GlobalAccessScope = iota
+	// ScopeSelf is a read confined to the principal's OWN identity (login/console
+	// resolving one's own memberships). Intrinsic to authentication; the INV-1
+	// guarantee lives in the call-site, which reads only the authenticated identity.
+	ScopeSelf
+)
+
 // GlobalAccess describes one cross-tenant access. Cross-tenant reads (global
 // reports, "all my memberships") are legitimate but must never be casual: each
-// carries a principal (who) and a reason (why), which the authorizer weighs and
-// the auditor records (RFC-0002 §4).
+// carries a principal (who), a reason (why) and a scope (how far), which the
+// authorizer weighs and the auditor records (RFC-0002 §4, ADR-0022).
 type GlobalAccess struct {
 	// Principal identifies who is performing the cross-tenant access (a subject,
 	// an operator, a service). Required.
@@ -31,6 +46,9 @@ type GlobalAccess struct {
 	// Reason is the declared purpose of the access. Required — a cross-tenant
 	// read with no stated reason is refused.
 	Reason string
+	// Scope declares the confinement of the access (ADR-0022). The zero value is
+	// ScopeCrossTenant (the restricted default), so self-confined reads must opt in.
+	Scope GlobalAccessScope
 }
 
 // Validate refuses an access with no principal or no reason.
