@@ -133,6 +133,18 @@
 - [ ] **T-019** Auditar as telas existentes (organizações/memberships, usuários/grupos,
       aplicações e clientes OIDC/SAML, provedores/sincronismos, MFA, papéis/permissões) contra o
       `/api/v1` e o modelo mental de PAM; ajustar navegação e remover o que não se aplica.
+- [ ] **T-022** Editor de aparência amigável da aplicação (personalização da página de login por
+      app). **Aditivo, NÃO refatora a `ApplicationEditPage` herdada** (1855 linhas — reescrever
+      encareceria todo cherry-pick do upstream, CLAUDE.md §7/§8). Tela nova **nossa**
+      (`web/src/AppearanceEditorPage.js`): seletor de página (Login/Cadastro/Esqueci a senha);
+      **prévia ao vivo** reusando o `<LoginPage>` existente (mesmo mecanismo do
+      `renderSignupSigninPreview`); **painel de propriedades** à direita agrupado (Marca:
+      logo/cor via `<ThemeEditor>`/raio; Fundo: imagem/offset; Layout: HTML lateral/signinItems;
+      Avançado: CSS). Salva os MESMOS campos via `updateApplication` (`logo`, `themeData`,
+      `formCss`, `formBackgroundUrl`, `formSideHtml`, `signinItems`). Botão **"Edição avançada"**
+      abre a tela herdada. Único toque no herdado: um link "Aparência". Rota `/appearance/:app` +
+      menu. i18n en+pt. Motivador: personalização por app já existe (usada no branding da Alçada),
+      mas a tela herdada é densa/pouco amigável.
 
 ## Verificação
 - [ ] **T-020** E2E dos fluxos privilegiados (break-glass, revisão de acesso, verificação de
