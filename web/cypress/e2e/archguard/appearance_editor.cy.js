@@ -22,12 +22,11 @@ describe("ArchGuard — editor de aparência (T-022)", () => {
   });
 
   it("renderiza a tela de aparência do app-built-in (preview + painel)", () => {
-    // '**' (não '*') porque a query tem barra (?id=admin/app-built-in) e '*' não atravessa '/'.
-    cy.intercept("GET", "**/api/get-application**").as("getApp");
+    // Sem intercept: asserir a UI é mais robusto e testa o resultado real. A página mostra
+    // <Spin/> até o app carregar (get-application), então o timeout cobre o boot.
     cy.visit("/appearance/admin/app-built-in");
-    cy.wait("@getApp").its("response.statusCode").should("eq", 200);
-    // Cabeçalho da tela nova.
-    cy.contains(/Appearance|Aparência/i).should("exist");
+    // Cabeçalho da tela nova (só renderiza após o app carregar).
+    cy.contains(/Appearance|Aparência/i, {timeout: 20000}).should("exist");
     // Painel de propriedades (campo de logo) e ações.
     cy.contains(/Logo URL|URL do logo/i).should("exist");
     cy.contains("button", /Save|Salvar/i).should("exist");
