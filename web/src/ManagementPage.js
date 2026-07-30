@@ -88,6 +88,7 @@ import BreakglassRequestPage from "./BreakglassRequestPage";
 import BreakglassQueuePage from "./BreakglassQueuePage";
 import AuditPage from "./AuditPage";
 import SubsystemHealthPage from "./SubsystemHealthPage";
+import AppearanceEditorPage from "./AppearanceEditorPage";
 import AccountAvatar from "./account/AccountAvatar";
 import BreadcrumbBar from "./common/BreadcrumbBar";
 import {Content, Header} from "antd/es/layout/layout";
@@ -516,6 +517,7 @@ function ManagementPage(props) {
         <Route exact path="/invitations/:organizationName/:invitationName" render={(props) => renderLoginIfNotLoggedIn(<InvitationEditPage account={account} {...props} />)} />
         <Route exact path="/applications" render={(props) => renderLoginIfNotLoggedIn(<ApplicationListPage account={account} {...props} />)} />
         <Route exact path="/applications/:organizationName/:applicationName" render={(props) => renderLoginIfNotLoggedIn(<ApplicationEditPage account={account} {...props} />)} />
+        <Route exact path="/appearance/:organizationName/:applicationName" render={(props) => renderLoginIfNotLoggedIn(<AppearanceEditorPage account={account} {...props} />)} />
         <Route exact path="/providers" render={(props) => renderLoginIfNotLoggedIn(<ProviderListPage account={account} {...props} />)} />
         <Route exact path="/providers/:organizationName/:providerName" render={(props) => renderLoginIfNotLoggedIn(<ProviderEditPage account={account} {...props} />)} />
         <Route exact path="/records" render={(props) => renderLoginIfNotLoggedIn(<RecordListPage account={account} {...props} />)} />

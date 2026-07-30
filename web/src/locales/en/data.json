@@ -803,7 +803,15 @@
     "All subsystems operational": "All subsystems operational",
     "A subsystem needs attention": "A subsystem needs attention",
     "A critical subsystem is unavailable": "A critical subsystem is unavailable",
-    "Could not read subsystem health": "Could not read subsystem health"
+    "Could not read subsystem health": "Could not read subsystem health",
+    "Appearance": "Appearance",
+    "Advanced edit": "Advanced edit",
+    "Brand": "Brand",
+    "Background": "Background",
+    "Custom CSS": "Custom CSS",
+    "Signup page": "Signup page",
+    "Logo URL": "Logo URL",
+    "Customize the hosted login page for this application": "Customize the hosted login page for this application"
   },
   "group": {
     "Edit Group": "Edit Group",

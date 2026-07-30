@@ -1590,6 +1590,7 @@ class ApplicationEditPage extends React.Component {
           {this.state.mode === "add" ? i18next.t("application:New Application") : i18next.t("application:Edit Application")}&nbsp;&nbsp;&nbsp;&nbsp;
           <Button onClick={() => this.submitApplicationEdit(false)}>{i18next.t("general:Save")}</Button>
           <Button style={{marginLeft: "20px"}} type="primary" onClick={() => this.submitApplicationEdit(true)}>{i18next.t("general:Save & Exit")}</Button>
+          {this.state.mode !== "add" && this.state.application ? <Button style={{marginLeft: "20px"}} onClick={() => this.props.history.push(`/appearance/${this.state.application.owner}/${this.state.application.name}`)}>{i18next.t("general:Appearance")}</Button> : null}
           {this.state.mode === "add" ? <Button style={{marginLeft: "20px"}} onClick={() => this.deleteApplication()}>{i18next.t("general:Cancel")}</Button> : null}
           {this.state.mode !== "add" && this.state.application ? <>
             <Button style={{marginLeft: "20px"}} icon={<DownloadOutlined />} onClick={() => exportApplicationJson(this.state.application)}>

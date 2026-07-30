@@ -802,7 +802,15 @@
     "All subsystems operational": "Todos os subsistemas operacionais",
     "A subsystem needs attention": "Um subsistema requer atenção",
     "A critical subsystem is unavailable": "Um subsistema crítico está indisponível",
-    "Could not read subsystem health": "Não foi possível ler a saúde dos subsistemas"
+    "Could not read subsystem health": "Não foi possível ler a saúde dos subsistemas",
+    "Appearance": "Aparência",
+    "Advanced edit": "Edição avançada",
+    "Brand": "Marca",
+    "Background": "Fundo",
+    "Custom CSS": "CSS personalizado",
+    "Signup page": "Página de cadastro",
+    "Logo URL": "URL do logo",
+    "Customize the hosted login page for this application": "Personalize a página de login hospedada desta aplicação"
   },
   "group": {
     "Edit Group": "Editar Grupo",
