@@ -22,7 +22,8 @@ describe("ArchGuard — editor de aparência (T-022)", () => {
   });
 
   it("renderiza a tela de aparência do app-built-in (preview + painel)", () => {
-    cy.intercept("GET", "**/api/get-application*").as("getApp");
+    // '**' (não '*') porque a query tem barra (?id=admin/app-built-in) e '*' não atravessa '/'.
+    cy.intercept("GET", "**/api/get-application**").as("getApp");
     cy.visit("/appearance/admin/app-built-in");
     cy.wait("@getApp").its("response.statusCode").should("eq", 200);
     // Cabeçalho da tela nova.
