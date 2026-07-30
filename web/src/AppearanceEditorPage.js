@@ -84,11 +84,16 @@ class AppearanceEditorPage extends React.Component {
     const application = this.state.application;
     const themeData = application.themeData ?? Conf.ThemeDefault;
 
+    // O antd não re-tematiza um <LoginPage> já montado quando só o token muda (estilo em
+    // cache). A key força REMONTAR o preview a cada mudança de tema, então o botão/links
+    // pegam a cor nova na hora.
+    const previewKey = `${this.state.page}-${themeData.colorPrimary}-${themeData.borderRadius}-${themeData.themeType}`;
+
     let previewComponent;
     if (this.state.page === "signup" && Setting.isPasswordEnabled(application)) {
-      previewComponent = <SignupPage application={application} preview="auto" />;
+      previewComponent = <SignupPage key={previewKey} application={application} preview="auto" />;
     } else {
-      previewComponent = <LoginPage type={"login"} mode={this.state.page === "signup" ? "signup" : "signin"} application={application} preview="auto" />;
+      previewComponent = <LoginPage key={previewKey} type={"login"} mode={this.state.page === "signup" ? "signup" : "signin"} application={application} preview="auto" />;
     }
 
     return (
@@ -171,7 +176,9 @@ class AppearanceEditorPage extends React.Component {
           </Col>
           <Col>
             <Space>
-              <Button icon={<SettingOutlined />} onClick={() => this.props.history.push(`/applications/${owner}/${name}`)}>
+              {/* #ui-customization: a tela herdada lê a aba do hash (window.location.hash), então
+                  abre direto na aba de personalização, não na "Básico". */}
+              <Button icon={<SettingOutlined />} onClick={() => this.props.history.push(`/applications/${owner}/${name}#ui-customization`)}>
                 {i18next.t("general:Advanced edit")}
               </Button>
               <Button type="primary" onClick={() => this.save()}>{i18next.t("general:Save")}</Button>
