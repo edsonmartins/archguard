@@ -48,8 +48,11 @@ no login) — é avaliador Go. Diagnóstico completo e desenho em ADR-0022.
       desatualizados corrigidos. build/vet/testes/invariantes/contrato/gofmt verdes. **Falta o
       deploy no piloto + validar `/api/v1/session` 200 após login** (a imagem entra pelo
       auto-update ao pushar).
-- [ ] **T-025** Fase 4 — invariante: perfil conforme nunca fica fail-open no acesso global; `self`
-      permitido; `cross-tenant` amplo negado-e-auditado.
+- [x] **T-025** Fase 4 — invariante estático anti-regressão
+      (`test/invariants/global_authorizer_test.go`): o boot não pode reintroduzir o provisional
+      (`NewProfileAuthorizer`/`NewMemoryAuditor`) — senão o login volta a negar em conforme (I-1.3).
+      Comportamento (self permitido / cross fail-closed) coberto por `scoped_test.go`.
+      **VALIDADO NO PILOTO (production, 2026-07-31): `/api/v1/session` 200 após login; Saúde ok.**
 
 ## Gate de verificação
 Testes declarativos verdes; nenhuma decisão duplicada entre os dois planos; fail-closed
