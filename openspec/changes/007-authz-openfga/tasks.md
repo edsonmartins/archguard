@@ -72,9 +72,13 @@ ArchGuard) / ADR-0005. Estratégia: fatia vertical (asset+grant→projeção→P
       na mesma tx) chamado nas 5 transições: breakglass_orchestrator (create),
       privileged_access_service (approve/revoke/step-up), grant_expirer (expire). Teste de domínio
       do binding. build/vet/testes/invariantes/contrato/gofmt verdes.
-- [ ] **T-028** Fase C — Scheduler do `TuplePublisher` no boot (goroutine/ticker) drenando
-      outbox→`authz_tuple`. **Marco:** asset + grant ativo ⇒ PDP decide de verdade; `/access/effective`
-      retorna dados reais. Validar no piloto.
+- [x] **T-028** Fase C — Scheduler do `TuplePublisher` (`internal/boot/authz_scheduler.go`,
+      `StartAuthzPublisher`): goroutine/ticker (5s, batch 200, teto por tick) drena o outbox→
+      `authz_tuple`; erros logados, nunca fatais; iniciado no `main.go` após MountCapabilities com
+      `defer` de parada. Teste de integração do pipeline fim a fim (asset→outbox→Publish→authz_tuple).
+      **Marco: com A+B+C, o PDP passa a decidir com dados reais.** build/vet/testes/invariantes/gofmt
+      verdes. Validar no piloto após deploy (criar asset via `POST /api/v1/assets` → em ~5s a tupla
+      aparece; `/access/effective` decide).
 - [ ] **T-029** Fase D — Papéis/grupos: mapear role assignment → `operator`/`auditor` e enfileirar
       `ProjectRoleAssignment` (role_assignment_store); tabela/store de group membership + `ProjectGroupMembership`.
 - [ ] **T-030** Fase E — Ciclo do membership: revoke/suspend ⇒ DELETE das tuplas derivadas

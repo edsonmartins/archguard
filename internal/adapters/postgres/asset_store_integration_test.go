@@ -100,3 +100,61 @@ func TestAssetStoreCreateAndProject(t *testing.T) {
 		t.Error("esperava tupla `parent` do ativo no outbox — projeção não foi enfileirada na mesma tx")
 	}
 }
+
+// TestAssetProjectionPublishesToTuple: o pipeline completo do M4 (Fase A+C) — criar um
+// ativo enfileira a projeção no outbox, e o TuplePublisher a drena para authz_tuple, de
+// onde o PDP decide. Prova que outbox → publisher → tuple funciona fim a fim.
+func TestAssetProjectionPublishesToTuple(t *testing.T) {
+	pool := setupTenantPool(t)
+	ctx := context.Background()
+
+	var orgID uuid.UUID
+	if err := pool.QueryRow(ctx,
+		"INSERT INTO organization (owner, name) VALUES ('it', $1) RETURNING id", "org-proj-"+uniqueSuffix()).Scan(&orgID); err != nil {
+		t.Fatalf("seed org: %v", err)
+	}
+	t.Cleanup(func() {
+		bg := context.Background()
+		_, _ = pool.Exec(bg, "DELETE FROM authz_tuple WHERE organization_id = $1", orgID)
+		_, _ = pool.Exec(bg, "DELETE FROM authz_tuple_outbox WHERE organization_id = $1", orgID)
+		_, _ = pool.Exec(bg, "DELETE FROM asset WHERE organization_id = $1", orgID)
+		_, _ = pool.Exec(bg, "DELETE FROM asset_group WHERE organization_id = $1", orgID)
+		_, _ = pool.Exec(bg, "DELETE FROM organization WHERE id = $1", orgID)
+	})
+
+	scope, err := domain.NewTenantScope(orgID)
+	if err != nil {
+		t.Fatalf("NewTenantScope: %v", err)
+	}
+	group, _ := domain.NewAssetGroup(orgID, "grp-"+uniqueSuffix(), nil)
+	asset, _ := domain.NewAsset(orgID, "host", "h-"+uniqueSuffix(), "", &group.ID, nil)
+	if err := NewTenantRepository(pool, scope).WithTenantTx(ctx, func(ttx *TenantTx) error {
+		s := NewAssetStore(ttx)
+		if e := s.CreateGroup(ctx, group); e != nil {
+			return e
+		}
+		return s.Create(ctx, asset)
+	}); err != nil {
+		t.Fatalf("criação: %v", err)
+	}
+
+	// Drena o outbox para a projeção.
+	published, err := NewTuplePublisher().Publish(ctx, pool, 100)
+	if err != nil {
+		t.Fatalf("Publish: %v", err)
+	}
+	if published == 0 {
+		t.Fatal("Publish não drenou nada — o enqueue não chegou ao outbox")
+	}
+
+	// A tupla `parent` do ativo agora vive em authz_tuple (o PDP a enxerga).
+	var n int
+	if err := pool.QueryRow(ctx,
+		"SELECT count(*) FROM authz_tuple WHERE organization_id = $1 AND tuple_relation = 'parent' AND tuple_object = $2",
+		orgID, asset.Ref()).Scan(&n); err != nil {
+		t.Fatalf("consultando authz_tuple: %v", err)
+	}
+	if n == 0 {
+		t.Error("esperava a tupla `parent` do ativo em authz_tuple após o publish")
+	}
+}

@@ -141,6 +141,10 @@ func main() {
 		panic(fmt.Sprintf("montagem das capacidades do control plane (pacote 011) falhou: %v", err))
 	}
 
+	// Authorization-projection publisher (pacote 007 M4, T-028): drains the outbox into
+	// authz_tuple so the PDP decides on real data. Errors are logged, never fatal.
+	defer boot.StartAuthzPublisher(boot.Pool())()
+
 	object.InitDefaultStorageProvider()
 	object.InitLogProviders()
 	object.InitLdapAutoSynchronizer()
