@@ -54,6 +54,9 @@ func MountCapabilities() error {
 	if err := mountAssets(p, f); err != nil {
 		return fmt.Errorf("montar assets: %w", err)
 	}
+	if err := mountAssetAccess(p, f); err != nil {
+		return fmt.Errorf("montar access-assignments: %w", err)
+	}
 	if err := mountHealth(p, f); err != nil {
 		return fmt.Errorf("montar health: %w", err)
 	}
@@ -203,6 +206,24 @@ func mountAssets(p *Pipeline, f *Factory) error {
 	}
 	handler := apihttp.NewAssetsHandler(postgres.NewAssetCatalog(f.Pool()))
 	RegisterAPIHandler("/assets", p.Require(opID, apihttp.RequireAdmin(handler)))
+	return nil
+}
+
+// mountAssetAccess mounts GET/POST /api/v1/access-assignments (pacote 007 M4, T-029 —
+// atribuição granular de acesso: membership → operator/auditor → asset/asset_group).
+// Operação de ADMINISTRAÇÃO: L1 + RequireAdmin. A criação enfileira a projeção na mesma
+// transação (o publisher a drena; o PDP passa a derivar operator/herdado).
+func mountAssetAccess(p *Pipeline, f *Factory) error {
+	const opID = "access.assignments"
+	if err := p.RegisterOperation(domain.Operation{
+		ID:          opID,
+		Level:       domain.L1,
+		Description: "atribuições granulares de acesso do tenant ativo (administração)",
+	}); err != nil {
+		return err
+	}
+	handler := apihttp.NewAssetAccessHandler(postgres.NewAssetAccessCatalog(f.Pool()))
+	RegisterAPIHandler("/access-assignments", p.Require(opID, apihttp.RequireAdmin(handler)))
 	return nil
 }
 
