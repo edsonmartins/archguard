@@ -54,6 +54,30 @@ no login) — é avaliador Go. Diagnóstico completo e desenho em ADR-0022.
       Comportamento (self permitido / cross fail-closed) coberto por `scoped_test.go`.
       **VALIDADO NO PILOTO (production, 2026-07-31): `/api/v1/session` 200 após login; Saúde ok.**
 
+## M4 — ativação end-to-end da autorização granular (habilita a T-012 do 008)
+Todos os componentes existem e são testados (outbox/publisher/reconciler/bootstrap/projeção/PDP/
+ReviewAsset); falta ATIVAR. Hoje `authz_tuple` fica vazia → PDP/ReviewAsset negam/retornam vazio
+(fail-closed correto, sem dados). RFC-0004 §4 (outbox transacional) / §9 (ativo = ID canônico
+ArchGuard) / ADR-0005. Estratégia: fatia vertical (asset+grant→projeção→PDP) e depois alargar.
+- [ ] **T-026** Fase A — Ativos: migração `0036` (asset/asset_group, RLS por tenant, FKs same-tenant)
+      + `postgres.AssetStore` (CRUD tenant-scoped via TenantTx; `ValidateAssetGroupHierarchy` no
+      re-parent) + CRUD `/api/v1/assets` (RequireAdmin) + enqueue `ProjectAsset`→`AuthzOutbox` na
+      mesma tx da mutação. ID canônico ArchGuard; `ExternalRef` p/ o broker (INV-7).
+- [ ] **T-027** Fase B — Grant→projeção: binding `grant.target_type/target_id → assetRef`
+      canônico + enqueue `ProjectGrant` nas 5 transições (breakglass_orchestrator create,
+      privileged_access_service approve/revoke/step-up, grant_expirer expire), dentro do WithTenantTx.
+- [ ] **T-028** Fase C — Scheduler do `TuplePublisher` no boot (goroutine/ticker) drenando
+      outbox→`authz_tuple`. **Marco:** asset + grant ativo ⇒ PDP decide de verdade; `/access/effective`
+      retorna dados reais. Validar no piloto.
+- [ ] **T-029** Fase D — Papéis/grupos: mapear role assignment → `operator`/`auditor` e enfileirar
+      `ProjectRoleAssignment` (role_assignment_store); tabela/store de group membership + `ProjectGroupMembership`.
+- [ ] **T-030** Fase E — Ciclo do membership: revoke/suspend ⇒ DELETE das tuplas derivadas
+      (membership_tenant_store SaveRevocation/SaveSuspension; inverso em reactivation/activation).
+- [ ] **T-031** Fase F — Reconciler: agregador "expected set" por tenant (também usado por
+      `AuthzBootstrap.RebuildTenant`) + scheduler do `AuthzReconciler` (correção assimétrica, RFC-0004 §4).
+- [ ] **T-032** (008 T-012) — Endpoint de revisão (`ReviewAsset`) + tela de campanha (acesso efetivo
+      com origem direto/herdado/concessão; decisões em lote auditadas). Agora COM dados reais.
+
 ## Gate de verificação
 Testes declarativos verdes; nenhuma decisão duplicada entre os dois planos; fail-closed
 comprovado; replay reconstrói o store de forma idêntica.
