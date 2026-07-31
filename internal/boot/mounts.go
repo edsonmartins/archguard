@@ -289,15 +289,15 @@ func mountFactorEnrollment(p *Pipeline, f *Factory) error {
 	return nil
 }
 
-// mountAccessReview mounts GET /api/v1/access/effective (pacote 011, T-013/020 —
-// revisão de acesso). Wires the PostgresPDP (pacote 007) into the composition root
-// and lets the console query effective privileged access. Admin-gated (L1 + admin).
+// mountAccessReview mounts the access-review endpoints over the PostgresPDP (pacote
+// 007): GET /api/v1/access/effective (a single membership×asset decision) and GET
+// /api/v1/access/review (the reverse query: who reaches an asset and by which origin —
+// direct/inherited/grant — the certification-campaign view, 008 T-012). Admin-gated
+// (L1 + admin); the tenant is the session's active org.
 //
-// The PDP reads the authz_tuple projection; that projection is still empty in
-// runtime (the grant→tuple wiring — outbox/publisher — and the asset model are
-// pending, RFC-0004 §9/M4), so it correctly DENIES today (fail-closed). As the
-// projection is activated, this endpoint lights up with real decisions — the PDP
-// itself is now wired and fail-closed.
+// The PDP reads the authz_tuple projection, now POPULATED at runtime (M4 Fase A+B+C:
+// asset catalog + grant→tuple + publisher). It decides on real data; it remains
+// fail-closed (denies / 503) when the PDP cannot answer.
 func mountAccessReview(p *Pipeline, f *Factory) error {
 	const opID = "access.review"
 	if err := p.RegisterOperation(domain.Operation{
@@ -307,8 +307,9 @@ func mountAccessReview(p *Pipeline, f *Factory) error {
 	}); err != nil {
 		return err
 	}
-	handler := apihttp.NewAccessHandler(postgres.NewPostgresPDP(f.Pool()))
-	RegisterAPIHandler("/access/effective", p.Require(opID, apihttp.RequireAdmin(handler)))
+	pdp := postgres.NewPostgresPDP(f.Pool())
+	RegisterAPIHandler("/access/effective", p.Require(opID, apihttp.RequireAdmin(apihttp.NewAccessHandler(pdp))))
+	RegisterAPIHandler("/access/review", p.Require(opID, apihttp.RequireAdmin(apihttp.NewAccessReviewHandler(pdp))))
 	return nil
 }
 

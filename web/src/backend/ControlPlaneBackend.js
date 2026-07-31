@@ -267,6 +267,16 @@ export function getEffectiveAccess(query) {
   return cpRequest("GET", "/access/effective", {query});
 }
 
+/** Revisão de acesso a um ativo: quem o alcança e por qual origem (direto/herdado/concessão). */
+export function getAccessReview(assetId) {
+  return cpRequest("GET", "/access/review", {query: {asset: assetId}});
+}
+
+/** Lista os ativos do tenant ativo (para escolher o alvo da revisão). */
+export function getAssets() {
+  return cpRequest("GET", "/assets");
+}
+
 // --- Saúde dos subsistemas (T-013) ---
 
 /** Saúde do plano de controle (PDP, cofre, auditoria) — agregado honesto. */

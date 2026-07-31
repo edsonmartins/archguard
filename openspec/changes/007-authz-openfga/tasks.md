@@ -85,8 +85,13 @@ ArchGuard) / ADR-0005. Estratégia: fatia vertical (asset+grant→projeção→P
       (membership_tenant_store SaveRevocation/SaveSuspension; inverso em reactivation/activation).
 - [ ] **T-031** Fase F — Reconciler: agregador "expected set" por tenant (também usado por
       `AuthzBootstrap.RebuildTenant`) + scheduler do `AuthzReconciler` (correção assimétrica, RFC-0004 §4).
-- [ ] **T-032** (008 T-012) — Endpoint de revisão (`ReviewAsset`) + tela de campanha (acesso efetivo
-      com origem direto/herdado/concessão; decisões em lote auditadas). Agora COM dados reais.
+- [x] **T-032** (008 T-012) — Revisão de acesso: endpoint `GET /api/v1/access/review?asset=X`
+      (`AccessReviewHandler` sobre `PostgresPDP.ReviewAsset`; fail-closed 503) + tela
+      `web/src/AccessReviewPage.js` (seletor de ativo → tabela de memberships com ORIGEM
+      direto/herdado/concessão como tags; fail-closed no PDP). Rota `/access-review` + menu (grupo
+      PAM). `getAccessReview`/`getAssets` no ControlPlaneBackend. i18n en+pt. Cypress
+      `access_review.cy.js`. yarn build + eslint + gate Go verdes. (Decisões em LOTE
+      auditadas — certificar/revogar — ficam para um incremento: revogar difere por origem.)
 
 ## Gate de verificação
 Testes declarativos verdes; nenhuma decisão duplicada entre os dois planos; fail-closed

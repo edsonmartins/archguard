@@ -810,7 +810,17 @@
     "Custom CSS": "CSS personalizado",
     "Signup page": "Página de cadastro",
     "Logo URL": "URL do logo",
-    "Customize the hosted login page for this application": "Personalize a página de login hospedada desta aplicação"
+    "Customize the hosted login page for this application": "Personalize a página de login hospedada desta aplicação",
+    "Access review": "Revisão de acesso",
+    "Asset": "Ativo",
+    "Effective access": "Acesso efetivo",
+    "Select an asset": "Selecione um ativo",
+    "No effective access to this asset": "Nenhum acesso efetivo a este ativo",
+    "Review could not be completed (PDP)": "A revisão não pôde ser concluída (PDP)",
+    "Direct": "Direto",
+    "Inherited": "Herdado",
+    "Grant": "Concessão",
+    "Membership": "Membership"
   },
   "group": {
     "Edit Group": "Editar Grupo",

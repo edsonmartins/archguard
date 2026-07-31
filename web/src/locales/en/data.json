@@ -811,7 +811,17 @@
     "Custom CSS": "Custom CSS",
     "Signup page": "Signup page",
     "Logo URL": "Logo URL",
-    "Customize the hosted login page for this application": "Customize the hosted login page for this application"
+    "Customize the hosted login page for this application": "Customize the hosted login page for this application",
+    "Access review": "Access review",
+    "Asset": "Asset",
+    "Effective access": "Effective access",
+    "Select an asset": "Select an asset",
+    "No effective access to this asset": "No effective access to this asset",
+    "Review could not be completed (PDP)": "Review could not be completed (PDP)",
+    "Direct": "Direct",
+    "Inherited": "Inherited",
+    "Grant": "Grant",
+    "Membership": "Membership"
   },
   "group": {
     "Edit Group": "Edit Group",

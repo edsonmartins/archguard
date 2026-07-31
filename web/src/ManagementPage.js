@@ -84,6 +84,7 @@ import OpenTour from "./common/OpenTour";
 import OrganizationSelect from "./common/select/OrganizationSelect";
 import TenantSelect from "./common/select/TenantSelect";
 import GrantsPage from "./GrantsPage";
+import AccessReviewPage from "./AccessReviewPage";
 import BreakglassRequestPage from "./BreakglassRequestPage";
 import BreakglassQueuePage from "./BreakglassQueuePage";
 import AuditPage from "./AuditPage";
@@ -111,6 +112,7 @@ function getMenuParentKey(uri) {
   if (!uri) {return null;}
   if (uri === "/" || uri.includes("/shortcuts") || uri.includes("/apps")) {return "/home";}
   if (uri.includes("/grants")) {return "/pam";}
+  if (uri.includes("/access-review")) {return "/pam";}
   if (uri.includes("/breakglass")) {return "/pam";}
   if (uri.includes("/audit")) {return "/audit-group";}
   if (uri.includes("/health")) {return "/audit-group";}
@@ -383,6 +385,7 @@ function ManagementPage(props) {
       Setting.getItem(<Link to="/grants">{i18next.t("general:Active grants")}</Link>, "/grants"),
       Setting.getItem(<Link to="/breakglass/request">{i18next.t("general:Request break-glass")}</Link>, "/breakglass/request"),
       Setting.getItem(<Link to="/breakglass/queue">{i18next.t("general:Approval queue")}</Link>, "/breakglass/queue"),
+      Setting.getItem(<Link to="/access-review">{i18next.t("general:Access review")}</Link>, "/access-review"),
     ]));
 
     res.push(Setting.getItem(<Link style={{color: textColor}} to="/audit">{i18next.t("general:Audit")}</Link>, "/audit-group", <SafetyCertificateOutlined />, [
@@ -537,6 +540,7 @@ function ManagementPage(props) {
         <Route exact path="/grants" render={(props) => renderLoginIfNotLoggedIn(<GrantsPage account={account} {...props} />)} />
         <Route exact path="/breakglass/request" render={(props) => renderLoginIfNotLoggedIn(<BreakglassRequestPage account={account} {...props} />)} />
         <Route exact path="/breakglass/queue" render={(props) => renderLoginIfNotLoggedIn(<BreakglassQueuePage account={account} {...props} />)} />
+        <Route exact path="/access-review" render={(props) => renderLoginIfNotLoggedIn(<AccessReviewPage account={account} {...props} />)} />
         <Route exact path="/audit" render={(props) => renderLoginIfNotLoggedIn(<AuditPage account={account} {...props} />)} />
         <Route exact path="/health" render={(props) => renderLoginIfNotLoggedIn(<SubsystemHealthPage account={account} {...props} />)} />
         <Route exact path="/roles" render={(props) => renderLoginIfNotLoggedIn(<RoleListPage account={account} {...props} />)} />
