@@ -51,6 +51,9 @@ func MountCapabilities() error {
 	if err := mountMemberships(p, f); err != nil {
 		return fmt.Errorf("montar memberships: %w", err)
 	}
+	if err := mountAssets(p, f); err != nil {
+		return fmt.Errorf("montar assets: %w", err)
+	}
 	if err := mountHealth(p, f); err != nil {
 		return fmt.Errorf("montar health: %w", err)
 	}
@@ -182,6 +185,24 @@ func mountMemberships(p *Pipeline, f *Factory) error {
 	}
 	handler := apihttp.NewMembershipsHandler(postgres.NewTenantMembershipLister(f.Pool()))
 	RegisterAPIHandler("/memberships", p.Require(opID, apihttp.RequireAdmin(handler)))
+	return nil
+}
+
+// mountAssets mounts GET/POST /api/v1/assets (pacote 007 M4, T-026 — catálogo de
+// ativos do tenant). Operação de ADMINISTRAÇÃO: L1 + RequireAdmin (console-CRUD). O
+// escopo é o tenant ativo da sessão (nunca do request, INV-1). A criação enfileira a
+// projeção de autorização na mesma transação (o publisher a drena depois).
+func mountAssets(p *Pipeline, f *Factory) error {
+	const opID = "assets.catalog"
+	if err := p.RegisterOperation(domain.Operation{
+		ID:          opID,
+		Level:       domain.L1,
+		Description: "catálogo de ativos do tenant ativo (administração)",
+	}); err != nil {
+		return err
+	}
+	handler := apihttp.NewAssetsHandler(postgres.NewAssetCatalog(f.Pool()))
+	RegisterAPIHandler("/assets", p.Require(opID, apihttp.RequireAdmin(handler)))
 	return nil
 }
 

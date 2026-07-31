@@ -20,6 +20,7 @@ import (
 
 	"github.com/casdoor/casdoor/internal/domain"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // AssetStore persists the tenant's asset catalog (pacote 007 M4, T-026). It is built
@@ -148,4 +149,42 @@ func parseUUIDPtr(s *string) *uuid.UUID {
 	}
 	id := uuid.MustParse(*s)
 	return &id
+}
+
+// AssetCatalog is the pool-level entry point the HTTP handler uses: each call opens
+// a TenantTx confined to the session's tenant (the org is resolved from the session,
+// never from the request — INV-1). It is the tenant-scoped facade over AssetStore.
+type AssetCatalog struct {
+	pool *pgxpool.Pool
+}
+
+// NewAssetCatalog builds the catalog over the runtime pool.
+func NewAssetCatalog(pool *pgxpool.Pool) *AssetCatalog {
+	return &AssetCatalog{pool: pool}
+}
+
+// ListInTenant returns the assets of the given tenant.
+func (c *AssetCatalog) ListInTenant(ctx context.Context, orgID uuid.UUID) ([]domain.Asset, error) {
+	scope, err := domain.NewTenantScope(orgID)
+	if err != nil {
+		return nil, err
+	}
+	var out []domain.Asset
+	err = NewTenantRepository(c.pool, scope).WithTenantTx(ctx, func(ttx *TenantTx) error {
+		a, e := NewAssetStore(ttx).List(ctx)
+		out = a
+		return e
+	})
+	return out, err
+}
+
+// CreateInTenant creates an asset in the given tenant (mutation + projection atomic).
+func (c *AssetCatalog) CreateInTenant(ctx context.Context, orgID uuid.UUID, a domain.Asset) error {
+	scope, err := domain.NewTenantScope(orgID)
+	if err != nil {
+		return err
+	}
+	return NewTenantRepository(c.pool, scope).WithTenantTx(ctx, func(ttx *TenantTx) error {
+		return NewAssetStore(ttx).Create(ctx, a)
+	})
 }

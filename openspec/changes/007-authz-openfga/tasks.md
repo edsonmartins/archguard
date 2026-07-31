@@ -59,10 +59,13 @@ Todos os componentes existem e são testados (outbox/publisher/reconciler/bootst
 ReviewAsset); falta ATIVAR. Hoje `authz_tuple` fica vazia → PDP/ReviewAsset negam/retornam vazio
 (fail-closed correto, sem dados). RFC-0004 §4 (outbox transacional) / §9 (ativo = ID canônico
 ArchGuard) / ADR-0005. Estratégia: fatia vertical (asset+grant→projeção→PDP) e depois alargar.
-- [ ] **T-026** Fase A — Ativos: migração `0036` (asset/asset_group, RLS por tenant, FKs same-tenant)
-      + `postgres.AssetStore` (CRUD tenant-scoped via TenantTx; `ValidateAssetGroupHierarchy` no
-      re-parent) + CRUD `/api/v1/assets` (RequireAdmin) + enqueue `ProjectAsset`→`AuthzOutbox` na
-      mesma tx da mutação. ID canônico ArchGuard; `ExternalRef` p/ o broker (INV-7).
+- [x] **T-026** Fase A — Ativos: migração `0036` (asset/asset_group, RLS por tenant, FKs
+      same-tenant) + `postgres.AssetStore`/`AssetCatalog` (CRUD tenant-scoped via TenantTx) + CRUD
+      `GET/POST /api/v1/assets` (op `assets.catalog` L1 + RequireAdmin) + enqueue
+      `ProjectAsset`→`AuthzOutbox` na mesma tx da mutação (RFC-0004 §4). ID canônico ArchGuard;
+      `ExternalRef` p/ o broker (INV-7). Teste de integração (Create+List+outbox recebeu `parent`).
+      build/vet/testes/invariantes/contrato/gofmt verdes. (Re-parent com
+      `ValidateAssetGroupHierarchy` e UI de ativos ficam para quando necessário.)
 - [ ] **T-027** Fase B — Grant→projeção: binding `grant.target_type/target_id → assetRef`
       canônico + enqueue `ProjectGrant` nas 5 transições (breakglass_orchestrator create,
       privileged_access_service approve/revoke/step-up, grant_expirer expire), dentro do WithTenantTx.
