@@ -42,10 +42,12 @@ no login) — é avaliador Go. Diagnóstico completo e desenho em ADR-0022.
       sem dep externa — I-1.3): `self` permitido em qualquer perfil; `cross-tenant` fail-closed em
       conforme (INV-6), permitido só em dev. `GlobalAccessScope.String()` p/ persistência. Testes
       unitários (self permitido em todo perfil; cross negado em conforme; malformado negado).
-- [ ] **T-024** Fase 3 — boot liga o real + auditor durável por perfil nos 4 sites de
-      `NewGlobalRepository` (bridge/pipeline/mounts/tenant_switch), centralizado numa factory.
-      Provisional+memory permanece só em dev/teste. Deploy no piloto → login estabelece a sessão
-      do `/api/v1`; validar (`/api/v1/session` 200 após login).
+- [x] **T-024** Fase 3 — boot liga o real. `internal/boot/globalrepo.go` (`newGlobalRepository`)
+      centraliza: `ScopedAuthorizer` + `AccessAuditor` durável, usado nos 4 sites
+      (bridge/pipeline/mounts/tenant_switch). Provisional+memory só em teste. Comentários
+      desatualizados corrigidos. build/vet/testes/invariantes/contrato/gofmt verdes. **Falta o
+      deploy no piloto + validar `/api/v1/session` 200 após login** (a imagem entra pelo
+      auto-update ao pushar).
 - [ ] **T-025** Fase 4 — invariante: perfil conforme nunca fica fail-open no acesso global; `self`
       permitido; `cross-tenant` amplo negado-e-auditado.
 

@@ -19,7 +19,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/casdoor/casdoor/internal/adapters/globalaccess"
 	"github.com/casdoor/casdoor/internal/adapters/postgres"
 	"github.com/casdoor/casdoor/internal/domain"
 	"github.com/google/uuid"
@@ -59,7 +58,7 @@ func BridgeLogin(ctx context.Context, email string, methods []domain.FactorType,
 		return uuid.Nil, uuid.Nil, false, ferr
 	}
 
-	global := postgres.NewGlobalRepository(pool, globalaccess.NewProfileAuthorizer(), globalaccess.NewMemoryAuditor())
+	global := newGlobalRepository(pool)
 	session, serr := postgres.NewSessionBridge(pool, global).EstablishSession(ctx, idn, provenAALFromMethods(methods), methods, now)
 	if serr != nil {
 		return uuid.Nil, uuid.Nil, false, serr

@@ -17,7 +17,6 @@ package boot
 import (
 	"context"
 
-	"github.com/casdoor/casdoor/internal/adapters/globalaccess"
 	"github.com/casdoor/casdoor/internal/adapters/postgres"
 	"github.com/casdoor/casdoor/internal/domain"
 	apihttp "github.com/casdoor/casdoor/internal/http"
@@ -40,10 +39,10 @@ type tenantSwitch struct {
 
 // newTenantSwitch compõe o switch sobre o pool de runtime, a política real de MFA
 // por org (OrgPolicyAuthority, pacote 005) e o leitor de memberships do chamador
-// (leitura cross-tenant autorizada/auditada — adapters provisórios de dev aqui, os
-// duráveis vêm com o global-access do devops).
+// (leitura cross-tenant autorizada/auditada pelos controles REAIS — newGlobalRepository,
+// ScopedAuthorizer + AccessAuditor durável, ADR-0022).
 func newTenantSwitch(f *Factory) *tenantSwitch {
-	global := postgres.NewGlobalRepository(f.Pool(), globalaccess.NewProfileAuthorizer(), globalaccess.NewMemoryAuditor())
+	global := newGlobalRepository(f.Pool())
 	return &tenantSwitch{
 		pool:   f.Pool(),
 		policy: postgres.NewOrgPolicyAuthority(f.Pool()),

@@ -18,7 +18,6 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/casdoor/casdoor/internal/adapters/globalaccess"
 	"github.com/casdoor/casdoor/internal/adapters/postgres"
 	"github.com/casdoor/casdoor/internal/domain"
 	apihttp "github.com/casdoor/casdoor/internal/http"
@@ -42,15 +41,13 @@ type Pipeline struct {
 
 // NewPipeline assembles the assurance pipeline over the runtime pool.
 //
-// The cross-tenant global-access chain used by SessionBridge (GlobalAuthorizer /
-// AccessAuditor) is wired to the PROVISIONAL dev adapters here: ProfileAuthorizer
-// denies cross-tenant access outside the dev profile (fail-closed), and MemoryAuditor
-// is a non-durable dev sink. That chain is only exercised once a session resolves,
-// which requires the login bridge (T-004b); wiring the durable authorizer (OpenFGA,
-// pacote 007) and auditor (trilha, pacote 003) for conformant profiles is part of
-// activating sessions (T-004b) — not reached at runtime until then.
+// The cross-tenant global-access chain used by SessionBridge is wired to the REAL
+// controls (newGlobalRepository, ADR-0022): the Go ScopedAuthorizer (self-confined
+// reads allowed in any profile, broad cross-tenant fail-closed in conformant) and the
+// durable AccessAuditor (append-only global_access_audit). No external dependency on
+// the login path (I-1.3).
 func NewPipeline(pool *pgxpool.Pool) *Pipeline {
-	global := postgres.NewGlobalRepository(pool, globalaccess.NewProfileAuthorizer(), globalaccess.NewMemoryAuditor())
+	global := newGlobalRepository(pool)
 	loader := postgres.NewSessionBridge(pool, global)
 	resolver := apihttp.NewBridgingResolver(contextBinding{}, loader)
 	floor := postgres.NewOrgPolicyAuthority(pool)

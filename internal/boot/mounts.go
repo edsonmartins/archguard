@@ -19,7 +19,6 @@ import (
 	"net/http"
 
 	"github.com/casdoor/casdoor/internal/adapters/auditseal"
-	"github.com/casdoor/casdoor/internal/adapters/globalaccess"
 	"github.com/casdoor/casdoor/internal/adapters/postgres"
 	"github.com/casdoor/casdoor/internal/domain"
 	apihttp "github.com/casdoor/casdoor/internal/http"
@@ -130,11 +129,10 @@ func mountSession(p *Pipeline) error {
 }
 
 // mountTenants mounts GET /api/v1/tenants (pacote 011, T-008 — seletor de tenant).
-// Classified L1: the caller lists its own tenants. It reads memberships across
-// tenants via the global-access path (provisional dev adapters here; the durable
-// authorizer/auditor for conformant profiles — OpenFGA/trilha — is wired with the
-// global-access work, T-004b/devops), so in a conformant profile the list fails
-// closed until then.
+// Classified L1: the caller lists its own tenants. It reads memberships across tenants
+// via the global-access path with the REAL controls (newGlobalRepository, ADR-0022):
+// the read is ScopeSelf, so it is authorized in any profile (the caller lists ITS OWN
+// tenants) and durably audited.
 func mountTenants(p *Pipeline, f *Factory) error {
 	const opID = "tenants.read"
 	if err := p.RegisterOperation(domain.Operation{
@@ -144,7 +142,7 @@ func mountTenants(p *Pipeline, f *Factory) error {
 	}); err != nil {
 		return err
 	}
-	global := postgres.NewGlobalRepository(f.Pool(), globalaccess.NewProfileAuthorizer(), globalaccess.NewMemoryAuditor())
+	global := newGlobalRepository(f.Pool())
 	handler := apihttp.NewTenantsHandler(postgres.NewMembershipReader(global), postgres.NewOrgDisplayNamer(f.Pool()))
 	RegisterAPIHandler("/tenants", p.Require(opID, handler))
 	return nil
