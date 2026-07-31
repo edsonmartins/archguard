@@ -32,14 +32,16 @@ no login) — é avaliador Go. Diagnóstico completo e desenho em ADR-0022.
 - [x] **T-021** Fase 1 — domínio: `GlobalAccessScope` (`self`/`cross-tenant`, default restrito) no
       `domain.GlobalAccess`; os 2 call-sites reais de `WithGlobalTx` (login, seletor de tenant)
       declaram `ScopeSelf`; testes de domínio. Commit `c4931d6c`. ADR-0022 aceito.
-- [ ] **T-022** Fase 2 — auditor durável de acesso GLOBAL. **Decisão de design pendente:** a trilha
-      003 é POR-TENANT (`AuditEventInput` exige `OrganizationID`); um acesso global/self não tem
-      tenant. Definir o destino: trilha append-only GLOBAL dedicada (nova migração + adapter
-      `AccessAuditor`) vs. redefinição de semântica. Hoje só há o `MemoryAuditor` (dev). Substituir
-      o `MemoryAuditor` pelo durável em perfil conforme.
-- [ ] **T-023** Fase 2 — `GlobalAuthorizer` real (avaliador Go): `self` permitido em qualquer
-      perfil; `cross-tenant` fail-closed em conforme (INV-6) até política real; `dev` permite ambos.
-      Testes (self permitido, cross negado em conforme, fail-closed).
+- [x] **T-022** Fase 2 — auditor durável de acesso GLOBAL. Decisão: trilha append-only GLOBAL
+      dedicada (a trilha 003 é por-tenant e não encaixa acesso global). Migração
+      `0035_create_global_access_audit.sql` (INSERT-only + trigger anti-UPDATE/DELETE, espelha
+      0018; `roles.sql` revoga UPDATE/DELETE/TRUNCATE para archguard_app). Adapter
+      `postgres.AccessAuditor` (Record → INSERT; fail-closed I-5.4). Testes de integração (grava
+      self; append-only bloqueia UPDATE/DELETE). RFC-0002 §4 (auditar "all my memberships") honrado.
+- [x] **T-023** Fase 2 — `GlobalAuthorizer` real (`globalaccess.ScopedAuthorizer`, avaliador Go,
+      sem dep externa — I-1.3): `self` permitido em qualquer perfil; `cross-tenant` fail-closed em
+      conforme (INV-6), permitido só em dev. `GlobalAccessScope.String()` p/ persistência. Testes
+      unitários (self permitido em todo perfil; cross negado em conforme; malformado negado).
 - [ ] **T-024** Fase 3 — boot liga o real + auditor durável por perfil nos 4 sites de
       `NewGlobalRepository` (bridge/pipeline/mounts/tenant_switch), centralizado numa factory.
       Provisional+memory permanece só em dev/teste. Deploy no piloto → login estabelece a sessão

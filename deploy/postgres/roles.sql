@@ -78,7 +78,7 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO archguard_app;
 --    recebe a linha). O bloco revoga no pai e em toda partição de `audit_event`.
 DO $$
 DECLARE
-  audit_tables text[] := ARRAY['record', 'audit_event', 'audit_seal'];
+  audit_tables text[] := ARRAY['record', 'audit_event', 'audit_seal', 'global_access_audit'];
   t text;
   part text;
 BEGIN

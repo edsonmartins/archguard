@@ -35,6 +35,16 @@ const (
 	ScopeSelf
 )
 
+// String is the persistable/loggable form of the scope. It matches the CHECK
+// constraint of global_access_audit ('self' | 'cross_tenant'); an unknown value
+// (should never occur) renders conservatively as cross_tenant.
+func (s GlobalAccessScope) String() string {
+	if s == ScopeSelf {
+		return "self"
+	}
+	return "cross_tenant"
+}
+
 // GlobalAccess describes one cross-tenant access. Cross-tenant reads (global
 // reports, "all my memberships") are legitimate but must never be casual: each
 // carries a principal (who), a reason (why) and a scope (how far), which the
