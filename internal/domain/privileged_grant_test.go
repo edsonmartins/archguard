@@ -285,3 +285,29 @@ func TestBreakglassPolicyZeroApproversInProduction(t *testing.T) {
 		t.Fatalf("política 2 em produção deveria valer: %+v %v", p, err)
 	}
 }
+
+// TestGrantTargetAssetRef: o alvo resolve para a ref de asset canônica APENAS quando
+// nomeia um asset registrado (Type=="asset" + ID UUID válido). Alvos opacos de broker
+// não projetam (ADR-0022/RFC-0004 §9) — fail-safe.
+func TestGrantTargetAssetRef(t *testing.T) {
+	org := uuid.New()
+	assetID := uuid.New()
+
+	// Type=="asset" + ID UUID → ref canônica.
+	ref, ok := GrantTarget{Type: "asset", ID: assetID.String(), Scope: "admin"}.AssetRef(org)
+	if !ok {
+		t.Fatal("target asset com UUID deveria resolver")
+	}
+	if want := Qualify(org, TypeAsset, assetID.String()); ref != want {
+		t.Errorf("ref = %q, esperado %q", ref, want)
+	}
+
+	// Alvo opaco de broker (Type != asset) → não projeta.
+	if _, ok := (GrantTarget{Type: "warpgate-host", ID: "db-01", Scope: "admin"}).AssetRef(org); ok {
+		t.Error("target de broker não deveria resolver")
+	}
+	// Type=="asset" mas ID não-UUID → não projeta.
+	if _, ok := (GrantTarget{Type: "asset", ID: "db-01", Scope: "admin"}).AssetRef(org); ok {
+		t.Error("target asset com ID não-UUID não deveria resolver")
+	}
+}

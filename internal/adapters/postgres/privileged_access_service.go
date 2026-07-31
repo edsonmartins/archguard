@@ -56,6 +56,9 @@ func (s *PrivilegedAccessService) Approve(ctx context.Context, grantID, approver
 		if err := store.SaveDecision(ctx, g); err != nil {
 			return err
 		}
+		if err := enqueueGrantProjection(ctx, ttx, g); err != nil {
+			return err
+		}
 		out = g
 		return emitAudit(ctx, ttx.Tx(), s.audit, g.OrganizationID, domain.ActionBreakglassApprove,
 			domain.AuditTarget{Type: "privileged_grant", ID: g.ID.String(), Label: "aprovação de break-glass"},
@@ -77,6 +80,9 @@ func (s *PrivilegedAccessService) Revoke(ctx context.Context, grantID uuid.UUID)
 			return err
 		}
 		if err := grantStore.SaveDecision(ctx, g); err != nil {
+			return err
+		}
+		if err := enqueueGrantProjection(ctx, ttx, g); err != nil {
 			return err
 		}
 		if _, err := NewTenantSessionStore(ttx).RevokeByGrant(ctx, g.ID); err != nil {
@@ -105,7 +111,10 @@ func (s *PrivilegedAccessService) PassStepUp(ctx context.Context, grantID uuid.U
 		if err := g.PassStepUp(provenAAL, phishingResistant); err != nil {
 			return err
 		}
-		return store.SaveDecision(ctx, g)
+		if err := store.SaveDecision(ctx, g); err != nil {
+			return err
+		}
+		return enqueueGrantProjection(ctx, ttx, g)
 	})
 }
 

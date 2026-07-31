@@ -83,6 +83,23 @@ func (t GrantTarget) Valid() bool {
 	return t.Type != "" && t.ID != "" && t.Scope != ""
 }
 
+// AssetRef resolves this target to the tenant-qualified graph ref of a registered
+// asset, for the authorization projection (M4, ADR-0022/RFC-0004 §9). It resolves
+// ONLY when the target names a catalog asset by its canonical ArchGuard id
+// (Type == "asset" and ID a valid UUID); any other (opaque broker) target returns
+// ok=false and is not projected — the grant still exists and is audited, but yields
+// no has_active_grant tuple until it points at a registered asset. Fail-safe.
+func (t GrantTarget) AssetRef(orgID uuid.UUID) (string, bool) {
+	if t.Type != string(TypeAsset) {
+		return "", false
+	}
+	assetID, err := uuid.Parse(t.ID)
+	if err != nil {
+		return "", false
+	}
+	return Qualify(orgID, TypeAsset, assetID.String()), true
+}
+
 // GrantApproval is one peer approval recorded on a grant.
 type GrantApproval struct {
 	ApproverMembershipID uuid.UUID

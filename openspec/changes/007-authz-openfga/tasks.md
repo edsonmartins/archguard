@@ -66,9 +66,12 @@ ArchGuard) / ADR-0005. Estratégia: fatia vertical (asset+grant→projeção→P
       `ExternalRef` p/ o broker (INV-7). Teste de integração (Create+List+outbox recebeu `parent`).
       build/vet/testes/invariantes/contrato/gofmt verdes. (Re-parent com
       `ValidateAssetGroupHierarchy` e UI de ativos ficam para quando necessário.)
-- [ ] **T-027** Fase B — Grant→projeção: binding `grant.target_type/target_id → assetRef`
-      canônico + enqueue `ProjectGrant` nas 5 transições (breakglass_orchestrator create,
-      privileged_access_service approve/revoke/step-up, grant_expirer expire), dentro do WithTenantTx.
+- [x] **T-027** Fase B — Grant→projeção: `domain.GrantTarget.AssetRef(orgID)` resolve o alvo para
+      a ref canônica de asset APENAS quando `Type=="asset"` + ID UUID (targets opacos de broker não
+      projetam — fail-safe, RFC-0004 §9). Helper `enqueueGrantProjection` (ProjectGrant → AuthzOutbox
+      na mesma tx) chamado nas 5 transições: breakglass_orchestrator (create),
+      privileged_access_service (approve/revoke/step-up), grant_expirer (expire). Teste de domínio
+      do binding. build/vet/testes/invariantes/contrato/gofmt verdes.
 - [ ] **T-028** Fase C — Scheduler do `TuplePublisher` no boot (goroutine/ticker) drenando
       outbox→`authz_tuple`. **Marco:** asset + grant ativo ⇒ PDP decide de verdade; `/access/effective`
       retorna dados reais. Validar no piloto.

@@ -63,6 +63,9 @@ func (o *BreakglassOrchestrator) Request(ctx context.Context, subjectMembershipI
 		if err := NewPrivilegedGrantStore(ttx).Create(ctx, g); err != nil {
 			return err
 		}
+		if err := enqueueGrantProjection(ctx, ttx, g); err != nil {
+			return err
+		}
 		return emitAudit(ctx, ttx.Tx(), o.audit, org, domain.ActionBreakglassRequest,
 			domain.AuditTarget{Type: "privileged_grant", ID: g.ID.String(), Label: "solicitação de break-glass"},
 			"solicitação de break-glass, incidente "+incidentRef)

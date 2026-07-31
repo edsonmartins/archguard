@@ -66,6 +66,9 @@ func (e *GrantExpirer) ExpireDue(ctx context.Context) (int, error) {
 			if err := grantStore.SaveDecision(ctx, g); err != nil {
 				return err
 			}
+			if err := enqueueGrantProjection(ctx, ttx, g); err != nil {
+				return err
+			}
 			// Cascade: revoke the sessions derived from this grant.
 			if _, err := sessionStore.RevokeByGrant(ctx, g.ID); err != nil {
 				return err
