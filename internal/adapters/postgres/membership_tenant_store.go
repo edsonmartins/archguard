@@ -213,6 +213,10 @@ func (s *TenantMembershipStore) SaveRevocation(ctx context.Context, m domain.Mem
 	if tag.RowsAffected() == 0 {
 		return ErrMembershipNotFound
 	}
+	// M4 Fase E (T-030): remove do grafo as tuplas de acesso do membership revogado.
+	if err := enqueueMembershipLifecycle(ctx, s.ttx, scope, m.ID, false); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -274,6 +278,10 @@ func (s *TenantMembershipStore) SaveReactivation(ctx context.Context, m domain.M
 	if tag.RowsAffected() == 0 {
 		return ErrMembershipNotFound
 	}
+	// M4 Fase E (T-030): restaura no grafo as tuplas de acesso do membership reativado.
+	if err := enqueueMembershipLifecycle(ctx, s.ttx, scope, m.ID, true); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -300,6 +308,10 @@ func (s *TenantMembershipStore) SaveSuspension(ctx context.Context, m domain.Mem
 	}
 	if tag.RowsAffected() == 0 {
 		return ErrMembershipNotFound
+	}
+	// M4 Fase E (T-030): remove do grafo as tuplas de acesso do membership suspenso.
+	if err := enqueueMembershipLifecycle(ctx, s.ttx, scope, m.ID, false); err != nil {
+		return err
 	}
 	return nil
 }
@@ -329,6 +341,10 @@ func (s *TenantMembershipStore) SaveActivation(ctx context.Context, m domain.Mem
 	}
 	if tag.RowsAffected() == 0 {
 		return ErrNotInvited
+	}
+	// M4 Fase E (T-030): projeta as tuplas de acesso pré-atribuídas ao membership ativado.
+	if err := enqueueMembershipLifecycle(ctx, s.ttx, scope, m.ID, true); err != nil {
+		return err
 	}
 	return nil
 }

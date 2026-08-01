@@ -88,8 +88,15 @@ ArchGuard) / ADR-0005. Estratégia: fatia vertical (asset+grant→projeção→P
       `GET/POST /api/v1/access-assignments` (op `access.assignments` L1 + RequireAdmin). Testes de
       domínio + integração (Create→outbox `operator`). build/vet/testes/invariantes/gofmt verdes.
       **Falta (D1):** group membership (subject=group, `ProjectGroupMembership`) + UI de atribuição.
-- [ ] **T-030** Fase E — Ciclo do membership: revoke/suspend ⇒ DELETE das tuplas derivadas
-      (membership_tenant_store SaveRevocation/SaveSuspension; inverso em reactivation/activation).
+- [x] **T-030** Fase E — Ciclo do membership: revoke/suspend ⇒ DELETE / reactivate/activate ⇒ WRITE
+      das tuplas de acesso do membership (owner de assets + operator/auditor de atribuições), na mesma
+      tx (`membership_projection.go`: `membershipAccessTupleUpdates`/`enqueueMembershipLifecycle`,
+      fiado nos 4 métodos do `membership_tenant_store`). Teste de integração (suspend→2 DELETE,
+      reactivate→2 WRITE). **`has_active_grant` FICA DE FORA de propósito** — um membership revogado
+      deve ter suas concessões CASCADE-REVOGADAS (Fase B remove a tupla + sessões), não escondidas do
+      grafo; cascade é follow-up (T-030b). build/vet/testes/invariantes/gofmt verdes.
+- [ ] **T-030b** Follow-up — cascade-revoke das concessões ativas do membership no revoke/suspend
+      (revoga os grants → Fase B remove `has_active_grant` + `RevokeByGrant` encerra as sessões).
 - [ ] **T-031** Fase F — Reconciler: agregador "expected set" por tenant (também usado por
       `AuthzBootstrap.RebuildTenant`) + scheduler do `AuthzReconciler` (correção assimétrica, RFC-0004 §4).
 - [x] **T-032** (008 T-012) — Revisão de acesso: endpoint `GET /api/v1/access/review?asset=X`
