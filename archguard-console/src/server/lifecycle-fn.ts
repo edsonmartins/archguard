@@ -13,18 +13,13 @@ import {
 } from './session-guard'
 import { logger } from './logger'
 import { integrationFetch } from './http-integration-client'
-import { ensureKanidmGroup } from './kanidm-admin'
+import { addUserToGroup } from './idp'
 
 const ORCH_URL = (
   process.env.ORCHESTRATION_URL ||
   process.env.ARCHGATE_ORCHESTRATION_URL ||
   'http://archgate-orchestration:8090'
 ).replace(/\/$/, '')
-
-const KANIDM_URL = (
-  process.env.ARCHGUARD_ID_URL || 'https://localhost:8443'
-).replace(/\/$/, '')
-const KANIDM_SA_TOKEN = process.env.ARCHGUARD_SA_TOKEN || ''
 
 export type LifecycleStep = {
   component: string
@@ -52,54 +47,13 @@ async function orchPost(
   return { status: res.status, data, text }
 }
 
-async function kanidmAddToGroup(
+/** Bind a person to a group on the active IdP (Kanidm or ArchGuard). */
+async function bindGroup(
   username: string,
   group: string,
 ): Promise<LifecycleStep> {
-  if (!KANIDM_SA_TOKEN) {
-    return { component: 'kanidm_group', ok: false, detail: 'SA token missing' }
-  }
-  try {
-    await ensureKanidmGroup(group)
-    const res = await fetch(
-      `${KANIDM_URL}/v1/group/${encodeURIComponent(group)}/_attr/member`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${KANIDM_SA_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ values: [username] }),
-      },
-    )
-    const text = await res.text()
-    if (res.status >= 200 && res.status < 300) {
-      return {
-        component: 'kanidm_group',
-        ok: true,
-        detail: `member → ${group}`,
-      }
-    }
-    // already member / alternate shape
-    if (res.status === 409 || text.toLowerCase().includes('already')) {
-      return {
-        component: 'kanidm_group',
-        ok: true,
-        detail: `already in ${group}`,
-      }
-    }
-    return {
-      component: 'kanidm_group',
-      ok: false,
-      detail: `HTTP ${res.status}: ${text.slice(0, 160)}`,
-    }
-  } catch (e) {
-    return {
-      component: 'kanidm_group',
-      ok: false,
-      detail: (e as Error).message,
-    }
-  }
+  const step = await addUserToGroup(username, group)
+  return { component: 'idp_group', ok: step.ok, detail: step.detail }
 }
 
 /**
@@ -176,7 +130,7 @@ export const provisionPersonAccessFn = createServerFn({ method: 'POST' })
 
     // Direct Kanidm membership (real path even if orch mock)
     for (const g of groups) {
-      steps.push(await kanidmAddToGroup(data.username, g))
+      steps.push(await bindGroup(data.username, g))
     }
 
     const critical = steps.some(

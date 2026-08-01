@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { getSite, upsertSite } from './sites'
 import type { SiteConnector, SiteInput, SiteTarget } from '@/lib/api/types/site'
 import { primaryStackFromConnectors } from '@/lib/api/types/site'
-import { ensureTenantGroup } from './kanidm-admin'
+import { ensureTenantGroup } from './idp'
 import { recordActivity } from './activity-log'
 import {
   assertSiteTenantAccess,

@@ -9,17 +9,13 @@ import {
   sessionActor,
 } from './session-guard'
 import { logger } from './logger'
+import { disableUser } from './idp'
 import { integrationFetch } from './http-integration-client'
 import {
   deleteWarpgateUserByName,
   warpgateConfigured,
 } from './warpgate-proxy'
 import { forceCloseCheckoutsForPrincipal } from './org-checkouts'
-
-const KANIDM_URL = (
-  process.env.ARCHGUARD_ID_URL || 'https://localhost:8443'
-).replace(/\/$/, '')
-const KANIDM_SA_TOKEN = process.env.ARCHGUARD_SA_TOKEN || ''
 
 /** Prefer internal compose service; host.docker.internal for agent-style */
 const ORCH_URL = (
@@ -34,67 +30,13 @@ export type OffboardStep = {
   detail?: string
 }
 
-async function kanidmSa(
-  method: string,
-  path: string,
-  body?: unknown,
-): Promise<{ status: number; text: string }> {
-  if (!KANIDM_SA_TOKEN) {
-    throw new Error('ARCHGUARD_SA_TOKEN ausente')
-  }
-  const res = await fetch(`${KANIDM_URL}${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${KANIDM_SA_TOKEN}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  })
-  return { status: res.status, text: await res.text() }
-}
-
 /**
- * Expire Kanidm person (soft disable — preferred over hard delete for audit).
- * Uses account_expire in the past so login is denied immediately.
+ * Disable the principal on the active IdP. Soft disable, never delete — the
+ * audit trail has to keep resolving the subject after offboarding.
  */
-async function expireKanidmPerson(username: string): Promise<OffboardStep> {
-  const id = encodeURIComponent(username)
-  try {
-    // Prefer name; Kanidm accepts spn/name on many installs
-    const exp = await kanidmSa(
-      'POST',
-      `/v1/person/${id}/_attr/account_expire`,
-      { values: ['1970-01-01T00:00:00+00:00'] },
-    )
-    if (exp.status >= 200 && exp.status < 300) {
-      return {
-        component: 'kanidm',
-        ok: true,
-        detail: 'account_expire set (login blocked)',
-      }
-    }
-    // Some versions use PUT on attr
-    const exp2 = await kanidmSa(
-      'PUT',
-      `/v1/person/${id}/_attr/account_expire`,
-      { values: ['1970-01-01T00:00:00+00:00'] },
-    )
-    if (exp2.status >= 200 && exp2.status < 300) {
-      return {
-        component: 'kanidm',
-        ok: true,
-        detail: 'account_expire set (PUT)',
-      }
-    }
-    return {
-      component: 'kanidm',
-      ok: false,
-      detail: `expire HTTP ${exp.status}: ${exp.text.slice(0, 180)}`,
-    }
-  } catch (e) {
-    return { component: 'kanidm', ok: false, detail: (e as Error).message }
-  }
+async function disableIdpPrincipal(username: string): Promise<OffboardStep> {
+  const step = await disableUser(username)
+  return { component: 'idp', ok: step.ok, detail: step.detail }
 }
 
 async function callOrchestrationRevoke(
@@ -184,7 +126,7 @@ export const revokePersonAccessFn = createServerFn({ method: 'POST' })
     }
 
     // Always enforce IdP block even if orch is mock-only
-    steps.push(await expireKanidmPerson(username))
+    steps.push(await disableIdpPrincipal(username))
 
     // ADR-013 A1: close any open org-account checkouts for this principal
     try {

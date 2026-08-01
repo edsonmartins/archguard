@@ -10,6 +10,7 @@ import { z } from 'zod'
 import { encryptSession, decryptSession } from './session'
 import { verifyIdToken } from './jwt'
 import { logger } from './logger'
+import { normalizeGroupNames } from './idp/groups'
 import { enforceRateLimit } from './rate-limit'
 import { derivePermissions, type Permission } from '../lib/auth/permissions'
 
@@ -276,9 +277,9 @@ export const loginCallbackFn = createServerFn({ method: 'POST' })
 
 // Normalize Kanidm group names: strip @domain suffix and filter out UUIDs
 export function normalizeGroups(rawGroups: string[]): string[] {
-  return rawGroups
-    .filter((g) => !g.match(/^[0-9a-f]{8}-[0-9a-f]{4}-/)) // Remove UUIDs
-    .map((g) => g.replace(/@.*$/, '')) // Strip @domain suffix
+  // Kanidm sends `name@domain`; ArchGuard sends `<org>/<name>`. Both shapes are
+  // reduced to the bare group name (audit 2026-08-01).
+  return normalizeGroupNames(rawGroups)
 }
 
 // Session creation from client-side token exchange (used by signinCallback flow)

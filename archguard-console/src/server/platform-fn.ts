@@ -30,7 +30,7 @@ import {
   mentorsAxisMode,
 } from './mentors-axis-proxy'
 import { listSites, sitesBackend } from './sites'
-import { kanidmAdminConfigured } from './kanidm-admin'
+import { identityAdminConfigured, idpKind } from './idp'
 import { pingDb } from './db'
 
 export type PlatformServiceStatus = 'ok' | 'degraded' | 'error' | 'unreachable' | 'unconfigured'
@@ -379,7 +379,7 @@ function consoleService(): PlatformService {
     name: 'ArchGuard Console',
     group: 'control_plane',
     status: 'ok',
-    detail: `NODE_ENV=${process.env.NODE_ENV || 'undefined'}; lab=${process.env.ARCHGATE_LAB || '0'}; kanidm_sa=${kanidmAdminConfigured() ? 'yes' : 'no'}`,
+    detail: `NODE_ENV=${process.env.NODE_ENV || 'undefined'}; lab=${process.env.ARCHGATE_LAB || '0'}; idp=${idpKind()} sa=${identityAdminConfigured() ? 'yes' : 'no'}`,
     endpoint: envEndpoint(
       'CONSOLE_PUBLIC_URL',
       'https://console.archgate.com.br',

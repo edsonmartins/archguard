@@ -20,6 +20,7 @@ import { setCookie } from '@tanstack/react-start/server'
 import { z } from 'zod'
 import { encryptSession } from './session'
 import { logger } from './logger'
+import { normalizeGroupNames } from './idp/groups'
 import { derivePermissions, type Permission } from '../lib/auth/permissions'
 import type { SessionData } from './auth'
 
@@ -49,9 +50,7 @@ const inputSchema = z.object({
 })
 
 function normalizeGroups(raw: string[]): string[] {
-  return raw
-    .filter((g) => !g.match(/^[0-9a-f]{8}-[0-9a-f]{4}-/))
-    .map((g) => g.replace(/@.*$/, ''))
+  return normalizeGroupNames(raw)
 }
 
 interface KanidmAuthState {

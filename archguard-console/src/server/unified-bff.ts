@@ -1,6 +1,7 @@
 // UnifiedUI BFF — contracts in documentos/runbooks/unified-ui-bff-contracts.md
 // REST handlers for SPA operator catalog (no admin tokens to browser).
 
+import { canonicalTenantKey } from './idp/groups'
 import { listSites } from './sites'
 import { listWarpgateTargets } from './warpgate-proxy'
 import {
@@ -64,8 +65,8 @@ export async function listUnifiedConnections(
   }
 
   const isAdmin = sessionPermissions(session).includes('system:admin')
-  /** Normalize tenant_rio_quality ↔ tenant-rio-quality (Kanidm vs Warpgate roles). */
-  const norm = (g: string) => g.replace(/@.*$/, '').replace(/-/g, '_')
+  /** tenant_rio_quality ↔ tenant-rio-quality ↔ archgate/tenant_rio_quality. */
+  const norm = canonicalTenantKey
   const groups = new Set((session.groups || []).map(norm))
 
   for (const site of sites) {

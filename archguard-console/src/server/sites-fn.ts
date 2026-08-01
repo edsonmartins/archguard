@@ -23,7 +23,7 @@ import {
   requireSession,
   sessionActor,
 } from './session-guard'
-import { ensureTenantGroup } from './kanidm-admin'
+import { ensureTenantGroup } from './idp'
 import { sitesBackend } from './sites'
 
 const stackMetaSchema = z

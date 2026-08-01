@@ -15,7 +15,7 @@ import {
   requireSession,
   sessionActor,
 } from './session-guard'
-import { ensureTenantGroup, kanidmAdminConfigured } from './kanidm-admin'
+import { ensureTenantGroup, identityAdminConfigured } from './idp'
 import { ensureRole, warpgateConfigured } from './warpgate-proxy'
 
 export type OrchestrationStep = {
@@ -36,7 +36,7 @@ export const getMentorsAxisStatusFn = createServerFn({ method: 'GET' }).handler(
       tenant_id: info.tenant_id,
       auth: info.auth,
       endpoints: info.endpoints,
-      kanidm_ensure_groups: kanidmAdminConfigured(),
+      kanidm_ensure_groups: identityAdminConfigured(),
       warpgate_ensure_roles: warpgateConfigured(),
       orchestration: [
         'site_upsert',
