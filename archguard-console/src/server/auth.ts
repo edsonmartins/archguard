@@ -183,7 +183,13 @@ export async function sessionFromTokens(
         (claims.name as string) ||
         'unknown',
       email: (claims.email as string) || '',
+      // `name` means opposite things depending on the source: in an ArchGuard
+      // JWT it is the username and the label lives in `displayName`, while in
+      // OIDC userinfo `name` IS the label and the username is
+      // `preferred_username`. Read the explicit label first so the UI does not
+      // fall back to showing the login handle.
       displayName:
+        (claims.displayName as string) ||
         (claims.name as string) ||
         (claims.preferred_username as string) ||
         'User',
