@@ -4,6 +4,8 @@ import { timingSafeEqual } from 'node:crypto'
 import type { SessionData } from './auth'
 import { requireUnifiedSession } from './unified-bff'
 import { logger } from './logger'
+import { discover } from './idp/discovery'
+import { normalizeGroupNames } from './idp/groups'
 
 /**
  * Lab bearer (smokes / offline dev). Fail-closed by design:
@@ -17,6 +19,8 @@ import { logger } from './logger'
  * Token format: `lab-<username>:<ARCHGATE_CONNECT_LAB_TOKEN>`
  */
 const LAB_GROUPS_DEFAULT = 'archguard_users'
+const CONNECT_CLIENT_ID =
+  process.env.CONNECT_OIDC_CLIENT_ID || 'archgate-connect'
 
 function labEnabled(): boolean {
   return process.env.ARCHGATE_CONNECT_LAB === '1'
@@ -77,7 +81,7 @@ export function labSession(token: string): SessionData | null {
 /**
  * Session for Connect CLI / desktop:
  * 1) cookie archguard_session (browser / test-login)
- * 2) Bearer OIDC access token → Kanidm userinfo
+ * 2) Bearer OIDC access token → IdP userinfo (endpoint from discovery)
  * 3) Bearer lab-<user>:<secret> when the lab path is explicitly configured
  */
 export async function resolveOperatorSession(
@@ -98,11 +102,14 @@ export async function resolveOperatorSession(
   // A `lab-` bearer never falls through to the IdP — it is not an OIDC token.
   if (token.startsWith('lab-')) throw new Error('Unauthorized')
 
-  const issuer =
-    process.env.CONNECT_OIDC_ISSUER ||
-    process.env.OIDC_ISSUER_BASE ||
-    'https://id.archgate.com.br/oauth2/openid/archgate-connect'
-  const userinfoURL = `${issuer.replace(/\/$/, '')}/userinfo`
+  // The userinfo path differs per IdP (`<issuer>/userinfo` on Kanidm,
+  // `/api/userinfo` on ArchGuard), so take it from discovery instead of
+  // building it by hand.
+  const explicitBase =
+    process.env.CONNECT_OIDC_ISSUER || process.env.OIDC_ISSUER_BASE || undefined
+  const doc = await discover(CONNECT_CLIENT_ID, explicitBase)
+  const userinfoURL =
+    doc.userinfo_endpoint || `${doc.issuer.replace(/\/$/, '')}/userinfo`
   const res = await fetch(userinfoURL, {
     headers: { Authorization: `Bearer ${token}` },
   })
@@ -117,17 +124,19 @@ export async function resolveOperatorSession(
     groups?: string[]
   }
   const username = ui.preferred_username || ui.name || ui.email || 'operator'
-  const groups = Array.isArray(ui.groups) ? ui.groups : []
+  // Kanidm sends name@domain, ArchGuard sends <org>/name — normalize once here
+  // so every consumer downstream compares bare group names.
+  const groups = normalizeGroupNames(ui.groups)
   return {
     isAuthenticated: true,
-    isAdmin: groups.some((g) => String(g).includes('archguard_super_admins')),
+    isAdmin: groups.includes('archguard_super_admins'),
     user: {
       id: ui.sub || username,
       name: username,
       email: ui.email || '',
       displayName: ui.name || username,
     },
-    groups: groups.map(String),
+    groups,
     permissions: [],
     expiresAt: Date.now() + 60 * 60 * 1000,
   } as SessionData
