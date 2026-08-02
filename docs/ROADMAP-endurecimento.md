@@ -21,7 +21,8 @@ não spec nova.
 | Item | Ação | Dono | Esf. | Risco | Impacto | Referência |
 |---|---|---|---|---|---|---|
 | 0.1 | ✅ **FEITO (2026-08-02)** — senha root da VPS rotacionada. *(Recomendado a seguir: SSH chave-only, `PasswordAuthentication no`.)* | operador | S | baixo | alto | `docs/produto/02` §5 |
-| 0.2 | **Ativar o perfil conforme + custódia OpenBao no piloto** (sair do keystore dev) | devops | M | médio (unseal/migração) | alto | 010 (código pronto); `docs/produto/02` §3 |
+| 0.2 | ✅ **JÁ ATIVO (verificado 2026-08-02)** — o piloto roda perfil conforme + **custódia OpenBao** (VAULT_ADDR/TOKEN no env, OpenBao unsealed; `vault != nil`). O "dev" na Saúde era **bug de display** (string fixa), corrigido (commit b665b1a2). ⚠️ **Follow-up urgente:** rotacionar o VAULT_TOKEN (vazou em diagnóstico — ver 0.2b). | devops | M | — | alto | 010; `docs/produto/02` §3 |
+| 0.2b | ⚠️ **Rotacionar o token do OpenBao** (o VAULT_TOKEN foi exposto num diagnóstico). Revogar o antigo + emitir novo (`token create -policy=archguard`), atualizar o env do core, restart. | operador/devops | S | baixo | alto | `30-provision-openbao.sh` |
 | 0.3 | ✅ **FEITO (2026-08-02)** — ativos de teste e grupo `DBAs` removidos do piloto (built-in). | operador/repo | S | baixo | baixo | — |
 
 ## Fase 1 — Operabilidade (semanas) · **pacote 010** (itens `[ ]`)
