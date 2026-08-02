@@ -304,6 +304,16 @@ export function createGroupMembership(payload) {
   return cpRequest("POST", "/group-memberships", {body: payload});
 }
 
+/** Catálogo de grupos de acesso do tenant (nome↔id). */
+export function getAccessGroups() {
+  return cpRequest("GET", "/access-groups");
+}
+
+/** Nomeia um grupo de acesso: {name, display_name?}. */
+export function createAccessGroup(payload) {
+  return cpRequest("POST", "/access-groups", {body: payload});
+}
+
 // --- Saúde dos subsistemas (T-013) ---
 
 /** Saúde do plano de controle (PDP, cofre, auditoria) — agregado honesto. */

@@ -835,7 +835,8 @@
     "Group": "Group",
     "Group id (uuid)": "Group id (uuid)",
     "Created": "Created",
-    "Operation failed": "Operation failed"
+    "Operation failed": "Operation failed",
+    "Create group": "Create group"
   },
   "group": {
     "Edit Group": "Edit Group",

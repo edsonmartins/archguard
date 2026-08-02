@@ -60,6 +60,9 @@ func MountCapabilities() error {
 	if err := mountGroupMemberships(p, f); err != nil {
 		return fmt.Errorf("montar group-memberships: %w", err)
 	}
+	if err := mountAccessGroups(p, f); err != nil {
+		return fmt.Errorf("montar access-groups: %w", err)
+	}
 	if err := mountHealth(p, f); err != nil {
 		return fmt.Errorf("montar health: %w", err)
 	}
@@ -244,6 +247,22 @@ func mountGroupMemberships(p *Pipeline, f *Factory) error {
 	}
 	handler := apihttp.NewGroupMembershipHandler(postgres.NewGroupMembershipCatalog(f.Pool()))
 	RegisterAPIHandler("/group-memberships", p.Require(opID, apihttp.RequireAdmin(handler)))
+	return nil
+}
+
+// mountAccessGroups mounts GET/POST /api/v1/access-groups (pacote 007 M4, D1 catálogo — o
+// catálogo de grupos de acesso: nome↔id). Operação de ADMINISTRAÇÃO: L1 + RequireAdmin.
+func mountAccessGroups(p *Pipeline, f *Factory) error {
+	const opID = "access.groups"
+	if err := p.RegisterOperation(domain.Operation{
+		ID:          opID,
+		Level:       domain.L1,
+		Description: "catálogo de grupos de acesso do tenant ativo (administração)",
+	}); err != nil {
+		return err
+	}
+	handler := apihttp.NewAccessGroupHandler(postgres.NewAccessGroupCatalog(f.Pool()))
+	RegisterAPIHandler("/access-groups", p.Require(opID, apihttp.RequireAdmin(handler)))
 	return nil
 }
 

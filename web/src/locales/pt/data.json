@@ -834,7 +834,8 @@
     "Group": "Grupo",
     "Group id (uuid)": "ID do grupo (uuid)",
     "Created": "Criado",
-    "Operation failed": "Operação falhou"
+    "Operation failed": "Operação falhou",
+    "Create group": "Criar grupo"
   },
   "group": {
     "Edit Group": "Editar Grupo",
