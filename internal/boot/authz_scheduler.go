@@ -32,6 +32,10 @@ const (
 	// authzMaxDrainsPerTick caps how many batches one tick drains, so a large backlog
 	// never monopolizes the goroutine (the remainder drains on the next tick).
 	authzMaxDrainsPerTick = 10
+	// authzReconcileInterval is how often the reconciler heals the projection against the
+	// source of truth. Longer than publishing — it is a safety net (drift + stale access
+	// left by bypass paths, T-030c), not the hot path.
+	authzReconcileInterval = 5 * time.Minute
 )
 
 // StartAuthzPublisher starts the background authorization-projection publisher (M4,
@@ -72,4 +76,35 @@ func drainAuthzOutbox(ctx context.Context, pub *postgres.TuplePublisher, pool *p
 			return // outbox drenado
 		}
 	}
+}
+
+// StartAuthzReconciler starts the background authorization-projection reconciler (M4 Fase F,
+// T-031): every interval it rebuilds each tenant's expected tuple set from the source of
+// truth and removes stale (extra) tuples from the projection, healing drift and the stale
+// access left by paths that bypass the per-mutation projection (T-030c). Missing tuples are
+// only ALERTED, never written (amplifying correction is never automatic). Errors are logged,
+// never fatal. Returns a stop function.
+func StartAuthzReconciler(pool *pgxpool.Pool) func() {
+	ctx, cancel := context.WithCancel(context.Background())
+	svc := postgres.NewReconcileService(pool)
+	go func() {
+		ticker := time.NewTicker(authzReconcileInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				removed, missing, err := svc.ReconcileAll(ctx)
+				if err != nil {
+					logs.Warning("authz reconciler: reconciliação falhou: %v", err)
+					continue
+				}
+				if removed > 0 || missing > 0 {
+					logs.Info("authz reconciler: %d tupla(s) obsoleta(s) removida(s), %d ausente(s) alertada(s)", removed, missing)
+				}
+			}
+		}
+	}()
+	return cancel
 }

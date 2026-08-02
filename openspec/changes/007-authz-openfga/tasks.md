@@ -104,8 +104,13 @@ ArchGuard) / ADR-0005. Estratégia: fatia vertical (asset+grant→projeção→P
       UPDATE em bloco) BYPASSAM `SaveRevocation`/`SaveSuspension` ⇒ a projeção da Fase E NÃO dispara
       no deprovision/suspend em massa de uma identidade. Cobrir pelo reconciler (Fase F: expected-set
       exclui membership revogado/suspenso) — é a rede de segurança correta para esses bypasses.
-- [ ] **T-031** Fase F — Reconciler: agregador "expected set" por tenant (também usado por
-      `AuthzBootstrap.RebuildTenant`) + scheduler do `AuthzReconciler` (correção assimétrica, RFC-0004 §4).
+- [x] **T-031** Fase F — Reconciler: agregador `tenantExpectedTuples` (parent de grupos/assets,
+      owner, operator/auditor, has_active_grant) construído da fonte da verdade **excluindo
+      membership revogado/suspenso** (JOIN `m.status='active'`; predicado de tenant explícito, INV-5)
+      + `ReconcileService` (itera orgs, expected via TenantTx, `AuthzReconciler.Reconcile` no pool:
+      remove extras, alerta ausentes) + `StartAuthzReconciler` (scheduler 5min no boot). Teste de
+      integração: tupla obsoleta de membership REVOGADO removida, a de ativo preservada (**fecha a
+      rede de segurança do T-030c**). build/vet/testes/invariantes/contrato/gofmt verdes.
 - [x] **T-032** (008 T-012) — Revisão de acesso: endpoint `GET /api/v1/access/review?asset=X`
       (`AccessReviewHandler` sobre `PostgresPDP.ReviewAsset`; fail-closed 503) + tela
       `web/src/AccessReviewPage.js` (seletor de ativo → tabela de memberships com ORIGEM

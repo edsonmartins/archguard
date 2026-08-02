@@ -145,6 +145,10 @@ func main() {
 	// authz_tuple so the PDP decides on real data. Errors are logged, never fatal.
 	defer boot.StartAuthzPublisher(boot.Pool())()
 
+	// Authorization-projection reconciler (pacote 007 M4, T-031): periodically heals the
+	// projection against the source of truth (removes stale tuples, T-030c safety net).
+	defer boot.StartAuthzReconciler(boot.Pool())()
+
 	object.InitDefaultStorageProvider()
 	object.InitLogProviders()
 	object.InitLdapAutoSynchronizer()
