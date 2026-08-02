@@ -184,3 +184,8 @@ deps-check/sbom/build` + `make conformance`) contra PG 15 real.
   do Guacamole. **Conformidade** como gate de release (T-016/017).
 - **Sem dependência nova**. Impls in-process = seam do real (pacote 010); wiring dos endpoints nos
   controllers + demonstração em homologação = deploy (archguard-devops) + pacote 008.
+- **Montagem dos endpoints v1 ADIADA (ADR-0023, 2026-08-02).** Os handlers existem/testados mas não
+  são montados; o Casdoor legado serve OAuth (`tokenFormat: JWT` = name+groups, o que o ArchGate
+  consome hoje). Montar exige estender a custódia (keyset cifrado, INV-7), bridge
+  Application→ClientRegistry e coexistência `/api/v1/oidc/*` — pacote próprio. Design completo e
+  gatilho de revisão em `docs/adr/ADR-0023-oidc-v1-montagem-adiada.md`.
