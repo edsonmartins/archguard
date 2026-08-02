@@ -20,9 +20,9 @@ não spec nova.
 
 | Item | Ação | Dono | Esf. | Risco | Impacto | Referência |
 |---|---|---|---|---|---|---|
-| 0.1 | **Rotacionar a senha root da VPS** + qualquer credencial que tenha aparecido em canal não-seguro | operador | S | baixo | alto | `docs/produto/02` §5 |
+| 0.1 | ✅ **FEITO (2026-08-02)** — senha root da VPS rotacionada. *(Recomendado a seguir: SSH chave-only, `PasswordAuthentication no`.)* | operador | S | baixo | alto | `docs/produto/02` §5 |
 | 0.2 | **Ativar o perfil conforme + custódia OpenBao no piloto** (sair do keystore dev) | devops | M | médio (unseal/migração) | alto | 010 (código pronto); `docs/produto/02` §3 |
-| 0.3 | **Limpar dados de teste** no piloto (assets `ui-test-*`/`pipeline-test`/`d2-*`, grupo `DBAs`) | operador/repo | S | baixo | baixo | — |
+| 0.3 | ✅ **FEITO (2026-08-02)** — ativos de teste e grupo `DBAs` removidos do piloto (built-in). | operador/repo | S | baixo | baixo | — |
 
 ## Fase 1 — Operabilidade (semanas) · **pacote 010** (itens `[ ]`)
 
