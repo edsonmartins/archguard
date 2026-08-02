@@ -116,7 +116,9 @@ func (s *resolveState) applyRewrite(object, relation, user string, rw rewrite) (
 					return false, "", err
 				}
 				if ok {
-					return true, "via " + sub.Ref, nil
+					// Cláusula completa como o caso direto ("operator direto"), para compor
+					// bem quando o rwComputed prefixa "<relation> via " (evita "via via").
+					return true, relation + " via " + sub.Ref, nil
 				}
 				continue
 			}

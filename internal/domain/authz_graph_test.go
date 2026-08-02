@@ -92,7 +92,11 @@ func TestEvaluateGroupMemberUserset(t *testing.T) {
 	g := NewMemoryGraph()
 	g.Add("asset:a1", RelOperator, "group:dba#member")
 	g.Add("group:dba", RelMember, "membership:m1")
-	mustAllow(t, g, "asset:a1", RelCanOpenSession, "membership:m1", at(t))
+	why := mustAllow(t, g, "asset:a1", RelCanOpenSession, "membership:m1", at(t))
+	// A justificativa compõe as cláusulas sem duplicar "via" (regressão do "via via").
+	if strings.Contains(why, "via via") {
+		t.Errorf("justificativa duplicou \"via\": %q", why)
+	}
 	mustDeny(t, g, "asset:a1", RelCanOpenSession, "membership:naomembro", at(t))
 }
 
