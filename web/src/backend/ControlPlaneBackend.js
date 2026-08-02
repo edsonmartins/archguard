@@ -277,6 +277,33 @@ export function getAssets() {
   return cpRequest("GET", "/assets");
 }
 
+// --- Gestão de acesso: ativos, atribuições e vínculos de grupo (M4 D1/D2) ---
+
+/** Registra um ativo no tenant ativo (kind + name obrigatórios). */
+export function createAsset(payload) {
+  return cpRequest("POST", "/assets", {body: payload});
+}
+
+/** Atribuições granulares (subject operator/auditor sobre asset/asset_group). */
+export function getAccessAssignments() {
+  return cpRequest("GET", "/access-assignments");
+}
+
+/** Cria uma atribuição: {subject_type, subject_id, relation, object_type, object_id}. */
+export function createAccessAssignment(payload) {
+  return cpRequest("POST", "/access-assignments", {body: payload});
+}
+
+/** Vínculos membership↔grupo de acesso do tenant ativo. */
+export function getGroupMemberships() {
+  return cpRequest("GET", "/group-memberships");
+}
+
+/** Vincula um membership a um grupo: {group_id, membership_id}. */
+export function createGroupMembership(payload) {
+  return cpRequest("POST", "/group-memberships", {body: payload});
+}
+
 // --- Saúde dos subsistemas (T-013) ---
 
 /** Saúde do plano de controle (PDP, cofre, auditoria) — agregado honesto. */

@@ -821,7 +821,21 @@
     "Direct": "Direct",
     "Inherited": "Inherited",
     "Grant": "Grant",
-    "Membership": "Membership"
+    "Membership": "Membership",
+    "Access management": "Access management",
+    "Assets": "Assets",
+    "Access assignments": "Access assignments",
+    "Group bindings": "Group bindings",
+    "Register asset": "Register asset",
+    "Grant access": "Grant access",
+    "Bind to group": "Bind to group",
+    "Kind": "Kind",
+    "Subject": "Subject",
+    "Relation": "Relation",
+    "Group": "Group",
+    "Group id (uuid)": "Group id (uuid)",
+    "Created": "Created",
+    "Operation failed": "Operation failed"
   },
   "group": {
     "Edit Group": "Edit Group",

@@ -820,7 +820,21 @@
     "Direct": "Direto",
     "Inherited": "Herdado",
     "Grant": "Concessão",
-    "Membership": "Membership"
+    "Membership": "Membership",
+    "Access management": "Gestão de acesso",
+    "Assets": "Ativos",
+    "Access assignments": "Atribuições",
+    "Group bindings": "Vínculos de grupo",
+    "Register asset": "Registrar ativo",
+    "Grant access": "Conceder acesso",
+    "Bind to group": "Vincular ao grupo",
+    "Kind": "Tipo",
+    "Subject": "Sujeito",
+    "Relation": "Relação",
+    "Group": "Grupo",
+    "Group id (uuid)": "ID do grupo (uuid)",
+    "Created": "Criado",
+    "Operation failed": "Operação falhou"
   },
   "group": {
     "Edit Group": "Editar Grupo",
