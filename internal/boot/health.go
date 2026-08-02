@@ -53,7 +53,14 @@ func (h healthChecker) database(ctx context.Context) apihttp.Subsystem {
 
 func (h healthChecker) custody() apihttp.Subsystem {
 	if h.factory != nil && h.factory.CustodyAvailable() {
-		return apihttp.Subsystem{Name: "custody", Status: apihttp.StatusOK, Detail: "keystore local selado (dev)"}
+		// O detalhe deve refletir o backend REAL, não uma string fixa: em perfil conforme a
+		// custódia é o OpenBao (cofre); só o perfil dev usa o keystore local selado. Um produto
+		// de segurança não pode mentir sobre onde suas chaves vivem.
+		detail := "OpenBao (cofre)"
+		if deploy.Active().IsDev() {
+			detail = "keystore local selado (dev)"
+		}
+		return apihttp.Subsystem{Name: "custody", Status: apihttp.StatusOK, Detail: detail}
 	}
 	return apihttp.Subsystem{Name: "custody", Status: apihttp.StatusUnavailable, Detail: "cofre (OpenBao) não ligado no perfil ativo"}
 }
