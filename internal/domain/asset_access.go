@@ -30,7 +30,8 @@ import (
 type AssetAccessAssignment struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
-	SubjectID      uuid.UUID  // a membership (same tenant)
+	SubjectType    ObjectType // membership | group (D1)
+	SubjectID      uuid.UUID  // a membership or an access group (same tenant)
 	Relation       string     // operator | auditor
 	ObjectType     ObjectType // asset | asset_group
 	ObjectID       uuid.UUID  // same tenant
@@ -39,12 +40,15 @@ type AssetAccessAssignment struct {
 // ErrInvalidAssetAccess is returned when the assignment is malformed.
 var ErrInvalidAssetAccess = errors.New("asset_access: dados obrigatórios ausentes ou inválidos")
 
-// NewAssetAccessAssignment builds a validated assignment (UUIDv7 id). The relation
-// must be assignable (operator/auditor — can_open_* are derived, never assigned) and
-// the object must be an asset or an asset_group.
-func NewAssetAccessAssignment(orgID, subjectID uuid.UUID, relation string, objectType ObjectType, objectID uuid.UUID) (AssetAccessAssignment, error) {
+// NewAssetAccessAssignment builds a validated assignment (UUIDv7 id). The subject is a
+// membership or an access group (D1); the relation must be assignable (operator/auditor —
+// can_open_* are derived, never assigned); the object must be an asset or an asset_group.
+func NewAssetAccessAssignment(orgID uuid.UUID, subjectType ObjectType, subjectID uuid.UUID, relation string, objectType ObjectType, objectID uuid.UUID) (AssetAccessAssignment, error) {
 	if orgID == uuid.Nil || subjectID == uuid.Nil || objectID == uuid.Nil {
 		return AssetAccessAssignment{}, fmt.Errorf("%w: organização, sujeito e objeto", ErrInvalidAssetAccess)
+	}
+	if subjectType != TypeMembership && subjectType != TypeGroup {
+		return AssetAccessAssignment{}, fmt.Errorf("%w: sujeito %q deve ser membership ou group", ErrInvalidAssetAccess, subjectType)
 	}
 	if relation != RelOperator && relation != RelAuditor {
 		return AssetAccessAssignment{}, fmt.Errorf("%w: relação %q não é atribuível (use operator/auditor)", ErrInvalidAssetAccess, relation)
@@ -59,6 +63,7 @@ func NewAssetAccessAssignment(orgID, subjectID uuid.UUID, relation string, objec
 	return AssetAccessAssignment{
 		ID:             id,
 		OrganizationID: orgID,
+		SubjectType:    subjectType,
 		SubjectID:      subjectID,
 		Relation:       relation,
 		ObjectType:     objectType,
@@ -66,8 +71,13 @@ func NewAssetAccessAssignment(orgID, subjectID uuid.UUID, relation string, objec
 	}, nil
 }
 
-// SubjectRef is the tenant-qualified graph ref of the subject membership.
+// SubjectRef is the tenant-qualified graph ref of the subject: a membership ref, or the
+// `group:<id>#member` userset for a group subject (D1) — through which a group's members
+// inherit the assignment.
 func (a AssetAccessAssignment) SubjectRef() string {
+	if a.SubjectType == TypeGroup {
+		return Qualify(a.OrganizationID, TypeGroup, a.SubjectID.String()) + "#member"
+	}
 	return Qualify(a.OrganizationID, TypeMembership, a.SubjectID.String())
 }
 

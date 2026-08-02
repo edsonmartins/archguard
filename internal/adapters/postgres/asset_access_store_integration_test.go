@@ -45,7 +45,7 @@ func TestAssetAccessStoreCreateAndProject(t *testing.T) {
 		t.Fatalf("NewTenantScope: %v", err)
 	}
 	subj, obj := uuid.New(), uuid.New()
-	assignment, err := domain.NewAssetAccessAssignment(orgID, subj, domain.RelOperator, domain.TypeAsset, obj)
+	assignment, err := domain.NewAssetAccessAssignment(orgID, domain.TypeMembership, subj, domain.RelOperator, domain.TypeAsset, obj)
 	if err != nil {
 		t.Fatalf("NewAssetAccessAssignment: %v", err)
 	}

@@ -57,6 +57,9 @@ func MountCapabilities() error {
 	if err := mountAssetAccess(p, f); err != nil {
 		return fmt.Errorf("montar access-assignments: %w", err)
 	}
+	if err := mountGroupMemberships(p, f); err != nil {
+		return fmt.Errorf("montar group-memberships: %w", err)
+	}
 	if err := mountHealth(p, f); err != nil {
 		return fmt.Errorf("montar health: %w", err)
 	}
@@ -224,6 +227,23 @@ func mountAssetAccess(p *Pipeline, f *Factory) error {
 	}
 	handler := apihttp.NewAssetAccessHandler(postgres.NewAssetAccessCatalog(f.Pool()))
 	RegisterAPIHandler("/access-assignments", p.Require(opID, apihttp.RequireAdmin(handler)))
+	return nil
+}
+
+// mountGroupMemberships mounts GET/POST /api/v1/group-memberships (pacote 007 M4, T-029 D1
+// — vínculo membership↔grupo de acesso). Operação de ADMINISTRAÇÃO: L1 + RequireAdmin. A
+// criação enfileira a projeção `member` na mesma tx (o membro herda o acesso do grupo).
+func mountGroupMemberships(p *Pipeline, f *Factory) error {
+	const opID = "group.memberships"
+	if err := p.RegisterOperation(domain.Operation{
+		ID:          opID,
+		Level:       domain.L1,
+		Description: "vínculos membership↔grupo de acesso do tenant ativo (administração)",
+	}); err != nil {
+		return err
+	}
+	handler := apihttp.NewGroupMembershipHandler(postgres.NewGroupMembershipCatalog(f.Pool()))
+	RegisterAPIHandler("/group-memberships", p.Require(opID, apihttp.RequireAdmin(handler)))
 	return nil
 }
 

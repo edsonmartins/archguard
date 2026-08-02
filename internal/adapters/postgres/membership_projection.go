@@ -55,7 +55,7 @@ func membershipAccessTupleUpdates(ctx context.Context, tx pgx.Tx, orgID, members
 	var assignments []asg
 	rows, err := tx.Query(ctx,
 		`SELECT relation, object_type, object_id::text FROM asset_access_assignment
-		 WHERE organization_id = $1 AND subject_id = $2`,
+		 WHERE organization_id = $1 AND subject_type = 'membership' AND subject_id = $2`,
 		orgID.String(), membershipID.String())
 	if err != nil {
 		return nil, fmt.Errorf("postgres: leitura de atribuições do membership falhou: %w", err)
@@ -73,12 +73,27 @@ func membershipAccessTupleUpdates(ctx context.Context, tx pgx.Tx, orgID, members
 		return nil, err
 	}
 
+	// Collect this membership's access-group bindings (`member` edges).
+	groupIDs, err := scanIDs(ctx, tx,
+		`SELECT group_id::text FROM group_membership WHERE organization_id = $1 AND membership_id = $2`,
+		orgID.String(), membershipID.String())
+	if err != nil {
+		return nil, fmt.Errorf("postgres: leitura de grupos do membership falhou: %w", err)
+	}
+
 	var updates []domain.TupleUpdate
 	for _, id := range assetIDs {
 		updates = append(updates, domain.TupleUpdate{Op: op, Tuple: domain.RelationTuple{
 			User:     subjectRef,
 			Relation: domain.RelOwner,
 			Object:   domain.Qualify(orgID, domain.TypeAsset, id),
+		}})
+	}
+	for _, id := range groupIDs {
+		updates = append(updates, domain.TupleUpdate{Op: op, Tuple: domain.RelationTuple{
+			User:     subjectRef,
+			Relation: domain.RelMember,
+			Object:   domain.Qualify(orgID, domain.TypeGroup, id),
 		}})
 	}
 	for _, a := range assignments {

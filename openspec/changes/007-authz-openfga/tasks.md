@@ -79,7 +79,7 @@ ArchGuard) / ADR-0005. Estratégia: fatia vertical (asset+grant→projeção→P
       **Marco: com A+B+C, o PDP passa a decidir com dados reais.** build/vet/testes/invariantes/gofmt
       verdes. Validar no piloto após deploy (criar asset via `POST /api/v1/assets` → em ~5s a tupla
       aparece; `/access/effective` decide).
-- [~] **T-029** Fase D — atribuição granular de acesso. **Decisão:** o modelo já suporta
+- [x] **T-029** Fase D — atribuição granular de acesso. **Decisão:** o modelo já suporta
       operator/auditor por tupla direta (com herança pelo `parent`), então a fonte da verdade é uma
       entidade de ATRIBUIÇÃO (não o access_policy node). **Feito (D2, subject=membership):** migração
       `0037` (asset_access_assignment, RLS por tenant, UNIQUE) + `domain.AssetAccessAssignment`
@@ -87,7 +87,13 @@ ArchGuard) / ADR-0005. Estratégia: fatia vertical (asset+grant→projeção→P
       `AssetAccessCatalog` (Create enfileira `ProjectRoleAssignment` na mesma tx) + CRUD
       `GET/POST /api/v1/access-assignments` (op `access.assignments` L1 + RequireAdmin). Testes de
       domínio + integração (Create→outbox `operator`). build/vet/testes/invariantes/gofmt verdes.
-      **Falta (D1):** group membership (subject=group, `ProjectGroupMembership`) + UI de atribuição.
+      **D1 FEITO (T-029 completa):** migração `0038` (tabela `group_membership` RLS + `asset_access_assignment`
+      aceita `subject_type='group'`) + `domain.GroupMembership` + `AssetAccessAssignment.SubjectType`
+      (SubjectRef vira o userset `group:<id>#member`) + `GroupMembershipStore`/catalog (Create/Delete
+      enfileiram `member`) + endpoint `GET/POST /api/v1/group-memberships` + Fase E (revoke limpa
+      `member`) + Fase F (agregador inclui `member` + operator-via-grupo, gateado). Cadeia
+      membership→member→group→operator→asset. Testes domínio + integração. gate verde.
+      **M4 100% — só a UI de atribuição (asset/access-assignment/group) fica como polimento de console.**
 - [x] **T-030** Fase E — Ciclo do membership: revoke/suspend ⇒ DELETE / reactivate/activate ⇒ WRITE
       das tuplas de acesso do membership (owner de assets + operator/auditor de atribuições), na mesma
       tx (`membership_projection.go`: `membershipAccessTupleUpdates`/`enqueueMembershipLifecycle`,

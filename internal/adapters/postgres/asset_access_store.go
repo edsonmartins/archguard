@@ -44,9 +44,9 @@ func (s *AssetAccessStore) Create(ctx context.Context, a domain.AssetAccessAssig
 	}
 	const q = `INSERT INTO asset_access_assignment
 	           (id, organization_id, subject_type, subject_id, relation, object_type, object_id)
-	           VALUES ($1, $2, 'membership', $3, $4, $5, $6)`
+	           VALUES ($1, $2, $3, $4, $5, $6, $7)`
 	if _, err := s.ttx.tx.Exec(ctx, q,
-		a.ID.String(), a.OrganizationID.String(), a.SubjectID.String(), a.Relation,
+		a.ID.String(), a.OrganizationID.String(), string(a.SubjectType), a.SubjectID.String(), a.Relation,
 		string(a.ObjectType), a.ObjectID.String()); err != nil {
 		return fmt.Errorf("postgres: criação de asset_access_assignment falhou: %w", err)
 	}
@@ -59,7 +59,7 @@ func (s *AssetAccessStore) Create(ctx context.Context, a domain.AssetAccessAssig
 
 // List returns the tenant's access assignments, newest first.
 func (s *AssetAccessStore) List(ctx context.Context) ([]domain.AssetAccessAssignment, error) {
-	const q = `SELECT id, organization_id, subject_id, relation, object_type, object_id
+	const q = `SELECT id, organization_id, subject_type, subject_id, relation, object_type, object_id
 	           FROM asset_access_assignment ORDER BY created_at DESC`
 	rows, err := s.ttx.tx.Query(ctx, q)
 	if err != nil {
@@ -69,12 +69,13 @@ func (s *AssetAccessStore) List(ctx context.Context) ([]domain.AssetAccessAssign
 	var out []domain.AssetAccessAssignment
 	for rows.Next() {
 		var a domain.AssetAccessAssignment
-		var idStr, orgStr, subjStr, objTypeStr, objStr string
-		if err := rows.Scan(&idStr, &orgStr, &subjStr, &a.Relation, &objTypeStr, &objStr); err != nil {
+		var idStr, orgStr, subjTypeStr, subjStr, objTypeStr, objStr string
+		if err := rows.Scan(&idStr, &orgStr, &subjTypeStr, &subjStr, &a.Relation, &objTypeStr, &objStr); err != nil {
 			return nil, fmt.Errorf("postgres: scan de asset_access falhou: %w", err)
 		}
 		a.ID = uuid.MustParse(idStr)
 		a.OrganizationID = uuid.MustParse(orgStr)
+		a.SubjectType = domain.ObjectType(subjTypeStr)
 		a.SubjectID = uuid.MustParse(subjStr)
 		a.ObjectType = domain.ObjectType(objTypeStr)
 		a.ObjectID = uuid.MustParse(objStr)

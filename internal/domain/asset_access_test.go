@@ -26,7 +26,7 @@ import (
 func TestNewAssetAccessAssignment(t *testing.T) {
 	org, subj, obj := uuid.New(), uuid.New(), uuid.New()
 
-	a, err := NewAssetAccessAssignment(org, subj, RelOperator, TypeAsset, obj)
+	a, err := NewAssetAccessAssignment(org, TypeMembership, subj, RelOperator, TypeAsset, obj)
 	if err != nil {
 		t.Fatalf("operator sobre asset deveria valer: %v", err)
 	}
@@ -41,15 +41,15 @@ func TestNewAssetAccessAssignment(t *testing.T) {
 	}
 
 	// Relação derivada não é atribuível.
-	if _, err := NewAssetAccessAssignment(org, subj, RelCanOpenSession, TypeAsset, obj); !errors.Is(err, ErrInvalidAssetAccess) {
+	if _, err := NewAssetAccessAssignment(org, TypeMembership, subj, RelCanOpenSession, TypeAsset, obj); !errors.Is(err, ErrInvalidAssetAccess) {
 		t.Error("can_open_session não deveria ser atribuível")
 	}
 	// Objeto inválido.
-	if _, err := NewAssetAccessAssignment(org, subj, RelOperator, TypeMembership, obj); !errors.Is(err, ErrInvalidAssetAccess) {
+	if _, err := NewAssetAccessAssignment(org, TypeMembership, subj, RelOperator, TypeMembership, obj); !errors.Is(err, ErrInvalidAssetAccess) {
 		t.Error("objeto membership não deveria valer (asset/asset_group)")
 	}
 	// Campos obrigatórios.
-	if _, err := NewAssetAccessAssignment(org, uuid.Nil, RelOperator, TypeAsset, obj); !errors.Is(err, ErrInvalidAssetAccess) {
+	if _, err := NewAssetAccessAssignment(org, TypeMembership, uuid.Nil, RelOperator, TypeAsset, obj); !errors.Is(err, ErrInvalidAssetAccess) {
 		t.Error("sujeito nulo deveria falhar")
 	}
 }

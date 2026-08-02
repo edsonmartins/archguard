@@ -44,18 +44,20 @@ func NewAssetAccessHandler(catalog AssetAccessCatalog) *AssetAccessHandler {
 }
 
 type accessAssignmentItem struct {
-	ID         string `json:"id"`
-	SubjectID  string `json:"subject_id"`
-	Relation   string `json:"relation"`
-	ObjectType string `json:"object_type"`
-	ObjectID   string `json:"object_id"`
+	ID          string `json:"id"`
+	SubjectType string `json:"subject_type"`
+	SubjectID   string `json:"subject_id"`
+	Relation    string `json:"relation"`
+	ObjectType  string `json:"object_type"`
+	ObjectID    string `json:"object_id"`
 }
 
 type createAssignmentBody struct {
-	SubjectID  string `json:"subject_id"`
-	Relation   string `json:"relation"`
-	ObjectType string `json:"object_type"`
-	ObjectID   string `json:"object_id"`
+	SubjectType string `json:"subject_type"` // "membership" (default) | "group"
+	SubjectID   string `json:"subject_id"`
+	Relation    string `json:"relation"`
+	ObjectType  string `json:"object_type"`
+	ObjectID    string `json:"object_id"`
 }
 
 func (h *AssetAccessHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -107,9 +109,13 @@ func (h *AssetAccessHandler) create(w http.ResponseWriter, r *http.Request, orgI
 		writeError(w, http.StatusBadRequest, "object_id inválido")
 		return
 	}
-	assignment, err := domain.NewAssetAccessAssignment(orgID, subjectID, body.Relation, domain.ObjectType(body.ObjectType), objectID)
+	subjectType := body.SubjectType
+	if subjectType == "" {
+		subjectType = string(domain.TypeMembership) // default: sujeito é um membership
+	}
+	assignment, err := domain.NewAssetAccessAssignment(orgID, domain.ObjectType(subjectType), subjectID, body.Relation, domain.ObjectType(body.ObjectType), objectID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "relação (operator/auditor) e objeto (asset/asset_group) são obrigatórios e válidos")
+		writeError(w, http.StatusBadRequest, "sujeito (membership/group), relação (operator/auditor) e objeto (asset/asset_group) são obrigatórios e válidos")
 		return
 	}
 	if err := h.catalog.CreateInTenant(r.Context(), orgID, assignment); err != nil {
@@ -121,10 +127,11 @@ func (h *AssetAccessHandler) create(w http.ResponseWriter, r *http.Request, orgI
 
 func toAssignmentItem(a domain.AssetAccessAssignment) accessAssignmentItem {
 	return accessAssignmentItem{
-		ID:         a.ID.String(),
-		SubjectID:  a.SubjectID.String(),
-		Relation:   a.Relation,
-		ObjectType: string(a.ObjectType),
-		ObjectID:   a.ObjectID.String(),
+		ID:          a.ID.String(),
+		SubjectType: string(a.SubjectType),
+		SubjectID:   a.SubjectID.String(),
+		Relation:    a.Relation,
+		ObjectType:  string(a.ObjectType),
+		ObjectID:    a.ObjectID.String(),
 	}
 }

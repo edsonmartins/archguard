@@ -84,17 +84,45 @@ func tenantExpectedTuples(ctx context.Context, ttx *TenantTx, orgID uuid.UUID) (
 		tuples = append(tuples, domain.RelationTuple{User: member(r.b), Relation: domain.RelOwner, Object: asset(r.a)})
 	}
 
-	// 4) operator/auditor from access assignments — only for ACTIVE subject memberships.
+	// 4) operator/auditor from MEMBERSHIP-subject assignments — only for ACTIVE memberships.
 	asgRows, err := collectQuads(ctx, tx,
 		`SELECT aa.subject_id::text, aa.relation, aa.object_type, aa.object_id::text
 		 FROM asset_access_assignment aa JOIN membership m ON m.id = aa.subject_id
-		 WHERE aa.organization_id = $1 AND m.organization_id = $1 AND m.status = 'active'`, org)
+		 WHERE aa.organization_id = $1 AND m.organization_id = $1
+		   AND aa.subject_type = 'membership' AND m.status = 'active'`, org)
 	if err != nil {
-		return nil, fmt.Errorf("expected: access assignments: %w", err)
+		return nil, fmt.Errorf("expected: access assignments (membership): %w", err)
 	}
 	for _, r := range asgRows {
 		obj := domain.Qualify(orgID, domain.ObjectType(r.c), r.d)
 		tuples = append(tuples, domain.RelationTuple{User: member(r.a), Relation: r.b, Object: obj})
+	}
+
+	// 4b) operator/auditor from GROUP-subject assignments (D1). The subject is the group
+	// userset `group:<id>#member`; it is NOT gated on membership status — the group's
+	// members are gated by their own `member` tuples (query 6, active-only).
+	grpAsgRows, err := collectQuads(ctx, tx,
+		`SELECT aa.subject_id::text, aa.relation, aa.object_type, aa.object_id::text
+		 FROM asset_access_assignment aa
+		 WHERE aa.organization_id = $1 AND aa.subject_type = 'group'`, org)
+	if err != nil {
+		return nil, fmt.Errorf("expected: access assignments (group): %w", err)
+	}
+	for _, r := range grpAsgRows {
+		obj := domain.Qualify(orgID, domain.ObjectType(r.c), r.d)
+		tuples = append(tuples, domain.RelationTuple{User: groupUserset(orgID, r.a), Relation: r.b, Object: obj})
+	}
+
+	// 6) `member` edges — only for ACTIVE memberships (a departed member leaves the group).
+	memRows, err := collectPairs(ctx, tx,
+		`SELECT gm.membership_id::text, gm.group_id::text
+		 FROM group_membership gm JOIN membership m ON m.id = gm.membership_id
+		 WHERE gm.organization_id = $1 AND m.organization_id = $1 AND m.status = 'active'`, org)
+	if err != nil {
+		return nil, fmt.Errorf("expected: group memberships: %w", err)
+	}
+	for _, r := range memRows {
+		tuples = append(tuples, domain.RelationTuple{User: member(r.a), Relation: domain.RelMember, Object: domain.Qualify(orgID, domain.TypeGroup, r.b)})
 	}
 
 	// 5) has_active_grant from ACTIVE grants on assets — only for ACTIVE subject memberships.
@@ -111,6 +139,12 @@ func tenantExpectedTuples(ctx context.Context, ttx *TenantTx, orgID uuid.UUID) (
 	}
 
 	return tuples, nil
+}
+
+// groupUserset is the `group:<id>#member` subject ref (tenant-qualified) — the userset a
+// group-subject operator/auditor assignment targets, expanded through `member` tuples (D1).
+func groupUserset(orgID uuid.UUID, id string) string {
+	return domain.Qualify(orgID, domain.TypeGroup, id) + "#member"
 }
 
 type pair struct{ a, b string }
