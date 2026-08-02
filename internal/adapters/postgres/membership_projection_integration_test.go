@@ -108,3 +108,77 @@ func TestMembershipLifecycleProjection(t *testing.T) {
 		t.Errorf("após reativação esperava 2 WRITE (owner+operator), veio %d", got)
 	}
 }
+
+// TestRevokeMembershipCascadesGrants (T-030b): revogar um membership cascade-revoga suas
+// concessões ativas — o grant vira 'revoked' e o has_active_grant é apagado do grafo (via
+// enqueueGrantProjection), na mesma tx. Quem saiu não mantém concessão privilegiada.
+func TestRevokeMembershipCascadesGrants(t *testing.T) {
+	pool := setupTenantPool(t)
+	ctx := context.Background()
+
+	var orgID uuid.UUID
+	if err := pool.QueryRow(ctx,
+		"INSERT INTO organization (owner, name) VALUES ('it', $1) RETURNING id", "org-casc-"+uniqueSuffix()).Scan(&orgID); err != nil {
+		t.Fatalf("seed org: %v", err)
+	}
+	idn, err := domain.NewIdentity(domain.IdentityHuman)
+	if err != nil {
+		t.Fatalf("NewIdentity: %v", err)
+	}
+	if err := NewIdentityStore(pool).Create(ctx, idn); err != nil {
+		t.Fatalf("cria identidade: %v", err)
+	}
+	m, err := domain.NewMembership(idn.ID, orgID)
+	if err != nil {
+		t.Fatalf("NewMembership: %v", err)
+	}
+	grantID, assetID := uuid.New(), uuid.New()
+	t.Cleanup(func() {
+		bg := context.Background()
+		_, _ = pool.Exec(bg, "DELETE FROM authz_tuple_outbox WHERE organization_id = $1", orgID)
+		_, _ = pool.Exec(bg, "DELETE FROM privileged_grant WHERE organization_id = $1", orgID)
+		_, _ = pool.Exec(bg, "DELETE FROM membership WHERE organization_id = $1", orgID)
+		_, _ = pool.Exec(bg, "DELETE FROM organization WHERE id = $1", orgID)
+	})
+	if _, err := pool.Exec(ctx,
+		"INSERT INTO membership (id, identity_id, organization_id, status) VALUES ($1,$2,$3,'active')",
+		m.ID.String(), m.IdentityID.String(), orgID.String()); err != nil {
+		t.Fatalf("insert membership: %v", err)
+	}
+	// concessão ATIVA sobre um ativo, do membership.
+	if _, err := pool.Exec(ctx,
+		`INSERT INTO privileged_grant
+		 (id, organization_id, subject_membership_id, target_type, target_id, target_scope,
+		  origin, status, required_approvals, not_before, expires_at, justification, incident_ref)
+		 VALUES ($1,$2,$3,'asset',$4,'admin','normal','active',0, now()-interval '1 hour', now()+interval '1 hour','j','INC-1')`,
+		grantID.String(), orgID.String(), m.ID.String(), assetID.String()); err != nil {
+		t.Fatalf("insert grant: %v", err)
+	}
+
+	scope, err := domain.NewTenantScope(orgID)
+	if err != nil {
+		t.Fatalf("NewTenantScope: %v", err)
+	}
+	if _, _, err := NewMembershipRevoker(NewTenantRepository(pool, scope), nil).RevokeMembership(ctx, m.ID); err != nil {
+		t.Fatalf("RevokeMembership: %v", err)
+	}
+
+	// grant virou revoked.
+	var status string
+	if err := pool.QueryRow(ctx, "SELECT status FROM privileged_grant WHERE id=$1", grantID.String()).Scan(&status); err != nil {
+		t.Fatalf("status grant: %v", err)
+	}
+	if status != "revoked" {
+		t.Errorf("grant status = %q, esperado revoked", status)
+	}
+	// has_active_grant apagado no grafo (delete enfileirado).
+	var n int
+	if err := pool.QueryRow(ctx,
+		"SELECT count(*) FROM authz_tuple_outbox WHERE organization_id=$1 AND tuple_relation='has_active_grant' AND op='delete'",
+		orgID).Scan(&n); err != nil {
+		t.Fatalf("count outbox: %v", err)
+	}
+	if n == 0 {
+		t.Error("esperava DELETE de has_active_grant no outbox após cascade")
+	}
+}

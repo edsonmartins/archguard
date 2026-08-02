@@ -109,6 +109,32 @@ func (r *MembershipRevoker) RevokeMembership(ctx context.Context, membershipID u
 		if err := memberships.SaveRevocation(ctx, m); err != nil {
 			return err
 		}
+		// T-030b: cascade-revoga as concessões ATIVAS do membership. Um membro que saiu
+		// não pode manter concessão privilegiada 'active'. Cada revogação apaga o
+		// has_active_grant (Fase B) e é auditada; as sessões derivadas são encerradas por
+		// RevokeByMembership abaixo (que cobre todas as sessões do membership).
+		grants := NewPrivilegedGrantStore(ttx)
+		active, err := grants.ListActiveByMembership(ctx, m.ID)
+		if err != nil {
+			return err
+		}
+		for i := range active {
+			g := active[i]
+			if err := g.Revoke(); err != nil {
+				return err
+			}
+			if err := grants.SaveDecision(ctx, g); err != nil {
+				return err
+			}
+			if err := enqueueGrantProjection(ctx, ttx, g); err != nil {
+				return err
+			}
+			if err := emitAudit(ctx, ttx.Tx(), r.audit, m.OrganizationID, domain.ActionPrivilegedGrantRevoke,
+				domain.AuditTarget{Type: "privileged_grant", ID: g.ID.String(), Label: "revogação em cascata (membership revogado)"},
+				"revogação de concessão em cascata por revogação de membership"); err != nil {
+				return err
+			}
+		}
 		if sessions, err = NewTenantSessionStore(ttx).RevokeByMembership(ctx, m.ID); err != nil {
 			return err
 		}

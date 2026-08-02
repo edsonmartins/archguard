@@ -191,6 +191,33 @@ func (s *PrivilegedGrantStore) ListActive(ctx context.Context) ([]domain.Privile
 	return out, rows.Err()
 }
 
+// ListActiveByMembership returns the tenant's ACTIVE grants held by one membership —
+// the set that a membership revocation cascade-revokes (T-030b). Tenant-scoped through
+// the enclosing WithTenantTx (RLS + explicit predicate, INV-5).
+func (s *PrivilegedGrantStore) ListActiveByMembership(ctx context.Context, membershipID uuid.UUID) ([]domain.PrivilegedGrant, error) {
+	const q = `
+		SELECT id::text, organization_id::text, subject_membership_id::text,
+		       target_type, target_id, target_scope, origin, status, required_approvals,
+		       not_before, expires_at, justification, incident_ref
+		FROM privileged_grant
+		WHERE organization_id = $1 AND subject_membership_id = $2 AND status = 'active'
+		ORDER BY not_before`
+	rows, err := s.ttx.tx.Query(ctx, q, s.ttx.scope.OrganizationID().String(), membershipID.String())
+	if err != nil {
+		return nil, fmt.Errorf("postgres: listagem de concessões ativas do membership falhou: %w", err)
+	}
+	defer rows.Close()
+	var out []domain.PrivilegedGrant
+	for rows.Next() {
+		g, err := scanGrant(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, g)
+	}
+	return out, rows.Err()
+}
+
 // ListAwaitingApproval returns the tenant's break-glass grants awaiting peer approval
 // (status 'awaiting_approval') — the approval queue (T-008). Tenant-scoped through the
 // enclosing WithTenantTx (RLS + explicit predicate, INV-5). Same column order as ListActive.

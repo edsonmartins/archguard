@@ -95,8 +95,15 @@ ArchGuard) / ADR-0005. Estratégia: fatia vertical (asset+grant→projeção→P
       reactivate→2 WRITE). **`has_active_grant` FICA DE FORA de propósito** — um membership revogado
       deve ter suas concessões CASCADE-REVOGADAS (Fase B remove a tupla + sessões), não escondidas do
       grafo; cascade é follow-up (T-030b). build/vet/testes/invariantes/gofmt verdes.
-- [ ] **T-030b** Follow-up — cascade-revoke das concessões ativas do membership no revoke/suspend
-      (revoga os grants → Fase B remove `has_active_grant` + `RevokeByGrant` encerra as sessões).
+- [x] **T-030b** — cascade-revoke das concessões ativas no `MembershipRevoker.RevokeMembership`:
+      `grant_store.ListActiveByMembership` + `g.Revoke()`/`SaveDecision`/`enqueueGrantProjection`
+      (apaga `has_active_grant`, Fase B) + audit por grant, na mesma tx; sessões já encerradas por
+      `RevokeByMembership`. Só REVOKE (suspensão é temporária; a Fase E já bloqueia acesso via a
+      interseção `can_open_session ∩ has_active_grant`). Teste de integração. gate verde.
+      **Achado registrado (T-030c):** `SuspendAllActive`/`RevokeAllNonRevoked` (cascade identity-level,
+      UPDATE em bloco) BYPASSAM `SaveRevocation`/`SaveSuspension` ⇒ a projeção da Fase E NÃO dispara
+      no deprovision/suspend em massa de uma identidade. Cobrir pelo reconciler (Fase F: expected-set
+      exclui membership revogado/suspenso) — é a rede de segurança correta para esses bypasses.
 - [ ] **T-031** Fase F — Reconciler: agregador "expected set" por tenant (também usado por
       `AuthzBootstrap.RebuildTenant`) + scheduler do `AuthzReconciler` (correção assimétrica, RFC-0004 §4).
 - [x] **T-032** (008 T-012) — Revisão de acesso: endpoint `GET /api/v1/access/review?asset=X`
