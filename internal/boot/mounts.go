@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/casdoor/casdoor/conf"
 	"github.com/casdoor/casdoor/internal/adapters/auditseal"
 	"github.com/casdoor/casdoor/internal/adapters/postgres"
 	"github.com/casdoor/casdoor/internal/domain"
@@ -41,6 +42,9 @@ func MountCapabilities() error {
 
 	if err := mountSession(p); err != nil {
 		return fmt.Errorf("montar session: %w", err)
+	}
+	if err := mountServiceContext(f); err != nil {
+		return fmt.Errorf("montar service-context: %w", err)
 	}
 	if err := mountTenants(p, f); err != nil {
 		return fmt.Errorf("montar tenants: %w", err)
@@ -102,6 +106,26 @@ func MountCapabilities() error {
 	if err := mountAuditTimeline(p, f); err != nil {
 		return fmt.Errorf("montar audit-timeline: %w", err)
 	}
+	return nil
+}
+
+// mountServiceContext mounts the narrow machine-to-machine identity lookup used
+// by ArchGate. It is deliberately outside the browser assurance pipeline: the
+// caller authenticates with the dedicated ARCHGUARD_SERVICE_TOKEN and supplies
+// only an opaque OIDC subject. No e-mail or tenant chosen by the caller crosses
+// this boundary.
+func mountServiceContext(f *Factory) error {
+	if f == nil || f.Pool() == nil {
+		RegisterAPIHandler("/service/session-context", unavailableHandler("service context indisponível: banco não ligado"))
+		return nil
+	}
+	global := newGlobalRepository(f.Pool())
+	handler := apihttp.NewServiceContextHandler(
+		conf.GetConfigString("ARCHGUARD_SERVICE_TOKEN"),
+		postgres.NewIdentityStore(f.Pool()),
+		postgres.NewMembershipReader(global),
+	)
+	RegisterAPIHandler("/service/session-context", handler)
 	return nil
 }
 
