@@ -72,8 +72,13 @@ export async function listUnifiedConnections(
 
   for (const site of sites) {
     for (const t of site.targets || []) {
-      const engine = t.engine === 'guacamole' ? 'guacamole' : 'warpgate'
       const protocol = (t.protocolo || 'ssh').toLowerCase()
+      const engine =
+        rustGuacConfigured() && ['ssh', 'rdp', 'vnc'].includes(protocol)
+          ? 'guacamole'
+          : t.engine === 'guacamole'
+            ? 'guacamole'
+            : 'warpgate'
       if (t.roles?.length && !isAdmin) {
         const ok = t.roles.some((r) => {
           const n = norm(r)
