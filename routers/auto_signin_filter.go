@@ -25,6 +25,12 @@ import (
 
 func AutoSigninFilter(ctx *context.Context) {
 	urlPath := ctx.Request.URL.Path
+	// The ArchGate machine endpoint authenticates with its dedicated static
+	// service secret, not a Casdoor access token. Let the control-plane bridge
+	// dispatch it to the handler so it can perform constant-time validation.
+	if urlPath == "/api/v1/service/session-context" {
+		return
+	}
 	if strings.HasPrefix(urlPath, "/api/login/oauth/access_token") {
 		return
 	}

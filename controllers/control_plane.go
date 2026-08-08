@@ -42,7 +42,8 @@ import (
 // compatibility assertion) that carries no data and needs no session.
 func (c *RootController) HandleControlPlane() {
 	isPublicProbe := c.Ctx.Request.URL.Path == boot.APIBasePath+"/version"
-	if !isPublicProbe && c.GetSessionUsername() == "" {
+	isServiceContext := c.Ctx.Request.URL.Path == boot.APIBasePath+"/service/session-context"
+	if !isPublicProbe && !isServiceContext && c.GetSessionUsername() == "" {
 		c.Ctx.ResponseWriter.WriteHeader(http.StatusUnauthorized)
 		return
 	}
