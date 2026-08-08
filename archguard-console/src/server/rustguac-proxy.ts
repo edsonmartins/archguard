@@ -49,6 +49,26 @@ function sessionType(protocol: string): 'ssh' | 'rdp' | 'vnc' {
   return p === 'rdp' || p === 'vnc' ? p : 'ssh'
 }
 
+/** Build browser-safe URLs from RustGuac's server response. */
+export function buildRustGuacUrls(
+  created: Pick<RustGuacSession, 'session_id' | 'client_url' | 'ws_url'>,
+  ticket: string,
+  publicBase = RUSTGUAC_PUBLIC_URL,
+) {
+  if (!created.session_id) throw new Error('RustGuac retornou sessão sem id')
+  if (!ticket) throw new Error('RustGuac retornou ticket vazio')
+  const client = created.client_url || `/client/${created.session_id}`
+  const ws = created.ws_url || `/ws/${created.session_id}`
+  const base = publicBase.replace(/\/$/, '')
+  return {
+    embed_url: `${client.startsWith('http') ? client : `${base}${client}`}?ticket=${encodeURIComponent(ticket)}`,
+    tunnel_url: `${ws.startsWith('ws') ? ws : base.replace(/^http/, 'ws') + ws}`,
+    connect_data: '',
+    // RustGuac tickets are currently valid for 30 seconds.
+    expires_in: 30,
+  }
+}
+
 export async function issueRustGuacSession(input: {
   protocol: string
   hostname: string
@@ -66,17 +86,6 @@ export async function issueRustGuacSession(input: {
     ...(input.password ? { password: input.password } : {}),
     ...(input.private_key ? { private_key: input.private_key } : {}),
   })
-  if (!created.session_id) throw new Error('RustGuac retornou sessão sem id')
   const result = await api<{ ticket?: string }>('/api/ws-ticket', {})
-  if (!result.ticket) throw new Error('RustGuac retornou ticket vazio')
-  const client = created.client_url || `/client/${created.session_id}`
-  const ws = created.ws_url || `/ws/${created.session_id}`
-  // The API may be private while the ticket URL must be reachable by the browser.
-  const base = RUSTGUAC_PUBLIC_URL
-  return {
-    embed_url: `${client.startsWith('http') ? client : `${base}${client}`}?ticket=${encodeURIComponent(result.ticket)}`,
-    tunnel_url: `${ws.startsWith('ws') ? ws : base.replace(/^http/, 'ws') + ws}`,
-    connect_data: '',
-    expires_in: 30,
-  }
+  return buildRustGuacUrls(created, result.ticket || '')
 }
