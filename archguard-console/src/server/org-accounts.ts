@@ -258,7 +258,7 @@ export function defaultOrgAccountSpecs(): OrgAccountInput[] {
       secret_ref: 'secret/data/org/product/vendax-admin',
       runbook_url: 'documentos/runbooks/org-product-oidc-federation.md',
       notes:
-        'Meta: SSO Kanidm. Password só break-glass dual-control até OIDC live.',
+        'Meta: SSO archguard. Password só break-glass dual-control até OIDC live.',
     },
     {
       slug: 'archflow-admin',
@@ -272,7 +272,7 @@ export function defaultOrgAccountSpecs(): OrgAccountInput[] {
       owner_group: 'archguard_users',
       secret_ref: 'secret/data/org/product/archflow-admin',
       runbook_url: 'documentos/runbooks/org-product-oidc-federation.md',
-      notes: 'Meta: SSO Kanidm; senha só break-glass.',
+      notes: 'Meta: SSO archguard; senha só break-glass.',
     },
     {
       slug: 'archguard-admin-breakglass',
@@ -287,7 +287,7 @@ export function defaultOrgAccountSpecs(): OrgAccountInput[] {
       secret_ref: 'secret/data/org/product/archguard-breakglass',
       runbook_url: 'documentos/runbooks/org-product-oidc-federation.md',
       notes:
-        'Já usa Kanidm OIDC (archguard-console). Secret = break-glass local se existir.',
+        'Já usa archguard OIDC (archguard-console). Secret = break-glass local se existir.',
     },
     {
       slug: 'brainsentry-admin',

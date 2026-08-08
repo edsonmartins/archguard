@@ -8,7 +8,7 @@
 | Layer | Name |
 |-------|------|
 | Product UI | ArchGate Manager |
-| Identity module | ArchGuard (Kanidm) |
+| Identity module | ArchGuard (archguard) |
 | Operator desktop | ArchGate Connect |
 | Operator browser | UnifiedUI |
 

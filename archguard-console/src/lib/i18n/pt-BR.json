@@ -367,8 +367,8 @@
     "language": "Idioma da interface",
     "languageHint": "Afeta labels, selects e textos do console.",
     "domainInfo": "Informações do Domínio",
-    "domainHint": "Configurações do domínio Kanidm",
-    "kanidmVersion": "Versão Kanidm",
+    "domainHint": "Configurações do domínio archguard",
+    "archguardVersion": "Versão archguard",
     "securityPolicy": "Política de segurança",
     "credentialMin": "Credencial mínima",
     "sessionTtl": "TTL de sessão",
@@ -453,7 +453,7 @@
     "subtitle": "Control plane — identidade, sites, gateways e segredos",
     "signIn": "Entrar com ArchGuard ID",
     "connecting": "Conectando...",
-    "errorNetwork": "Não foi possível conectar ao servidor de identidade. Verifique se o Kanidm está acessível.",
+    "errorNetwork": "Não foi possível conectar ao servidor de identidade. Verifique se o archguard está acessível.",
     "errorStart": "Erro ao iniciar login: {{message}}",
     "errorUnknown": "Erro desconhecido"
   },
@@ -476,7 +476,7 @@
       "online": "Online",
       "error": "Erro",
       "unreachable": "Indisponível",
-      "kanidm": "ArchGuard ID (Kanidm)",
+      "archguard": "ArchGuard ID (archguard)",
       "openbao": "OpenBao (segredos)"
     },
     "quickActions": {
@@ -507,7 +507,7 @@
       },
       "identity": {
         "title": "Identidade",
-        "desc": "Pessoas, grupos e OAuth2 (módulo ArchGuard / Kanidm)."
+        "desc": "Pessoas, grupos e OAuth2 (módulo ArchGuard / archguard)."
       },
       "platform": {
         "title": "Plataforma",
@@ -625,7 +625,7 @@
     "engines": "Secrets engines",
     "authMethods": "Auth methods",
     "policies": "Policies",
-    "jwtAuth": "JWT auth (Kanidm)",
+    "jwtAuth": "JWT auth (archguard)",
     "leases": "Leases dinâmicos",
     "leaseId": "Lease ID",
     "revoke": "Revogar",

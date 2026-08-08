@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { extractTenantPrefix } from '@/lib/api/normalizers'
 import { useGroups } from '@/lib/hooks/use-groups'
 import { usePersons } from '@/lib/hooks/use-persons'
-import type { OAuth2Client, Group } from '@/lib/api/types/kanidm'
+import type { OAuth2Client, Group } from '@/lib/api/types/archguard'
 
 interface AccessEntry {
   groupId: string

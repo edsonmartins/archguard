@@ -1,6 +1,6 @@
 // OIDC discovery, per IdP.
 //
-// Kanidm publishes one issuer per client:
+// archguard publishes one issuer per client:
 //   https://id.archgate.com.br/oauth2/openid/<client>/.well-known/openid-configuration
 //
 // ArchGuard (Casdoor) publishes a single issuer for the deployment:
@@ -8,7 +8,7 @@
 //
 // Everything downstream — issuer, jwks_uri, userinfo_endpoint, token_endpoint —
 // comes from the document, so this URL is the only shape that has to change.
-// In particular the userinfo path differs (`<issuer>/userinfo` on Kanidm,
+// In particular the userinfo path differs (`<issuer>/userinfo` on archguard,
 // `/api/userinfo` on Casdoor) and must never be hand-built again.
 
 import { idpKind } from './index'

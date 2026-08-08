@@ -7,10 +7,10 @@ import {
   type UseQueryOptions,
 } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { groupApi } from '@/lib/api/kanidm-client'
+import { groupApi } from '@/lib/api/archguard-client'
 import { queryKeys } from '@/lib/utils/query-keys'
-import { mapKanidmError } from '@/lib/utils/error-mapper'
-import type { Group, CreateGroupPayload } from '@/lib/api/types/kanidm'
+import { maparchguardError } from '@/lib/utils/error-mapper'
+import type { Group, CreateGroupPayload } from '@/lib/api/types/archguard'
 
 // ── QUERIES ──────────────────────────────────────
 
@@ -59,7 +59,7 @@ export function useCreateGroup() {
       toast.success('Grupo criado com sucesso')
     },
     onError: (error) => {
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
   })
 }
@@ -74,7 +74,7 @@ export function useDeleteGroup() {
       toast.success('Grupo removido com sucesso')
     },
     onError: (error) => {
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
   })
 }
@@ -107,7 +107,7 @@ export function useAddGroupMembers() {
           context.previousGroup,
         )
       }
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
     onSettled: (_data, _error, { id }) => {
       queryClient.invalidateQueries({
@@ -158,7 +158,7 @@ export function useRemoveGroupMembers() {
           context.previousGroup,
         )
       }
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
     onSettled: (_data, _error, { id }) => {
       queryClient.invalidateQueries({

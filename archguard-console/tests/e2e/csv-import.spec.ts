@@ -44,7 +44,7 @@ test.describe('CSV import wizard', () => {
     ).toBeVisible({ timeout: 10_000 })
 
     // Stop before the actual write: keeps the test idempotent and avoids
-    // creating fixtures inside Kanidm.
+    // creating fixtures inside archguard.
   })
 
   test('disables advance when no file is selected', async ({ page }) => {

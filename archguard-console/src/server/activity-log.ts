@@ -1,12 +1,12 @@
 // src/server/activity-log.ts
 //
 // Persisted activity log for tracking mutations made through the console.
-// Kanidm v1.9 has no public audit API, so we record every mutation that
+// archguard v1.9 has no public audit API, so we record every mutation that
 // crosses our proxy. The store survives restarts (SQLite, see db.ts).
 
 import { z } from 'zod'
 import { getDb } from './db'
-import type { ActivityLogEntry } from '@/lib/api/types/kanidm'
+import type { ActivityLogEntry } from '@/lib/api/types/archguard'
 import { getSessionOrNull, sessionActor } from './session-guard'
 import { logger } from './logger'
 
@@ -17,7 +17,7 @@ export function getActor(): string {
 }
 
 /**
- * Record a mutation in the activity log. Called by kanidm-proxy after
+ * Record a mutation in the activity log. Called by archguard-proxy after
  * each write operation, success or failure.
  */
 export function recordActivity(

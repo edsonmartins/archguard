@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { getActivityLogFn } from '@/server/activity-log-fn'
-import type { ActivityLogEntry } from '@/lib/api/types/kanidm'
+import type { ActivityLogEntry } from '@/lib/api/types/archguard'
 
 export function useActivityLog() {
   return useQuery<ActivityLogEntry[]>({

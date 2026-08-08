@@ -18,7 +18,7 @@ import {
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { EmptyState } from '@/components/shared/empty-state'
 import { useRecycleBin, useReviveEntry } from '@/lib/hooks/use-recycle-bin'
-import type { RecycleBinEntry } from '@/lib/api/types/kanidm'
+import type { RecycleBinEntry } from '@/lib/api/types/archguard'
 import { PageHeader } from '@/components/shared/page-header'
 
 const TYPE_CONFIG: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; variant: 'default' | 'secondary' | 'outline' }> = {

@@ -7,14 +7,14 @@ import {
   type UseQueryOptions,
 } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { personApi } from '@/lib/api/kanidm-client'
+import { personApi } from '@/lib/api/archguard-client'
 import { queryKeys } from '@/lib/utils/query-keys'
-import { mapKanidmError } from '@/lib/utils/error-mapper'
+import { maparchguardError } from '@/lib/utils/error-mapper'
 import type {
   Person,
   CredentialStatus,
   CreatePersonPayload,
-} from '@/lib/api/types/kanidm'
+} from '@/lib/api/types/archguard'
 
 // ── QUERIES ──────────────────────────────────────
 
@@ -67,7 +67,7 @@ export function useCreatePerson() {
       toast.success('Pessoa criada com sucesso')
     },
     onError: (error) => {
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
   })
 }
@@ -82,7 +82,7 @@ export function useDeletePerson() {
       toast.success('Pessoa removida com sucesso')
     },
     onError: (error) => {
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
   })
 }
@@ -108,7 +108,7 @@ export function useUpdatePersonAttr() {
       toast.success('Atributo atualizado com sucesso')
     },
     onError: (error) => {
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
   })
 }
@@ -133,7 +133,7 @@ export function useAppendPersonAttr() {
       toast.success('Atributo adicionado com sucesso')
     },
     onError: (error) => {
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
   })
 }
@@ -151,7 +151,7 @@ export function useDeletePersonAttr() {
       toast.success('Atributo removido com sucesso')
     },
     onError: (error) => {
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
   })
 }
@@ -169,7 +169,7 @@ export function useResetPersonCredential() {
       toast.success('Link de reset gerado com sucesso')
     },
     onError: (error) => {
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
   })
 }

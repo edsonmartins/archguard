@@ -49,7 +49,7 @@ import {
   useDeleteServiceAccount,
 } from '@/lib/hooks/use-service-accounts'
 import { useTenantFilter } from '@/lib/hooks/use-tenant-filter'
-import type { ServiceAccount } from '@/lib/api/types/kanidm'
+import type { ServiceAccount } from '@/lib/api/types/archguard'
 
 export function ServiceAccountListPage() {
   const { t } = useTranslation()

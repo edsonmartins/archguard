@@ -1,6 +1,6 @@
 // src/components/oauth2/integration-snippets.ts
 
-import type { OAuth2Client } from '@/lib/api/types/kanidm'
+import type { OAuth2Client } from '@/lib/api/types/archguard'
 
 interface Snippet {
   framework: string

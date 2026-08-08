@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PermissionGate } from '@/components/shared/permission-gate'
-import { systemApi, accountPolicyApi } from '@/lib/api/kanidm-client'
+import { systemApi, accountPolicyApi } from '@/lib/api/archguard-client'
 import { queryKeys } from '@/lib/utils/query-keys'
 import { LanguageSwitcher } from '@/components/layout/language-switcher'
 import { enumLabel } from '@/lib/i18n/labels'
@@ -124,7 +124,7 @@ export function SettingsPage() {
                     </Badge>
                   </SettingsField>
                   <SettingsField
-                    label={t('settings.kanidmVersion')}
+                    label={t('settings.archguardVersion')}
                     value={getSystemProp(systemStatus, 'version')}
                   />
                 </>
@@ -182,9 +182,9 @@ export function SettingsPage() {
               <CardContent>
                 <p className="text-sm text-muted-foreground">
                   Contas break-glass e configurações avançadas de segurança devem ser
-                  gerenciadas via CLI do Kanidm. Consulte a{' '}
+                  gerenciadas via CLI do archguard. Consulte a{' '}
                   <a
-                    href="https://kanidm.github.io/kanidm/stable/"
+                    href="https://archguard.github.io/archguard/stable/"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-primary underline"
@@ -208,7 +208,7 @@ export function SettingsPage() {
               <SettingsField label="ArchGate Manager" value="v1.0.0" />
               <SettingsField label="Framework" value="TanStack Start" />
               <SettingsField
-                label={t('settings.kanidmVersion')}
+                label={t('settings.archguardVersion')}
                 value={getSystemProp(systemStatus, 'version')}
               />
             </CardContent>
@@ -218,16 +218,16 @@ export function SettingsPage() {
             <CardHeader>
               <CardTitle className="text-base">Backup e Manutenção</CardTitle>
               <CardDescription>
-                Operações de backup e restauração do Kanidm
+                Operações de backup e restauração do archguard
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Backups do Kanidm são gerenciados via CLI do servidor
-                (<code className="text-xs bg-muted px-1 py-0.5 rounded">kanidmd database backup</code>).
+                Backups do archguard são gerenciados via CLI do servidor
+                (<code className="text-xs bg-muted px-1 py-0.5 rounded">archguardd database backup</code>).
                 O Console não gerencia backups diretamente — consulte a{' '}
                 <a
-                  href="https://kanidm.github.io/kanidm/stable/server_configuration/backup_restore.html"
+                  href="https://archguard.github.io/archguard/stable/server_configuration/backup_restore.html"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-primary underline"

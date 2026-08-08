@@ -19,7 +19,7 @@ test.describe('audit / activity log', () => {
       page.getByRole('heading', { name: /log de atividades/i }),
     ).toBeVisible()
     await expect(
-      page.getByText(/kanidm v1\.9 não possui api de auditoria/i),
+      page.getByText(/archguard v1\.9 não possui api de auditoria/i),
     ).toBeVisible()
   })
 

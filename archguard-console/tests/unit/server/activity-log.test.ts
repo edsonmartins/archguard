@@ -37,11 +37,11 @@ describe('recordActivity (persisted)', () => {
       '/v1/person/bob',
       'admin',
       'error',
-      'Kanidm API 404',
+      'archguard API 404',
     )
     const [row] = queryActivityLog()
     expect(row.result).toBe('error')
-    expect(row.errorMessage).toBe('Kanidm API 404')
+    expect(row.errorMessage).toBe('archguard API 404')
     expect(row.target).toBe('bob')
     expect(row.action).toBe('Excluir person')
   })

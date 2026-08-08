@@ -10,11 +10,11 @@ ArchGuard é uma plataforma administrativa web que unifica o gerenciamento de id
 
 ## O Problema
 
-Organizações que adotam soluções open-source de identidade como o Kanidm enfrentam desafios operacionais significativos:
+Organizações que adotam soluções open-source de identidade como o archguard enfrentam desafios operacionais significativos:
 
 - **Administração via CLI/API** — gerenciar centenas de identidades, grupos e integrações OAuth2 via linha de comando é ineficiente e propenso a erros
 - **Fragmentação de ferramentas** — identidades num lugar, cofre de senhas em outro, auditoria em outro
-- **Curva de aprendizado elevada** — equipes de suporte precisam conhecer a API REST do Kanidm para operações básicas como reset de credenciais
+- **Curva de aprendizado elevada** — equipes de suporte precisam conhecer a API REST do archguard para operações básicas como reset de credenciais
 - **Falta de visibilidade** — sem dashboards ou relatórios consolidados sobre o estado das identidades
 
 ## A Solução
@@ -47,7 +47,7 @@ ArchGuard Console oferece uma interface web completa que abstrai a complexidade 
 └────────┼────────────────────┼───────────────┘
          │                    │
     ┌────┴─────┐        ┌────┴─────┐
-    │ Kanidm   │        │ Kanidm   │
+    │ archguard   │        │ archguard   │
     │ Auth API │        │ Admin API│
     │ (OIDC)   │        │ (REST)   │
     └──────────┘        └──────────┘
@@ -58,7 +58,7 @@ ArchGuard Console oferece uma interface web completa que abstrai a complexidade 
     └───────────┘
 ```
 
-**Dual session:** O console mantém duas sessões — uma OIDC para identidade do operador e uma service account para chamadas administrativas à API do Kanidm. Os tokens sensíveis nunca são expostos ao browser; todo acesso à API administrativa passa por um proxy server-side com validação de path e autenticação.
+**Dual session:** O console mantém duas sessões — uma OIDC para identidade do operador e uma service account para chamadas administrativas à API do archguard. Os tokens sensíveis nunca são expostos ao browser; todo acesso à API administrativa passa por um proxy server-side com validação de path e autenticação.
 
 ---
 
@@ -86,18 +86,18 @@ ArchGuard Console oferece uma interface web completa que abstrai a complexidade 
 
 ArchGuard Console é uma camada de gestão sobre projetos open-source independentes:
 
-### Kanidm
+### archguard
 
-> **Identity Management Server** — [github.com/kanidm/kanidm](https://github.com/kanidm/kanidm)
+> **Identity Management Server** — [github.com/archguard/archguard](https://github.com/archguard/archguard)
 
-Kanidm é um servidor de identidade moderno escrito em Rust, projetado como alternativa a FreeIPA e LDAP. Fornece:
+archguard é um servidor de identidade moderno escrito em Rust, projetado como alternativa a FreeIPA e LDAP. Fornece:
 - Autenticação OIDC/OAuth2 com PKCE
 - Gerenciamento de identidades via API REST (`/v1/`)
 - Suporte nativo a Passkeys, WebAuthn, TOTP
 - Grupos, RBAC e políticas de acesso
 - Service Accounts com API tokens
 
-ArchGuard Console utiliza o Kanidm como **engine de identidade**, consumindo sua API administrativa para todas as operações de CRUD de pessoas, grupos, OAuth2 clients e service accounts.
+ArchGuard Console utiliza o archguard como **engine de identidade**, consumindo sua API administrativa para todas as operações de CRUD de pessoas, grupos, OAuth2 clients e service accounts.
 
 ### AliasVault
 
@@ -113,7 +113,7 @@ AliasVault é um cofre de senhas open-source com criptografia end-to-end. ArchGu
 ## Pré-requisitos
 
 - **Node.js** >= 20
-- **Docker** (ou OrbStack/Podman) — para os containers Kanidm e AliasVault
+- **Docker** (ou OrbStack/Podman) — para os containers archguard e AliasVault
 - **expect** — para o script de setup (`brew install expect` no macOS)
 
 ## Quick Start (Desenvolvimento Local)
@@ -129,9 +129,9 @@ cd archguard
 docker compose up -d
 ```
 
-3. Inicialize o Kanidm (grupos, usuários, OAuth2, service account):
+3. Inicialize o archguard (grupos, usuários, OAuth2, service account):
 ```bash
-./scripts/setup-kanidm.sh
+./scripts/setup-archguard.sh
 ```
 
 4. Instale as dependências e inicie o Console:
@@ -148,15 +148,15 @@ npm run dev
 | `testadmin` | `TestAdmin123!` | Super Admin |
 | `testuser` | `TestUser123!` | Viewer |
 
-> **Nota:** Como o Kanidm usa TLS com certificado auto-assinado, aceite o certificado no browser visitando `https://localhost:8443` antes de fazer login.
+> **Nota:** Como o archguard usa TLS com certificado auto-assinado, aceite o certificado no browser visitando `https://localhost:8443` antes de fazer login.
 
 ## Variáveis de Ambiente
 
 ```env
-ARCHGUARD_ID_URL=https://localhost:8443          # URL do Kanidm
+ARCHGUARD_ID_URL=https://localhost:8443          # URL do archguard
 ARCHGUARD_SA_TOKEN=<token>                       # Service account token (gerado pelo setup)
 ARCHGUARD_VAULT_URL=http://localhost:8080         # URL do AliasVault
-VITE_ARCHGUARD_ID_URL=https://localhost:8443     # URL do Kanidm (client-side)
+VITE_ARCHGUARD_ID_URL=https://localhost:8443     # URL do archguard (client-side)
 SESSION_SECRET=<64-char-hex>                     # Chave AES-256-GCM para sessão
 ```
 
@@ -191,14 +191,14 @@ archguard/
 │   │   │   └── __root.tsx
 │   │   ├── server/              # Server functions (Nitro)
 │   │   │   ├── auth.ts          # Sessão, login, logout
-│   │   │   ├── kanidm-proxy.ts  # Proxy seguro (anti-SSRF)
+│   │   │   ├── archguard-proxy.ts  # Proxy seguro (anti-SSRF)
 │   │   │   └── session.ts       # Criptografia AES-256-GCM
 │   │   ├── components/          # Componentes React
 │   │   └── lib/                 # API client, hooks, i18n, utils
 │   └── documentos/              # Especificação e ADRs
-├── docker-compose.yml           # Kanidm + AliasVault
-├── kanidm/server.toml           # Configuração do Kanidm
-├── scripts/setup-kanidm.sh      # Inicialização automatizada
+├── docker-compose.yml           # archguard + AliasVault
+├── archguard/server.toml           # Configuração do archguard
+├── scripts/setup-archguard.sh      # Inicialização automatizada
 └── images/                      # Recursos visuais
 ```
 
@@ -207,11 +207,11 @@ archguard/
 ## Segurança
 
 - **PKCE S256** para fluxo OIDC (proteção contra interceptação de authorization code)
-- **Proxy server-side** para API Kanidm — o SA token nunca é exposto ao browser
+- **Proxy server-side** para API archguard — o SA token nunca é exposto ao browser
 - **Validação de path (anti-SSRF)** — whitelist de endpoints permitidos no proxy
 - **Sessão criptografada** — cookies httpOnly com AES-256-GCM
 - **RBAC granular** — 27 permissões derivadas dos grupos OIDC
-- **Separação de privilégios** — Kanidm enforces separation of duties entre admin e idm_admin por design
+- **Separação de privilégios** — archguard enforces separation of duties entre admin e idm_admin por design
 
 ---
 
@@ -219,13 +219,13 @@ archguard/
 
 Este projeto é software proprietário. Todos os direitos reservados.
 
-Os engines utilizados (Kanidm e AliasVault) possuem suas próprias licenças open-source — consulte seus respectivos repositórios.
+Os engines utilizados (archguard e AliasVault) possuem suas próprias licenças open-source — consulte seus respectivos repositórios.
 
 ---
 
 ## Créditos
 
-- [Kanidm](https://github.com/kanidm/kanidm) — Identity Management Server (MPL-2.0)
+- [archguard](https://github.com/archguard/archguard) — Identity Management Server (MPL-2.0)
 - [AliasVault](https://github.com/lanedirt/AliasVault) — Password & Secrets Vault (MIT)
 - [TanStack](https://github.com/TanStack) — Router, Query, Form, Table, Start (MIT)
 - [Shadcn/ui](https://github.com/shadcn-ui/ui) — UI Components (MIT)

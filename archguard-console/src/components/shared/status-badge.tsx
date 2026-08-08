@@ -1,7 +1,7 @@
 // src/components/shared/status-badge.tsx
 
 import { Badge } from '@/components/ui/badge'
-import type { PersonStatus } from '@/lib/api/types/kanidm'
+import type { PersonStatus } from '@/lib/api/types/archguard'
 
 const statusConfig: Record<
   PersonStatus,

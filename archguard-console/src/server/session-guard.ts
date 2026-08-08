@@ -13,7 +13,7 @@ import type { Site } from '@/lib/api/types/site'
 
 /**
  * Decrypt session cookie. Rejects unauthenticated or expired sessions so
- * modules like org-accounts (ADR-013 A1) return 401 after Kanidm offboard /
+ * modules like org-accounts (ADR-013 A1) return 401 after archguard offboard /
  * access-token expiry without waiting for a browser refresh path.
  */
 export function getSessionOrNull(): SessionData | null {

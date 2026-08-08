@@ -8,7 +8,7 @@ import type { Page } from '@playwright/test'
 
 export function stamp(): string {
   // Only lowercase letters and digits — the OAuth2 client-id slug only
-  // accepts `[a-z0-9-]+`, and the SA SPN gets pickier as Kanidm ages.
+  // accepts `[a-z0-9-]+`, and the SA SPN gets pickier as archguard ages.
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
 }
 

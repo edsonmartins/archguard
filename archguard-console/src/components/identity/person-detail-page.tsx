@@ -406,7 +406,7 @@ export function PersonDetailPage() {
             <DialogTitle>Provisionar acesso</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Garante grupos tenant + archguard_users no Kanidm e dispara
+            Garante grupos tenant + archguard_users no archguard e dispara
             orquestração (adapters). Pessoa já deve existir no IdP.
           </p>
           <div className="space-y-2">
@@ -482,7 +482,7 @@ export function PersonDetailPage() {
         open={showRevoke}
         onOpenChange={setShowRevoke}
         title="Revogar acesso"
-        description={`Bloqueia o login de ${person.displayName} (@${person.username}) no Kanidm, aciona orquestração (WG/OpenBao) e remove usuário no Warpgate se existir. Preferível a excluir (mantém trilha de auditoria). Digite o username para confirmar.`}
+        description={`Bloqueia o login de ${person.displayName} (@${person.username}) no archguard, aciona orquestração (WG/OpenBao) e remove usuário no Warpgate se existir. Preferível a excluir (mantém trilha de auditoria). Digite o username para confirmar.`}
         confirmText={person.username}
         destructive
         isLoading={revokeAccess.isPending}

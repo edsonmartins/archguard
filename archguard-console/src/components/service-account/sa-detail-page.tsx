@@ -312,7 +312,7 @@ export function ServiceAccountDetailPage() {
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Armazene este token de forma segura. Ele fornece acesso direto
-                  à API do Kanidm com as permissões deste service account.
+                  à API do archguard com as permissões deste service account.
                 </p>
               </div>
               <DialogFooter>

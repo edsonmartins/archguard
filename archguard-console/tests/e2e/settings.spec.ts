@@ -17,7 +17,7 @@ test.describe('settings', () => {
     await expect(
       page.getByRole('heading', { name: /informações do domínio/i }),
     ).toBeVisible()
-    for (const f of [/^domínio$/i, /display name/i, /^status$/i, /versão kanidm/i]) {
+    for (const f of [/^domínio$/i, /display name/i, /^status$/i, /versão archguard/i]) {
       await expect(page.getByText(f).first()).toBeVisible()
     }
   })
@@ -45,10 +45,10 @@ test.describe('settings', () => {
     ).toBeVisible()
     await expect(
       page.getByRole('link', { name: /documentação/i }),
-    ).toHaveAttribute('href', /kanidm\.github\.io/)
+    ).toHaveAttribute('href', /archguard\.github\.io/)
   })
 
-  test('System tab shows console + Kanidm version cards', async ({ page }) => {
+  test('System tab shows console + archguard version cards', async ({ page }) => {
     await page.goto('/settings')
     await page.getByRole('tab', { name: /^sistema$/i }).click()
 

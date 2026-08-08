@@ -92,7 +92,7 @@ async function callOrchestrationRevoke(
 /**
  * One-shot offboarding:
  * 1. Orchestration service (mock or live multi-adapter)
- * 2. Kanidm expire (real access kill — always attempted)
+ * 2. archguard expire (real access kill — always attempted)
  * 3. Warpgate user remove (best-effort if configured)
  */
 export const revokePersonAccessFn = createServerFn({ method: 'POST' })
@@ -102,7 +102,7 @@ export const revokePersonAccessFn = createServerFn({ method: 'POST' })
         username: z.string().min(1).max(128),
         person_id: z.string().optional(),
         reason: z.string().max(500).optional(),
-        /** If true, skip orch and only direct Kanidm/WG */
+        /** If true, skip orch and only direct archguard/WG */
         direct_only: z.boolean().optional(),
       })
       .safeParse(data)
@@ -170,16 +170,16 @@ export const revokePersonAccessFn = createServerFn({ method: 'POST' })
       })
     }
 
-    const kanidmOk = steps.find((x) => x.component === 'kanidm')?.ok
+    const archguardOk = steps.find((x) => x.component === 'archguard')?.ok
     const allOk = steps.every((x) => x.ok)
-    const criticalOk = !!kanidmOk
+    const criticalOk = !!archguardOk
 
     recordActivity(
       'POST',
       `/archgate/persons/${encodeURIComponent(username)}/revoke`,
       actor,
       criticalOk ? 'success' : 'error',
-      criticalOk ? undefined : 'kanidm expire failed',
+      criticalOk ? undefined : 'archguard expire failed',
       {
         reason,
         steps: steps.map((x) => `${x.component}:${x.ok ? 'ok' : 'fail'}`).join(','),
@@ -198,7 +198,7 @@ export const revokePersonAccessFn = createServerFn({ method: 'POST' })
       reason,
       steps,
       message: criticalOk
-        ? `Acesso revogado para ${username} (login Kanidm bloqueado)`
+        ? `Acesso revogado para ${username} (login archguard bloqueado)`
         : `Falha ao revogar ${username} — ver steps`,
     }
   })

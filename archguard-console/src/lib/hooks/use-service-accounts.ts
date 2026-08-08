@@ -7,13 +7,13 @@ import {
   type UseQueryOptions,
 } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { serviceAccountApi } from '@/lib/api/kanidm-client'
+import { serviceAccountApi } from '@/lib/api/archguard-client'
 import { queryKeys } from '@/lib/utils/query-keys'
-import { mapKanidmError } from '@/lib/utils/error-mapper'
+import { maparchguardError } from '@/lib/utils/error-mapper'
 import type {
   ServiceAccount,
   CreateServiceAccountPayload,
-} from '@/lib/api/types/kanidm'
+} from '@/lib/api/types/archguard'
 
 // ── QUERIES ──────────────────────────────────────
 
@@ -56,7 +56,7 @@ export function useCreateServiceAccount() {
       toast.success('Service account criado com sucesso')
     },
     onError: (error) => {
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
   })
 }
@@ -73,7 +73,7 @@ export function useDeleteServiceAccount() {
       toast.success('Service account removido com sucesso')
     },
     onError: (error) => {
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
   })
 }
@@ -94,7 +94,7 @@ export function useGenerateApiToken() {
       serviceAccountApi
         .generateToken(id, label, expiry)
         .then((raw) => ({
-          // Kanidm returns the token as a bare JSON string; older code expected
+          // archguard returns the token as a bare JSON string; older code expected
           // an envelope so we adapt to a uniform { token } shape.
           token:
             typeof raw === 'string'
@@ -108,7 +108,7 @@ export function useGenerateApiToken() {
       toast.success('Token API gerado com sucesso')
     },
     onError: (error) => {
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
   })
 }
@@ -126,7 +126,7 @@ export function useRevokeApiToken() {
       toast.success('Token API revogado com sucesso')
     },
     onError: (error) => {
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
   })
 }

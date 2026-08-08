@@ -26,14 +26,14 @@
 	reverse_proxy archguard-console:3000
 }
 
-# Kanidm (OIDC issuer + admin API)
+# archguard (OIDC issuer + admin API)
 {$ARCHGUARD_ID_DOMAIN} {
 	encode zstd gzip
 
-	# Kanidm serves HTTPS internally on 8443 with a self-signed cert; we tell
+	# archguard serves HTTPS internally on 8443 with a self-signed cert; we tell
 	# the proxy to trust it. Caddy still re-encrypts to the public clients
 	# with the LE-issued cert.
-	reverse_proxy https://kanidmd:8443 {
+	reverse_proxy https://archguardd:8443 {
 		transport http {
 			tls
 			tls_insecure_skip_verify

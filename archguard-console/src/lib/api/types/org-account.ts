@@ -18,10 +18,10 @@ export type OrgAccountAuthKind =
 /**
  * OCB-4 — how far the product/cloud moved off shared passwords.
  * - password_only: shared password is primary (bad)
- * - oidc_primary: day-to-day via Kanidm/Workspace SSO; password only break-glass in OpenBao
+ * - oidc_primary: day-to-day via archguard/Workspace SSO; password only break-glass in OpenBao
  * - oidc_only: no shared password (ideal)
  * - api_key_primary: automation via key in OpenBao; human via individual SSO
- * - external_idp: Google/Apple native IAM (not Kanidm) but no shared password
+ * - external_idp: Google/Apple native IAM (not archguard) but no shared password
  */
 export type OrgFederationStatus =
   | 'password_only'
@@ -40,7 +40,7 @@ export type OrgAccount = {
   login_hint: string
   auth_kind: OrgAccountAuthKind
   federation_status: OrgFederationStatus
-  /** Kanidm OAuth2 client id when federated, e.g. vendax-admin */
+  /** archguard OAuth2 client id when federated, e.g. vendax-admin */
   oidc_client_id: string
   /** OpenBao path e.g. secret/data/org/store/apple-appstore — never the secret value */
   secret_ref: string

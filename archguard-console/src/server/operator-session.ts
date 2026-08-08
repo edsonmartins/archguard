@@ -102,7 +102,7 @@ export async function resolveOperatorSession(
   // A `lab-` bearer never falls through to the IdP — it is not an OIDC token.
   if (token.startsWith('lab-')) throw new Error('Unauthorized')
 
-  // The userinfo path differs per IdP (`<issuer>/userinfo` on Kanidm,
+  // The userinfo path differs per IdP (`<issuer>/userinfo` on archguard,
   // `/api/userinfo` on ArchGuard), so take it from discovery instead of
   // building it by hand.
   const explicitBase =
@@ -124,7 +124,7 @@ export async function resolveOperatorSession(
     groups?: string[]
   }
   const username = ui.preferred_username || ui.name || ui.email || 'operator'
-  // Kanidm sends name@domain, ArchGuard sends <org>/name — normalize once here
+  // archguard sends name@domain, ArchGuard sends <org>/name — normalize once here
   // so every consumer downstream compares bare group names.
   const groups = normalizeGroupNames(ui.groups)
   return {

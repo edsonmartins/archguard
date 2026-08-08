@@ -2,9 +2,9 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { recycleBinApi } from '@/lib/api/kanidm-client'
-import { mapKanidmError } from '@/lib/utils/error-mapper'
-import type { RecycleBinEntry } from '@/lib/api/types/kanidm'
+import { recycleBinApi } from '@/lib/api/archguard-client'
+import { maparchguardError } from '@/lib/utils/error-mapper'
+import type { RecycleBinEntry } from '@/lib/api/types/archguard'
 
 export function useRecycleBin() {
   return useQuery<RecycleBinEntry[]>({
@@ -29,7 +29,7 @@ export function useReviveEntry() {
       queryClient.invalidateQueries({ queryKey: ['oauth2'] })
     },
     onError: (err) => {
-      toast.error(mapKanidmError(err))
+      toast.error(maparchguardError(err))
     },
   })
 }

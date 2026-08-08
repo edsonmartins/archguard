@@ -2,7 +2,7 @@
 //
 // The same logical group arrives in a token under different shapes:
 //
-//   Kanidm     archguard_users@id.archgate.com.br   (SPN, @domain suffix)
+//   archguard     archguard_users@id.archgate.com.br   (SPN, @domain suffix)
 //   ArchGuard  archgate/archguard_users             (Casdoor <owner>/<name>)
 //
 // Casdoor composes the `owner/` prefix itself when a membership is stored
@@ -13,14 +13,14 @@
 // Kept deliberately tolerant: during the migration a session may carry groups
 // from either IdP.
 
-/** Strips the Casdoor `<owner>/` prefix and the Kanidm `@domain` suffix. */
+/** Strips the Casdoor `<owner>/` prefix and the archguard `@domain` suffix. */
 export function normalizeGroupName(raw: string): string {
   const withoutDomain = String(raw).replace(/@.*$/, '')
   const lastSegment = withoutDomain.slice(withoutDomain.lastIndexOf('/') + 1)
   return lastSegment.trim()
 }
 
-/** Normalizes a claim array, dropping empties and Kanidm's UUID entries. */
+/** Normalizes a claim array, dropping empties and archguard's UUID entries. */
 export function normalizeGroupNames(raw: readonly string[] | undefined): string[] {
   if (!Array.isArray(raw)) return []
   return raw
@@ -30,7 +30,7 @@ export function normalizeGroupNames(raw: readonly string[] | undefined): string[
 }
 
 /**
- * Tenant matching also has to survive the `-` vs `_` split between Kanidm
+ * Tenant matching also has to survive the `-` vs `_` split between archguard
  * group names (`tenant_rio_quality`) and Warpgate role names
  * (`tenant-rio-quality`).
  */

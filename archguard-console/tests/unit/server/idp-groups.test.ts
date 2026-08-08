@@ -1,7 +1,7 @@
 // Group names arrive in a different shape from each IdP. Getting this wrong
 // silently empties a tenant's catalog, so it is pinned here.
 //
-//   Kanidm     archguard_users@id.archgate.com.br
+//   archguard     archguard_users@id.archgate.com.br
 //   ArchGuard  archgate/archguard_users
 
 import { describe, expect, it } from 'vitest'
@@ -12,7 +12,7 @@ import {
 } from '@/server/idp/groups'
 
 describe('normalizeGroupName', () => {
-  it('strips the Kanidm @domain suffix', () => {
+  it('strips the archguard @domain suffix', () => {
     expect(normalizeGroupName('archguard_users@id.archgate.com.br')).toBe(
       'archguard_users',
     )
@@ -52,7 +52,7 @@ describe('normalizeGroupNames', () => {
     ).toEqual(['archguard_users', 'tenant_rio_quality', 'archguard_viewers'])
   })
 
-  it('drops Kanidm UUID entries and empties', () => {
+  it('drops archguard UUID entries and empties', () => {
     expect(
       normalizeGroupNames([
         '4f2b9c1a-1111-2222-3333-444455556666',

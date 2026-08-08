@@ -1,4 +1,4 @@
-// src/server/kanidm-proxy.ts
+// src/server/archguard-proxy.ts
 
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
@@ -8,8 +8,8 @@ import { logger } from './logger'
 import { enforceRateLimit } from './rate-limit'
 import { requireAnyPerm, requireSession } from './session-guard'
 
-const KANIDM_URL = process.env.ARCHGUARD_ID_URL || 'https://localhost:8443'
-const KANIDM_SA_TOKEN = process.env.ARCHGUARD_SA_TOKEN!
+const archguard_URL = process.env.ARCHGUARD_ID_URL || 'https://localhost:8443'
+const archguard_SA_TOKEN = process.env.ARCHGUARD_SA_TOKEN!
 const PROXY_LIMIT = 60
 const PROXY_WINDOW_MS = 60 * 1000
 
@@ -26,11 +26,11 @@ const ALLOWED_PATH_PREFIXES = [
 ]
 
 /**
- * Map Kanidm proxy method+path → required console permissions.
+ * Map archguard proxy method+path → required console permissions.
  * Deny-by-default: unknown shapes require system:admin.
  * Viewers (persons:read only) cannot mutate via the shared SA token.
  */
-export function requiredPermsForKanidmProxy(
+export function requiredPermsForarchguardProxy(
   method: string,
   path: string,
 ): Permission[] {
@@ -155,7 +155,7 @@ export function isAllowedPath(path: string): boolean {
   )
 }
 
-export const kanidmApiFn = createServerFn({ method: 'POST' })
+export const archguardApiFn = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) => {
     const result = proxyRequestSchema.safeParse(data)
     if (!result.success) {
@@ -167,7 +167,7 @@ export const kanidmApiFn = createServerFn({ method: 'POST' })
     enforceRateLimit('proxy', PROXY_LIMIT, PROXY_WINDOW_MS)
 
     // Auth + RBAC: authenticated session with permission for this method/path.
-    // Without this, any logged-in viewer could mutate Kanidm via the SA token.
+    // Without this, any logged-in viewer could mutate archguard via the SA token.
     let session
     try {
       session = requireSession()
@@ -188,7 +188,7 @@ export const kanidmApiFn = createServerFn({ method: 'POST' })
       throw new Error(`Forbidden path: ${data.path}`)
     }
 
-    const needed = requiredPermsForKanidmProxy(data.method, data.path)
+    const needed = requiredPermsForarchguardProxy(data.method, data.path)
     try {
       requireAnyPerm(session, needed, needed.join(' | '))
     } catch (e) {
@@ -204,10 +204,10 @@ export const kanidmApiFn = createServerFn({ method: 'POST' })
       throw e
     }
 
-    const response = await fetch(`${KANIDM_URL}${data.path}`, {
+    const response = await fetch(`${archguard_URL}${data.path}`, {
       method: data.method,
       headers: {
-        Authorization: `Bearer ${KANIDM_SA_TOKEN}`,
+        Authorization: `Bearer ${archguard_SA_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body: data.body ? JSON.stringify(data.body) : undefined,
@@ -234,9 +234,9 @@ export const kanidmApiFn = createServerFn({ method: 'POST' })
           path: data.path,
           status: response.status,
         },
-        'proxy: kanidm api error',
+        'proxy: archguard api error',
       )
-      throw new Error(`Kanidm API ${response.status}: ${error}`)
+      throw new Error(`archguard API ${response.status}: ${error}`)
     }
 
     if (isMutation) {

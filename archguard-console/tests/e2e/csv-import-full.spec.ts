@@ -2,7 +2,7 @@
 //
 // Drives the CSV import wizard end-to-end: upload → mapping → validate →
 // import → completion. The CSV uses unique identifiers so the test is
-// idempotent against a long-lived Kanidm.
+// idempotent against a long-lived archguard.
 
 import { test, expect } from '@playwright/test'
 import { loginAs } from './fixtures/auth'
@@ -44,7 +44,7 @@ test('CSV import: upload → validate → import → completion', async ({
     page.getByRole('button', { name: /importar 2 registros/i }),
   ).toBeVisible({ timeout: 10_000 })
 
-  // Step 2 → 3: actual import (writes to Kanidm)
+  // Step 2 → 3: actual import (writes to archguard)
   await page.getByRole('button', { name: /importar 2 registros/i }).click()
 
   // Step 3: completion screen lets the user navigate back to the list.

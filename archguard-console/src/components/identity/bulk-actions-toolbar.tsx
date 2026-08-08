@@ -24,7 +24,7 @@ import { Progress } from '@/components/ui/progress'
 import { PermissionGate } from '@/components/shared/permission-gate'
 import { useGroups, useAddGroupMembers, useRemoveGroupMembers } from '@/lib/hooks/use-groups'
 import { useResetPersonCredential } from '@/lib/hooks/use-persons'
-import type { Person } from '@/lib/api/types/kanidm'
+import type { Person } from '@/lib/api/types/archguard'
 
 interface BulkActionsToolbarProps {
   selectedPersons: Person[]

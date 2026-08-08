@@ -123,7 +123,7 @@ export const upsertSiteFn = createServerFn({ method: 'POST' })
     const actor = sessionActor(s)
     try {
       const site = await upsertSite(data, actor)
-      // ADR-004: ensure tenant_* group in Kanidm (best-effort; never blocks write)
+      // ADR-004: ensure tenant_* group in archguard (best-effort; never blocks write)
       const kg = await ensureTenantGroup(site.tenant_group, site.cliente)
       recordActivity(
         'PUT',
@@ -135,7 +135,7 @@ export const upsertSiteFn = createServerFn({ method: 'POST' })
           slug: site.slug,
           cliente: site.cliente,
           sites_backend: sitesBackend(),
-          kanidm_group: kg.action,
+          archguard_group: kg.action,
         },
       )
       return site

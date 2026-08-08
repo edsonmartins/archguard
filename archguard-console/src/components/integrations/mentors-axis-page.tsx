@@ -1,4 +1,4 @@
-// CP-7 — Mentors Axis sync (proprietários → sites + Kanidm + Warpgate roles)
+// CP-7 — Mentors Axis sync (proprietários → sites + archguard + Warpgate roles)
 
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -55,7 +55,7 @@ export function MentorsAxisPage() {
     onSuccess: (res) => {
       if (res.orchestration_ok) {
         toast.success(
-          `Orquestração OK: ${res.created} criados, ${res.updated} atualizados · Kanidm +${res.kanidm_created} · WG roles ${res.warpgate_roles_ok}`,
+          `Orquestração OK: ${res.created} criados, ${res.updated} atualizados · archguard +${res.archguard_created} · WG roles ${res.warpgate_roles_ok}`,
         )
       } else {
         toast.error(
@@ -82,7 +82,7 @@ export function MentorsAxisPage() {
         description={
           <>
             SoT comercial de clientes. Sync orquestra:{' '}
-            <strong>site</strong> → <strong>grupo Kanidm tenant_*</strong> →{' '}
+            <strong>site</strong> → <strong>grupo archguard tenant_*</strong> →{' '}
             <strong>role Warpgate</strong> (ADR-004). Pessoas/offboarding full =
             Fase 4.
           </>
@@ -121,8 +121,8 @@ export function MentorsAxisPage() {
                 {status.data?.auth && (
                   <Badge variant="outline">auth: {status.data.auth}</Badge>
                 )}
-                {status.data?.kanidm_ensure_groups && (
-                  <Badge variant="secondary">Kanidm groups</Badge>
+                {status.data?.archguard_ensure_groups && (
+                  <Badge variant="secondary">archguard groups</Badge>
                 )}
                 {status.data?.warpgate_ensure_roles && (
                   <Badge variant="secondary">Warpgate roles</Badge>
@@ -239,7 +239,7 @@ tenant header X-TENANT-IDs: ${status.data.tenant_id || '—'}`}
               <CardTitle>Última orquestração</CardTitle>
               <CardDescription>
                 mode={sync.data.mode} · created={sync.data.created} · updated=
-                {sync.data.updated} · kanidm+{sync.data.kanidm_created} · wg
+                {sync.data.updated} · archguard+{sync.data.archguard_created} · wg
                 roles {sync.data.warpgate_roles_ok} · failed steps=
                 {sync.data.steps_failed}
               </CardDescription>
@@ -263,7 +263,7 @@ tenant header X-TENANT-IDs: ${status.data.tenant_id || '—'}`}
                   <TableRow>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Site</TableHead>
-                    <TableHead>Kanidm</TableHead>
+                    <TableHead>archguard</TableHead>
                     <TableHead>Warpgate</TableHead>
                     <TableHead>Admin</TableHead>
                   </TableRow>
@@ -287,7 +287,7 @@ tenant header X-TENANT-IDs: ${status.data.tenant_id || '—'}`}
                         </Link>
                       </TableCell>
                       <TableCell className="font-mono text-[11px]">
-                        {r.kanidm_group || '—'}
+                        {r.archguard_group || '—'}
                       </TableCell>
                       <TableCell className="font-mono text-[11px]">
                         {r.warpgate_role || '—'}

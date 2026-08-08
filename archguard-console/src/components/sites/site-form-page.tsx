@@ -259,7 +259,7 @@ export function SiteFormPage({
       <Card>
         <CardHeader>
           <CardTitle>Identidade do cliente</CardTitle>
-          <CardDescription>Ligado ao tenant Kanidm (`tenant_*`).</CardDescription>
+          <CardDescription>Ligado ao tenant archguard (`tenant_*`).</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
@@ -282,7 +282,7 @@ export function SiteFormPage({
             />
           </div>
           <div className="space-y-2">
-            <Label>Grupo tenant Kanidm</Label>
+            <Label>Grupo tenant archguard</Label>
             <Input
               value={form.tenant_group}
               onChange={(e) => set('tenant_group', e.target.value)}

@@ -8,7 +8,7 @@ import { SystemHealth } from '@/components/dashboard/system-health'
 import { QuickActions } from '@/components/dashboard/quick-actions'
 import { ManagerModules } from '@/components/dashboard/manager-modules'
 import { PageHeader } from '@/components/shared/page-header'
-import { personApi, groupApi, oauth2Api, systemApi } from '@/lib/api/kanidm-client'
+import { personApi, groupApi, oauth2Api, systemApi } from '@/lib/api/archguard-client'
 import { getOpenBaoStatusFn } from '@/server/openbao-fn'
 import { queryKeys } from '@/lib/utils/query-keys'
 import { useTenantFilter } from '@/lib/hooks/use-tenant-filter'
@@ -17,8 +17,8 @@ export const Route = createFileRoute('/_authed/dashboard')({
   component: DashboardPage,
 })
 
-/** Kanidm /status returns bare `true`, not `{ state: "ok" }`. */
-function isKanidmOnline(data: unknown): boolean {
+/** archguard /status returns bare `true`, not `{ state: "ok" }`. */
+function isarchguardOnline(data: unknown): boolean {
   if (data === true || data === 'true') return true
   if (data && typeof data === 'object') {
     const d = data as Record<string, unknown>
@@ -71,7 +71,7 @@ function DashboardPage() {
     groups.isLoading ||
     oauth2.isLoading
 
-  const kanidmOk = !system.isError && isKanidmOnline(system.data)
+  const archguardOk = !system.isError && isarchguardOnline(system.data)
   const baoHealth = openbao.data?.health as
     | { sealed?: boolean; initialized?: boolean; version?: string }
     | null
@@ -84,12 +84,12 @@ function DashboardPage() {
 
   const services = [
     {
-      name: t('dashboard.health.kanidm'),
+      name: t('dashboard.health.archguard'),
       status: system.isLoading
         ? ('ok' as const)
         : system.isError
           ? ('unreachable' as const)
-          : kanidmOk
+          : archguardOk
             ? ('ok' as const)
             : ('error' as const),
       version:

@@ -1,6 +1,6 @@
-// src/lib/api/kanidm-client.ts
+// src/lib/api/archguard-client.ts
 
-import { kanidmApiFn } from '@/server/kanidm-proxy'
+import { archguardApiFn } from '@/server/archguard-proxy'
 import {
   normalizePerson,
   normalizeCredentialStatus,
@@ -8,14 +8,14 @@ import {
   normalizeOAuth2Client,
   normalizeServiceAccount,
 } from './normalizers'
-import type * as T from './types/kanidm'
+import type * as T from './types/archguard'
 
 async function api(
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   path: string,
   body?: unknown,
 ) {
-  return kanidmApiFn({ data: { method, path, body } })
+  return archguardApiFn({ data: { method, path, body } })
 }
 
 // ── PERSONS ─────────────────────────────────────
@@ -24,12 +24,12 @@ export const personApi = {
   list: async (): Promise<T.Person[]> => {
     const raw = await api('GET', '/v1/person')
     if (!raw || !Array.isArray(raw)) return []
-    return (raw as T.KanidmEntry[]).map(normalizePerson)
+    return (raw as T.archguardEntry[]).map(normalizePerson)
   },
 
   get: async (id: string): Promise<T.Person> => {
     const raw = await api('GET', `/v1/person/${encodeURIComponent(id)}`)
-    return normalizePerson(raw as T.KanidmEntry)
+    return normalizePerson(raw as T.archguardEntry)
   },
 
   create: async (payload: T.CreatePersonPayload) => {
@@ -87,12 +87,12 @@ export const groupApi = {
   list: async (): Promise<T.Group[]> => {
     const raw = await api('GET', '/v1/group')
     if (!raw || !Array.isArray(raw)) return []
-    return (raw as T.KanidmEntry[]).map(normalizeGroup)
+    return (raw as T.archguardEntry[]).map(normalizeGroup)
   },
 
   get: async (id: string): Promise<T.Group> => {
     const raw = await api('GET', `/v1/group/${encodeURIComponent(id)}`)
-    return normalizeGroup(raw as T.KanidmEntry)
+    return normalizeGroup(raw as T.archguardEntry)
   },
 
   create: async (payload: T.CreateGroupPayload) => {
@@ -138,12 +138,12 @@ export const groupApi = {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-// Kanidm v1.9 OAuth2 endpoints expect the client slug (name), not UUID.
+// archguard v1.9 OAuth2 endpoints expect the client slug (name), not UUID.
 // Most of our UI carries the UUID through routing — resolve to slug here
 // so callers stay uniform.
 async function resolveOAuth2Slug(id: string): Promise<string> {
   if (!UUID_RE.test(id)) return id
-  const all = (await api('GET', '/v1/oauth2')) as T.KanidmEntry[] | null
+  const all = (await api('GET', '/v1/oauth2')) as T.archguardEntry[] | null
   const match = (all ?? []).find((e) => e.attrs.uuid?.[0] === id)
   return match?.attrs.name?.[0] ?? id
 }
@@ -152,16 +152,16 @@ export const oauth2Api = {
   list: async (): Promise<T.OAuth2Client[]> => {
     const raw = await api('GET', '/v1/oauth2')
     if (!raw || !Array.isArray(raw)) return []
-    return (raw as T.KanidmEntry[]).map(normalizeOAuth2Client)
+    return (raw as T.archguardEntry[]).map(normalizeOAuth2Client)
   },
 
   get: async (id: string): Promise<T.OAuth2Client> => {
-    // Kanidm v1.9 only resolves /v1/oauth2/:id when :id is the slug (name),
+    // archguard v1.9 only resolves /v1/oauth2/:id when :id is the slug (name),
     // not the UUID. Detail page links carry the UUID, so transparently
     // fall back to a list lookup when the direct GET returns null.
     const raw = await api('GET', `/v1/oauth2/${encodeURIComponent(id)}`)
-    if (raw) return normalizeOAuth2Client(raw as T.KanidmEntry)
-    const all = (await api('GET', '/v1/oauth2')) as T.KanidmEntry[] | null
+    if (raw) return normalizeOAuth2Client(raw as T.archguardEntry)
+    const all = (await api('GET', '/v1/oauth2')) as T.archguardEntry[] | null
     const match = (all ?? []).find(
       (e) => e.attrs.uuid?.[0] === id || e.attrs.name?.[0] === id,
     )
@@ -265,12 +265,12 @@ export const serviceAccountApi = {
   list: async (): Promise<T.ServiceAccount[]> => {
     const raw = await api('GET', '/v1/service_account')
     if (!raw || !Array.isArray(raw)) return []
-    return (raw as T.KanidmEntry[]).map(normalizeServiceAccount)
+    return (raw as T.archguardEntry[]).map(normalizeServiceAccount)
   },
 
   get: async (id: string): Promise<T.ServiceAccount> => {
     const raw = await api('GET', `/v1/service_account/${encodeURIComponent(id)}`)
-    const sa = normalizeServiceAccount(raw as T.KanidmEntry)
+    const sa = normalizeServiceAccount(raw as T.archguardEntry)
     const tokens = await api(
       'GET',
       `/v1/service_account/${encodeURIComponent(id)}/_api_token`,
@@ -292,7 +292,7 @@ export const serviceAccountApi = {
   },
 
   create: (payload: T.CreateServiceAccountPayload) =>
-    // Kanidm v1.9 requires `entry_managed_by` for token issuance to work
+    // archguard v1.9 requires `entry_managed_by` for token issuance to work
     // (and silently drops `displayname` if it isn't set).
     api('POST', '/v1/service_account', {
       attrs: {
@@ -309,7 +309,7 @@ export const serviceAccountApi = {
     api('DELETE', `/v1/service_account/${encodeURIComponent(id)}`),
 
   generateToken: (id: string, label: string, expiry?: string) =>
-    // Kanidm v1.9 requires every field on this body — `expiry` must be
+    // archguard v1.9 requires every field on this body — `expiry` must be
     // present (null = no expiration) and `read_write` is mandatory.
     api('POST', `/v1/service_account/${encodeURIComponent(id)}/_api_token`, {
       label,
@@ -345,7 +345,7 @@ export const recycleBinApi = {
   list: async (): Promise<T.RecycleBinEntry[]> => {
     const raw = await api('GET', '/v1/recycle_bin')
     if (!raw || !Array.isArray(raw)) return []
-    return (raw as T.KanidmEntry[]).map((entry) => ({
+    return (raw as T.archguardEntry[]).map((entry) => ({
       id: entry.attrs.uuid?.[0] ?? '',
       name: entry.attrs.name?.[0] ?? entry.attrs.spn?.[0] ?? 'unknown',
       type: (entry.attrs.class ?? []).find((c) =>
@@ -365,7 +365,7 @@ export const recycleBinApi = {
 export const accountPolicyApi = {
   get: async (groupId: string): Promise<T.AccountPolicy> => {
     const raw = await api('GET', `/v1/group/${encodeURIComponent(groupId)}`)
-    const entry = raw as T.KanidmEntry
+    const entry = raw as T.archguardEntry
     const a = entry.attrs
     return {
       credentialTypeMinimum: (a.credential_type_minimum?.[0] as T.AccountPolicy['credentialTypeMinimum']) ?? 'any',

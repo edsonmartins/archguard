@@ -1,7 +1,7 @@
 // tests/e2e/fixtures/auth.ts
 //
 // E2E login helper. Uses the programmatic test-login route instead of the
-// OIDC redirect, which is unreliable under Playwright + self-signed Kanidm
+// OIDC redirect, which is unreliable under Playwright + self-signed archguard
 // cert. The test-login route is gated by ARCHGUARD_E2E_LOGIN=1 server-side.
 
 import type { Page } from '@playwright/test'

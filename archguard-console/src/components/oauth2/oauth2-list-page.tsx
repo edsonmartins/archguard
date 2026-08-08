@@ -30,7 +30,7 @@ import { PermissionGate } from '@/components/shared/permission-gate'
 import { useOAuth2Clients, useDeleteOAuth2Client } from '@/lib/hooks/use-oauth2'
 import { useGroups } from '@/lib/hooks/use-groups'
 import { useTenantFilter } from '@/lib/hooks/use-tenant-filter'
-import type { OAuth2Client } from '@/lib/api/types/kanidm'
+import type { OAuth2Client } from '@/lib/api/types/archguard'
 
 export function OAuth2ListPage() {
   const { t } = useTranslation()

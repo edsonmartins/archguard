@@ -37,7 +37,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { personApi } from '@/lib/api/kanidm-client'
+import { personApi } from '@/lib/api/archguard-client'
 import { GuideButton } from '@/components/shared/guide-button'
 import {
   parseCsv,

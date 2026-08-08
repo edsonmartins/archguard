@@ -1,11 +1,11 @@
-// src/lib/api/types/kanidm.ts
+// src/lib/api/types/archguard.ts
 
 // ══════════════════════════════════════════════
-// RAW KANIDM RESPONSE
+// RAW archguard RESPONSE
 // ══════════════════════════════════════════════
 
-/** Raw Kanidm response — attrs são sempre string[] */
-export interface KanidmEntry {
+/** Raw archguard response — attrs são sempre string[] */
+export interface archguardEntry {
   attrs: Record<string, string[]>
 }
 
@@ -166,7 +166,7 @@ export interface CreateOAuth2ClientPayload {
 // ══════════════════════════════════════════════
 
 export interface SystemStatus {
-  kanidm: {
+  archguard: {
     status: 'ok' | 'error'
     version?: string
     domain?: string

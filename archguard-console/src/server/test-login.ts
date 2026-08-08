@@ -2,10 +2,10 @@
 //
 // PROGRAMMATIC LOGIN FOR E2E ONLY.
 //
-// The OIDC redirect flow is unreliable in Playwright when Kanidm uses a
+// The OIDC redirect flow is unreliable in Playwright when archguard uses a
 // self-signed cert (`oidc-client-ts` does its own discovery fetch and the
 // browser refuses the response intermittently). This server function lets
-// the E2E suite log in by username + password against Kanidm's `/v1/auth`
+// the E2E suite log in by username + password against archguard's `/v1/auth`
 // API and mint a console session directly, skipping the browser redirect.
 //
 // Hardened: the `ARCHGUARD_E2E_LOGIN` env var must be set to "1" at server
@@ -24,8 +24,8 @@ import { normalizeGroupNames } from './idp/groups'
 import { derivePermissions, type Permission } from '../lib/auth/permissions'
 import type { SessionData } from './auth'
 
-const KANIDM_URL = process.env.ARCHGUARD_ID_URL || 'https://localhost:8443'
-const KANIDM_SA_TOKEN = process.env.ARCHGUARD_SA_TOKEN!
+const archguard_URL = process.env.ARCHGUARD_ID_URL || 'https://localhost:8443'
+const archguard_SA_TOKEN = process.env.ARCHGUARD_SA_TOKEN!
 const E2E_ENABLED = process.env.ARCHGUARD_E2E_LOGIN === '1'
 
 const ADMIN_GROUPS = [
@@ -53,68 +53,68 @@ function normalizeGroups(raw: string[]): string[] {
   return normalizeGroupNames(raw)
 }
 
-interface KanidmAuthState {
-  // Kanidm v1.9 returns the session token directly as a string in
+interface archguardAuthState {
+  // archguard v1.9 returns the session token directly as a string in
   // `state.success`, not as an object.
   state?: { choose?: string[]; continue?: string[]; success?: string }
 }
 
-async function kanidmAuth(
+async function archguardAuth(
   username: string,
   password: string,
 ): Promise<string> {
   // Step 1: init
-  const init = await fetch(`${KANIDM_URL}/v1/auth`, {
+  const init = await fetch(`${archguard_URL}/v1/auth`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ step: { init: username } }),
   })
-  if (!init.ok) throw new Error(`Kanidm /v1/auth init: ${init.status}`)
-  const sessionId = init.headers.get('x-kanidm-auth-session-id') ?? ''
-  if (!sessionId) throw new Error('Missing x-kanidm-auth-session-id header')
+  if (!init.ok) throw new Error(`archguard /v1/auth init: ${init.status}`)
+  const sessionId = init.headers.get('x-archguard-auth-session-id') ?? ''
+  if (!sessionId) throw new Error('Missing x-archguard-auth-session-id header')
 
   // Step 2: begin (choose method)
-  const beginRes = await fetch(`${KANIDM_URL}/v1/auth`, {
+  const beginRes = await fetch(`${archguard_URL}/v1/auth`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-kanidm-auth-session-id': sessionId,
+      'x-archguard-auth-session-id': sessionId,
     },
     body: JSON.stringify({ step: { begin: 'password' } }),
   })
-  if (!beginRes.ok) throw new Error(`Kanidm /v1/auth begin: ${beginRes.status}`)
+  if (!beginRes.ok) throw new Error(`archguard /v1/auth begin: ${beginRes.status}`)
 
   // Step 3: cred (submit password)
-  const credRes = await fetch(`${KANIDM_URL}/v1/auth`, {
+  const credRes = await fetch(`${archguard_URL}/v1/auth`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-kanidm-auth-session-id': sessionId,
+      'x-archguard-auth-session-id': sessionId,
     },
     body: JSON.stringify({ step: { cred: { password } } }),
   })
-  if (!credRes.ok) throw new Error(`Kanidm /v1/auth cred: ${credRes.status}`)
-  const credData = (await credRes.json()) as KanidmAuthState
+  if (!credRes.ok) throw new Error(`archguard /v1/auth cred: ${credRes.status}`)
+  const credData = (await credRes.json()) as archguardAuthState
   const token = credData.state?.success
   if (!token || typeof token !== 'string') {
-    throw new Error('Kanidm auth did not return a session token')
+    throw new Error('archguard auth did not return a session token')
   }
   return token
 }
 
-interface KanidmEntry {
+interface archguardEntry {
   attrs?: { uuid?: string[]; name?: string[]; displayname?: string[]; mail?: string[]; memberof?: string[] }
 }
 
-async function fetchPerson(username: string): Promise<KanidmEntry> {
+async function fetchPerson(username: string): Promise<archguardEntry> {
   const res = await fetch(
-    `${KANIDM_URL}/v1/person/${encodeURIComponent(username)}`,
+    `${archguard_URL}/v1/person/${encodeURIComponent(username)}`,
     {
-      headers: { Authorization: `Bearer ${KANIDM_SA_TOKEN}` },
+      headers: { Authorization: `Bearer ${archguard_SA_TOKEN}` },
     },
   )
-  if (!res.ok) throw new Error(`Kanidm /v1/person: ${res.status}`)
-  return (await res.json()) as KanidmEntry
+  if (!res.ok) throw new Error(`archguard /v1/person: ${res.status}`)
+  return (await res.json()) as archguardEntry
 }
 
 export const testLoginFn = createServerFn({ method: 'POST' })
@@ -130,8 +130,8 @@ export const testLoginFn = createServerFn({ method: 'POST' })
       )
     }
 
-    // Verify the password is correct against Kanidm.
-    await kanidmAuth(data.username, data.password)
+    // Verify the password is correct against archguard.
+    await archguardAuth(data.username, data.password)
 
     // Pull groups via the service-account token so we know what to grant.
     const person = await fetchPerson(data.username)

@@ -19,7 +19,7 @@ import { ensureTenantGroup, identityAdminConfigured } from './idp'
 import { ensureRole, warpgateConfigured } from './warpgate-proxy'
 
 export type OrchestrationStep = {
-  system: 'site' | 'kanidm' | 'warpgate'
+  system: 'site' | 'archguard' | 'warpgate'
   action: string
   detail?: string
   ok: boolean
@@ -36,11 +36,11 @@ export const getMentorsAxisStatusFn = createServerFn({ method: 'GET' }).handler(
       tenant_id: info.tenant_id,
       auth: info.auth,
       endpoints: info.endpoints,
-      kanidm_ensure_groups: identityAdminConfigured(),
+      archguard_ensure_groups: identityAdminConfigured(),
       warpgate_ensure_roles: warpgateConfigured(),
       orchestration: [
         'site_upsert',
-        'kanidm_tenant_group',
+        'archguard_tenant_group',
         'warpgate_tenant_role',
       ],
       source_repo: 'mentors-axis-server-api',
@@ -161,7 +161,7 @@ async function proprietarioToSiteInput(
 /**
  * Orchestrate Axis → ArchGate (ADR-004 CP-7 + bootstrap identity/gateway):
  * 1. upsert site ficha
- * 2. ensure Kanidm tenant_* group
+ * 2. ensure archguard tenant_* group
  * 3. ensure Warpgate role(s) for site
  * Does NOT create persons (Fase 4 — requires HITL / Axis user directory).
  */
@@ -181,7 +181,7 @@ export const syncMentorsAxisTenantsFn = createServerFn({
     axis_id: string
     tenant_group: string
     admin_email?: string
-    kanidm_group?: string
+    archguard_group?: string
     warpgate_role?: string
     steps: OrchestrationStep[]
   }[] = []
@@ -219,10 +219,10 @@ export const syncMentorsAxisTenantsFn = createServerFn({
       continue
     }
 
-    // Kanidm tenant group
+    // archguard tenant group
     const kg = await ensureTenantGroup(input.tenant_group, input.cliente)
     steps.push({
-      system: 'kanidm',
+      system: 'archguard',
       action: kg.action,
       detail: kg.error || input.tenant_group,
       ok: kg.action === 'created' || kg.action === 'exists',
@@ -274,7 +274,7 @@ export const syncMentorsAxisTenantsFn = createServerFn({
       axis_id: p.id,
       tenant_group: input.tenant_group,
       admin_email: p.adminEmail || p.email,
-      kanidm_group: `${kg.action}${kg.error ? `: ${kg.error}` : ''}`,
+      archguard_group: `${kg.action}${kg.error ? `: ${kg.error}` : ''}`,
       warpgate_role: warpgateRoleNote,
       steps,
     })
@@ -291,7 +291,7 @@ export const syncMentorsAxisTenantsFn = createServerFn({
     {
       mode: mentorsAxisMode(),
       count: results.length,
-      kanidm_groups: results.map((r) => r.kanidm_group),
+      archguard_groups: results.map((r) => r.archguard_group),
       warpgate_roles: results.map((r) => r.warpgate_role),
     },
   )
@@ -301,11 +301,11 @@ export const syncMentorsAxisTenantsFn = createServerFn({
     results,
     created: results.filter((r) => r.action === 'created').length,
     updated: results.filter((r) => r.action === 'updated').length,
-    kanidm_created: results.filter((r) =>
-      r.kanidm_group?.startsWith('created'),
+    archguard_created: results.filter((r) =>
+      r.archguard_group?.startsWith('created'),
     ).length,
-    kanidm_exists: results.filter((r) =>
-      r.kanidm_group?.startsWith('exists'),
+    archguard_exists: results.filter((r) =>
+      r.archguard_group?.startsWith('exists'),
     ).length,
     warpgate_roles_ok: results.filter((r) =>
       r.steps.some((st) => st.system === 'warpgate' && st.ok && st.action === 'ensure_role'),

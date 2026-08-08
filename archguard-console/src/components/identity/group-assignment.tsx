@@ -18,7 +18,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { PermissionGate } from '@/components/shared/permission-gate'
 import { GroupBadge } from '@/components/shared/group-badge'
 import { useGroups, useAddGroupMembers, useRemoveGroupMembers } from '@/lib/hooks/use-groups'
-import type { Person } from '@/lib/api/types/kanidm'
+import type { Person } from '@/lib/api/types/archguard'
 
 interface PersonGroupAssignmentProps {
   personId: string

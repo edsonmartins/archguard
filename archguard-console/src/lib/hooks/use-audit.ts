@@ -1,14 +1,14 @@
 // src/lib/hooks/use-audit.ts
 
 import { useQuery, type UseQueryOptions } from '@tanstack/react-query'
-import { kanidmApiFn } from '@/server/kanidm-proxy'
+import { archguardApiFn } from '@/server/archguard-proxy'
 import { queryKeys } from '@/lib/utils/query-keys'
-import type { AuditEvent } from '@/lib/api/types/kanidm'
+import type { AuditEvent } from '@/lib/api/types/archguard'
 import type { AuditFilters } from '@/lib/utils/validators'
 
 async function fetchAuditEvents(_filters: AuditFilters): Promise<AuditEvent[]> {
   try {
-    await kanidmApiFn({
+    await archguardApiFn({
       data: { method: 'GET', path: '/v1/recycle_bin' },
     })
     return []

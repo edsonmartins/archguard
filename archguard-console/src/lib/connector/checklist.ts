@@ -50,7 +50,7 @@ const COMMON: ChecklistItem[] = [
   },
   {
     id: 'tenant_linked',
-    label: 'Tenant Kanidm ligado',
+    label: 'Tenant archguard ligado',
     description: 'Grupo tenant_* no site',
     how: 'Editar site → tenant_group',
     auto: true,

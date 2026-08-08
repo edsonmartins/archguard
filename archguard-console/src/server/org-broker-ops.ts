@@ -1,5 +1,5 @@
 // Org Credential Broker — Manager-only ops (settings + health + ensure write).
-// ADR-013 C7 / ADR-009: admin never opens OpenBao/Kanidm UIs for day-to-day.
+// ADR-013 C7 / ADR-009: admin never opens OpenBao/archguard UIs for day-to-day.
 
 import { listOrgAccounts } from './org-accounts'
 import { getSetting, setSetting } from './manager-settings'

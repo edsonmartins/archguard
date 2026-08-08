@@ -87,7 +87,7 @@ async function writeResponse(webRes, res) {
   Readable.fromWeb(webRes.body).pipe(res)
 }
 
-async function checkKanidm() {
+async function checkarchguard() {
   const url = process.env.ARCHGUARD_ID_URL
   if (!url) return { ok: false, reason: 'ARCHGUARD_ID_URL not set' }
   try {
@@ -106,9 +106,9 @@ const server = createServer(async (req, res) => {
       const checks = {
         sessionSecret: Boolean(process.env.SESSION_SECRET),
         saToken: Boolean(process.env.ARCHGUARD_SA_TOKEN),
-        kanidm: await checkKanidm(),
+        archguard: await checkarchguard(),
       }
-      const ok = checks.sessionSecret && checks.saToken && checks.kanidm.ok
+      const ok = checks.sessionSecret && checks.saToken && checks.archguard.ok
       res.writeHead(ok ? 200 : 503, {
         'Content-Type': 'application/json',
       })

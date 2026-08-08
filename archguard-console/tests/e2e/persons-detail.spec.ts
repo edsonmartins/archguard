@@ -74,7 +74,7 @@ test.describe('person detail page', () => {
     ).toBeVisible()
     await expect(page.getByText(/validade do link/i)).toBeVisible()
 
-    // We do not actually generate the token here — that requires Kanidm to
+    // We do not actually generate the token here — that requires archguard to
     // be writable for the test user and pollutes the audit log. The smoke
     // test stops after verifying the dialog renders.
     await page.getByRole('button', { name: /cancelar/i }).click()

@@ -23,11 +23,11 @@ function CallbackPage() {
       try {
         const url = new URL(window.location.href)
 
-        // Handle OAuth2 error response from Kanidm
+        // Handle OAuth2 error response from archguard
         const errorParam = url.searchParams.get('error')
         const errorDesc = url.searchParams.get('error_description')
         if (errorParam) {
-          setError(`Kanidm: ${errorParam} — ${errorDesc || 'Erro desconhecido'}`)
+          setError(`archguard: ${errorParam} — ${errorDesc || 'Erro desconhecido'}`)
           return
         }
 
@@ -65,7 +65,7 @@ function CallbackPage() {
 
         if (message.includes('fetch') || message.includes('NetworkError') || message.includes('Failed to fetch')) {
           setError(
-            `Erro de rede ao trocar código OAuth2. Verifique se o certificado TLS do Kanidm foi aceito no navegador. ` +
+            `Erro de rede ao trocar código OAuth2. Verifique se o certificado TLS do archguard foi aceito no navegador. ` +
             `Acesse https://localhost:8443 e aceite o certificado, depois tente novamente. (${message})`
           )
         } else if (message.includes('No matching state')) {

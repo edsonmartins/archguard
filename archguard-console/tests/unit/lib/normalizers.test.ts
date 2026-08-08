@@ -9,9 +9,9 @@ import {
   parseClaimMaps,
   extractTenantPrefix,
 } from '@/lib/api/normalizers'
-import type { KanidmEntry } from '@/lib/api/types/kanidm'
+import type { archguardEntry } from '@/lib/api/types/archguard'
 
-const personEntry: KanidmEntry = {
+const personEntry: archguardEntry = {
   attrs: {
     uuid: ['11111111-1111-1111-1111-111111111111'],
     name: ['alice'],
@@ -24,7 +24,7 @@ const personEntry: KanidmEntry = {
   },
 }
 
-const expiredPerson: KanidmEntry = {
+const expiredPerson: archguardEntry = {
   attrs: {
     uuid: ['22222222-2222-2222-2222-222222222222'],
     name: ['bob'],
@@ -34,7 +34,7 @@ const expiredPerson: KanidmEntry = {
   },
 }
 
-const futurePerson: KanidmEntry = {
+const futurePerson: archguardEntry = {
   attrs: {
     uuid: ['33333333-3333-3333-3333-333333333333'],
     name: ['carol'],
@@ -45,7 +45,7 @@ const futurePerson: KanidmEntry = {
 }
 
 describe('normalizePerson', () => {
-  it('maps Kanidm person fields to the Person model', () => {
+  it('maps archguard person fields to the Person model', () => {
     const p = normalizePerson(personEntry)
     expect(p.id).toBe('11111111-1111-1111-1111-111111111111')
     expect(p.username).toBe('alice')
@@ -242,7 +242,7 @@ describe('extractTenantPrefix', () => {
     ['globex', 'globex'], // standalone tenant root
     ['tenant_rio_quality', 'tenant_rio_quality'], // ArchGate
     ['tenant_grupo_marra', 'tenant_grupo_marra'],
-    // SPN form from Kanidm memberof
+    // SPN form from archguard memberof
     [
       'tenant_rio_quality@id.archgate.com.br',
       'tenant_rio_quality',

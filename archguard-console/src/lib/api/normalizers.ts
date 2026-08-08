@@ -1,7 +1,7 @@
 // src/lib/api/normalizers.ts
 
 import type {
-  KanidmEntry,
+  archguardEntry,
   Person,
   PersonStatus,
   CredentialStatus,
@@ -11,12 +11,12 @@ import type {
   ServiceAccount,
   ScopeMap,
   ClaimMap,
-} from './types/kanidm'
+} from './types/archguard'
 import { BUILTIN_GROUPS } from '../utils/constants'
 
-export function normalizePerson(raw: KanidmEntry): Person {
+export function normalizePerson(raw: archguardEntry): Person {
   const a = raw.attrs
-  // memberof contains UUIDs; the Kanidm list API also provides
+  // memberof contains UUIDs; the archguard list API also provides
   // memberof attribute which often contains group names or UUIDs.
   // We derive groupNames from the memberof attribute values.
   const memberOf = a.memberof ?? []
@@ -42,7 +42,7 @@ export function normalizePerson(raw: KanidmEntry): Person {
 }
 
 export function normalizeCredentialStatus(raw: unknown): CredentialStatus {
-  // Kanidm returns credential status in various formats;
+  // archguard returns credential status in various formats;
   // normalize to our CredentialStatus interface
   if (!raw || typeof raw !== 'object') {
     return {
@@ -57,7 +57,7 @@ export function normalizeCredentialStatus(raw: unknown): CredentialStatus {
 
   const data = raw as Record<string, unknown>
 
-  // Handle array-of-credentials format from Kanidm
+  // Handle array-of-credentials format from archguard
   const creds = Array.isArray(data.creds) ? data.creds : []
 
   const hasPassword = creds.some(
@@ -100,7 +100,7 @@ export function normalizeCredentialStatus(raw: unknown): CredentialStatus {
 
 /**
  * Normalize group name: strip SPN domain (`name@domain` → `name`).
- * Kanidm list APIs often return memberof as SPNs.
+ * archguard list APIs often return memberof as SPNs.
  */
 export function stripGroupSpn(groupName: string): string {
   if (!groupName.includes('@')) return groupName
@@ -160,7 +160,7 @@ export function extractTenantPrefix(groupName: string): string | null {
   return name
 }
 
-export function normalizeGroup(raw: KanidmEntry): Group {
+export function normalizeGroup(raw: archguardEntry): Group {
   const a = raw.attrs
   const name = a.name?.[0] ?? ''
 
@@ -187,7 +187,7 @@ export function normalizeGroup(raw: KanidmEntry): Group {
   }
 }
 
-export function normalizeOAuth2Client(raw: KanidmEntry): OAuth2Client {
+export function normalizeOAuth2Client(raw: archguardEntry): OAuth2Client {
   const a = raw.attrs
   const classes = a.class ?? []
   return {
@@ -209,7 +209,7 @@ export function normalizeOAuth2Client(raw: KanidmEntry): OAuth2Client {
   }
 }
 
-export function normalizeServiceAccount(raw: KanidmEntry): ServiceAccount {
+export function normalizeServiceAccount(raw: archguardEntry): ServiceAccount {
   const a = raw.attrs
   const memberOf = a.memberof ?? []
   return {

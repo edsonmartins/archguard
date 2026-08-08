@@ -186,7 +186,7 @@ export async function deleteConnection(id: string): Promise<void> {
 
 /**
  * Mint a short-lived Guacamole authToken for an operator via header-auth
- * (ADR-007A: X-Forwarded-User = Kanidm preferred_username).
+ * (ADR-007A: X-Forwarded-User = archguard preferred_username).
  * Never uses guacadmin for operator sessions.
  *
  * Note: header auth often returns dataSource="header". Connection inventory and

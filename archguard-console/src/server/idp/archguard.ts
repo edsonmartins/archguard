@@ -1,6 +1,6 @@
 // ArchGuard (Casdoor fork) adapter for the identity-admin port.
 //
-// Differences from Kanidm that shape this file:
+// Differences from archguard that shape this file:
 //
 // - Objects are addressed as `<organization>/<name>`, not by bare name.
 // - Group membership lives on the USER (`user.groups`), not on the group, so a

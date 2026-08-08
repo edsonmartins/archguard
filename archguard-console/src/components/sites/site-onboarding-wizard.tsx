@@ -289,7 +289,7 @@ export function SiteOnboardingWizard() {
           <CardHeader>
             <CardTitle>1. Identidade do cliente</CardTitle>
             <CardDescription>
-              Cria o site no inventário e o grupo tenant no Kanidm.
+              Cria o site no inventário e o grupo tenant no archguard.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -314,7 +314,7 @@ export function SiteOnboardingWizard() {
               />
             </div>
             <div className="space-y-1">
-              <Label>Grupo tenant Kanidm</Label>
+              <Label>Grupo tenant archguard</Label>
               <Input
                 className="font-mono"
                 value={tenant}
@@ -718,7 +718,7 @@ export function SiteOnboardingWizard() {
           <CardHeader>
             <CardTitle>4. Revisar e provisionar</CardTitle>
             <CardDescription>
-              Uma ação cria site, tenant Kanidm, connectors (se marcados) e
+              Uma ação cria site, tenant archguard, connectors (se marcados) e
               aplica gateways.
             </CardDescription>
           </CardHeader>

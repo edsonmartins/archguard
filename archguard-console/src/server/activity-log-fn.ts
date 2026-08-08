@@ -5,7 +5,7 @@
 
 import { createServerFn } from '@tanstack/react-start'
 import { queryActivityLog } from './activity-log'
-import type { ActivityLogEntry } from '@/lib/api/types/kanidm'
+import type { ActivityLogEntry } from '@/lib/api/types/archguard'
 import { requireAnyPerm, requireSession } from './session-guard'
 
 export const getActivityLogFn = createServerFn({ method: 'GET' }).handler(

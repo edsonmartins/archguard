@@ -52,7 +52,7 @@ import { BulkActionsToolbar } from '@/components/identity/bulk-actions-toolbar'
 import { usePersons, useDeletePerson } from '@/lib/hooks/use-persons'
 import { useTenantFilter } from '@/lib/hooks/use-tenant-filter'
 import { initials } from '@/lib/utils/formatters'
-import type { Person } from '@/lib/api/types/kanidm'
+import type { Person } from '@/lib/api/types/archguard'
 
 export function PersonListPage() {
   const { t } = useTranslation()

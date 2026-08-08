@@ -94,7 +94,7 @@ test.describe('control plane — admin', () => {
     await expect(
       page.getByRole('heading', { level: 1, name: /plataforma/i }),
     ).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByText(/kanidm/i).first()).toBeVisible({
+    await expect(page.getByText(/archguard/i).first()).toBeVisible({
       timeout: 15_000,
     })
   })

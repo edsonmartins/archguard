@@ -37,7 +37,7 @@ export interface SessionData {
 // Refresh proactively when fewer than this many ms remain on the access token.
 const REFRESH_THRESHOLD_MS = 60 * 1000
 
-const KANIDM_URL = process.env.ARCHGUARD_ID_URL || 'https://localhost:8443'
+const archguard_URL = process.env.ARCHGUARD_ID_URL || 'https://localhost:8443'
 /** Default admin console client; UnifiedUI may override via OIDC_CLIENT_ID / UNIFIED_OIDC_CLIENT_ID. */
 const OIDC_CLIENT_ID =
   process.env.UNIFIED_OIDC_CLIENT_ID ||
@@ -45,9 +45,9 @@ const OIDC_CLIENT_ID =
   'archguard-console'
 const IS_PROD = process.env.NODE_ENV === 'production'
 
-if (IS_PROD && !KANIDM_URL.startsWith('https://')) {
+if (IS_PROD && !archguard_URL.startsWith('https://')) {
   throw new Error(
-    'ARCHGUARD_ID_URL must be HTTPS in production (got: ' + KANIDM_URL + ')',
+    'ARCHGUARD_ID_URL must be HTTPS in production (got: ' + archguard_URL + ')',
   )
 }
 
@@ -113,7 +113,7 @@ export async function exchangeCodeForTokens(
   codeVerifier: string,
   redirectUri: string,
 ) {
-  const response = await fetch(`${KANIDM_URL}/oauth2/token`, {
+  const response = await fetch(`${archguard_URL}/oauth2/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -143,7 +143,7 @@ interface TokenResponse {
 async function exchangeRefreshTokenForTokens(
   refreshToken: string,
 ): Promise<TokenResponse> {
-  const response = await fetch(`${KANIDM_URL}/oauth2/token`, {
+  const response = await fetch(`${archguard_URL}/oauth2/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -160,7 +160,7 @@ async function exchangeRefreshTokenForTokens(
 }
 
 /**
- * Build a SessionData payload from a Kanidm token response. Verifies the
+ * Build a SessionData payload from a archguard token response. Verifies the
  * id_token and re-derives groups/permissions, so any group changes upstream
  * propagate on every refresh.
  */
@@ -281,9 +281,9 @@ export const loginCallbackFn = createServerFn({ method: 'POST' })
     }
   })
 
-// Normalize Kanidm group names: strip @domain suffix and filter out UUIDs
+// Normalize archguard group names: strip @domain suffix and filter out UUIDs
 export function normalizeGroups(rawGroups: string[]): string[] {
-  // Kanidm sends `name@domain`; ArchGuard sends `<org>/<name>`. Both shapes are
+  // archguard sends `name@domain`; ArchGuard sends `<org>/<name>`. Both shapes are
   // reduced to the bare group name (audit 2026-08-01).
   return normalizeGroupNames(rawGroups)
 }

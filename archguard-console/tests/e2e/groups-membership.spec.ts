@@ -2,7 +2,7 @@
 //
 // Adds and removes members through the group detail page. Each test creates
 // fresh fixtures (one group, one or more persons) so they can run in any
-// order against a long-lived Kanidm.
+// order against a long-lived archguard.
 
 import { test, expect } from '@playwright/test'
 import { loginAs } from './fixtures/auth'

@@ -4,7 +4,7 @@
 //
 // Uses jose's RemoteJWKSet, which fetches and caches JWKS from the issuer
 // (rotating keys are picked up on kid miss). The issuer and jwks_uri come from
-// OIDC discovery, so this file works against Kanidm (issuer per client) and
+// OIDC discovery, so this file works against archguard (issuer per client) and
 // ArchGuard (single issuer) without knowing which is active.
 
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose'

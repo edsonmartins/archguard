@@ -53,7 +53,7 @@ import { PermissionGate } from '@/components/shared/permission-gate'
 import { GroupBadge } from '@/components/shared/group-badge'
 import { useGroups, useDeleteGroup } from '@/lib/hooks/use-groups'
 import { useTenantFilter } from '@/lib/hooks/use-tenant-filter'
-import type { Group } from '@/lib/api/types/kanidm'
+import type { Group } from '@/lib/api/types/archguard'
 
 type ViewMode = 'list' | 'tree'
 

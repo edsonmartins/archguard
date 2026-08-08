@@ -5,7 +5,7 @@
 **Versão:** 1.0  
 **Data:** Fevereiro 2026  
 **Stack:** TanStack Start · TanStack Router · TanStack Query · Shadcn/ui · oidc-client-ts  
-**Engines:** Kanidm (Identity) · AliasVault (Vault)
+**Engines:** archguard (Identity) · AliasVault (Vault)
 
 ---
 
@@ -82,7 +82,7 @@
 └────────┼─────────────────────┼───────────────┘
          │                     │
     ┌────┴─────┐         ┌────┴─────┐
-    │ Kanidm   │         │ Kanidm   │
+    │ archguard   │         │ archguard   │
     │ Auth API │         │ Admin API│
     │ (OIDC)   │         │ (REST)   │
     └──────────┘         └──────────┘
@@ -93,15 +93,15 @@
     └──────────┘
 ```
 
-**Dois modos de comunicação com Kanidm:**
+**Dois modos de comunicação com archguard:**
 
-1. **OIDC Flow (autenticação):** Console ↔ Kanidm via OAuth2/OIDC standard. O Console é um OAuth2 public client registrado no Kanidm. Usa PKCE S256.
+1. **OIDC Flow (autenticação):** Console ↔ archguard via OAuth2/OIDC standard. O Console é um OAuth2 public client registrado no archguard. Usa PKCE S256.
 
-2. **Admin API (gestão):** Console faz chamadas REST à API `/v1/` do Kanidm. O admin logado autentica via Kanidm API flow (POST `/v1/auth`) com o bearer token JWT resultante. Tokens OAuth2/OIDC do Kanidm NÃO concedem acesso à API administrativa — são fluxos separados.
+2. **Admin API (gestão):** Console faz chamadas REST à API `/v1/` do archguard. O admin logado autentica via archguard API flow (POST `/v1/auth`) com o bearer token JWT resultante. Tokens OAuth2/OIDC do archguard NÃO concedem acesso à API administrativa — são fluxos separados.
 
 **Implicação de design:** O Console mantém duas sessões:
 - Sessão OIDC: identifica o usuário, fornece claims (groups, email, name)
-- Sessão Kanidm API: bearer token para chamadas administrativas
+- Sessão archguard API: bearer token para chamadas administrativas
 
 ---
 
@@ -172,16 +172,16 @@ archguard-console/
 │   ├── routes/                        # (acima)
 │   │
 │   ├── server/                        # Server functions
-│   │   ├── auth.ts                    # OIDC + Kanidm API auth
+│   │   ├── auth.ts                    # OIDC + archguard API auth
 │   │   ├── session.ts                 # Session store (cookie-based)
-│   │   └── kanidm-proxy.ts            # Proxy requests com bearer token
+│   │   └── archguard-proxy.ts            # Proxy requests com bearer token
 │   │
 │   ├── lib/
 │   │   ├── api/
-│   │   │   ├── kanidm-client.ts       # HTTP client Kanidm REST API
+│   │   │   ├── archguard-client.ts       # HTTP client archguard REST API
 │   │   │   ├── vault-client.ts        # HTTP client AliasVault API
 │   │   │   └── types/
-│   │   │       ├── kanidm.ts          # Types da API Kanidm
+│   │   │       ├── archguard.ts          # Types da API archguard
 │   │   │       ├── vault.ts           # Types do AliasVault
 │   │   │       └── shared.ts          # Types compartilhados
 │   │   ├── auth/
@@ -201,7 +201,7 @@ archguard-console/
 │   │   ├── utils/
 │   │   │   ├── formatters.ts
 │   │   │   ├── validators.ts          # Zod schemas
-│   │   │   └── constants.ts           # Kanidm built-in groups, scopes
+│   │   │   └── constants.ts           # archguard built-in groups, scopes
 │   │   └── i18n/
 │   │       ├── config.ts
 │   │       ├── pt-BR.json
@@ -315,14 +315,14 @@ declare module '@tanstack/react-router' {
 
 ### 3.1 Dual Session Architecture
 
-O Console precisa de duas sessões distintas — Kanidm separa OAuth2 e API admin:
+O Console precisa de duas sessões distintas — archguard separa OAuth2 e API admin:
 
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                  ARCHGUARD CONSOLE                        │
 │                                                           │
 │  ┌─────────────────┐    ┌──────────────────────────────┐ │
-│  │  OIDC Session    │    │  Kanidm API Session           │ │
+│  │  OIDC Session    │    │  archguard API Session           │ │
 │  │  ──────────────  │    │  ──────────────────────       │ │
 │  │                  │    │                               │ │
 │  │  Purpose:        │    │  Purpose:                     │ │
@@ -336,7 +336,7 @@ O Console precisa de duas sessões distintas — Kanidm separa OAuth2 e API admi
 │  │                  │    │  → Bearer JWT                 │ │
 │  │  Token:          │    │                               │ │
 │  │  id_token +      │    │  Token:                       │ │
-│  │  access_token    │    │  Kanidm session JWT           │ │
+│  │  access_token    │    │  archguard session JWT           │ │
 │  │                  │    │                               │ │
 │  │  Storage:        │    │  Storage:                     │ │
 │  │  httpOnly cookie │    │  httpOnly cookie               │ │
@@ -361,10 +361,10 @@ _authed.tsx beforeLoad()
                 │
                 ▼
         OIDC Authorization Code + PKCE
-        → Kanidm /oauth2/authorise
+        → archguard /oauth2/authorise
                 │
                 ▼
-        Kanidm login UI (multi-step)
+        archguard login UI (multi-step)
         [username] → [password] → [MFA/passkey]
                 │
                 ▼
@@ -372,7 +372,7 @@ _authed.tsx beforeLoad()
                 │
                 ▼
         Server function: troca code por tokens
-        → Kanidm POST /oauth2/token
+        → archguard POST /oauth2/token
                 │
                 ▼
         Decodifica id_token → extrai groups, name, email
@@ -417,7 +417,7 @@ export const Route = createFileRoute('/_authed')({
         user: session.user,
         groups: session.groups,
         permissions: session.permissions,
-        kanidmToken: session.kanidmApiToken,
+        archguardToken: session.archguardApiToken,
       },
     }
   },
@@ -458,7 +458,7 @@ interface SessionData {
     refreshToken?: string
     expiresAt: number
   }
-  kanidmApiToken: string
+  archguardApiToken: string
 }
 
 export const getSessionFn = createServerFn({ method: 'GET' })
@@ -528,7 +528,7 @@ export const loginCallbackFn = createServerFn({ method: 'POST' })
         refreshToken: tokens.refresh_token,
         expiresAt: Date.now() + tokens.expires_in * 1000,
       },
-      kanidmApiToken: process.env.ARCHGUARD_SA_TOKEN || '',
+      archguardApiToken: process.env.ARCHGUARD_SA_TOKEN || '',
     }
 
     setCookie('archguard_session', encryptSession(session), {
@@ -548,9 +548,9 @@ export const logoutFn = createServerFn({ method: 'POST' })
   })
 ```
 
-### 3.5 Kanidm API Proxy — Service Account
+### 3.5 archguard API Proxy — Service Account
 
-O Console usa um **Service Account dedicado** para chamadas admin à API do Kanidm:
+O Console usa um **Service Account dedicado** para chamadas admin à API do archguard:
 
 ```
 archguard-console-sa (service account)
@@ -563,23 +563,23 @@ archguard-console-sa (service account)
 ```
 
 ```typescript
-// src/server/kanidm-proxy.ts
+// src/server/archguard-proxy.ts
 import { createServerFn } from '@tanstack/react-start'
 
-const KANIDM_URL = process.env.ARCHGUARD_ID_URL || 'https://localhost:8443'
-const KANIDM_SA_TOKEN = process.env.ARCHGUARD_SA_TOKEN!
+const archguard_URL = process.env.ARCHGUARD_ID_URL || 'https://localhost:8443'
+const archguard_SA_TOKEN = process.env.ARCHGUARD_SA_TOKEN!
 
-export const kanidmApiFn = createServerFn({ method: 'POST' })
+export const archguardApiFn = createServerFn({ method: 'POST' })
   .validator((data: {
     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
     path: string
     body?: unknown
   }) => data)
   .handler(async ({ data }) => {
-    const response = await fetch(`${KANIDM_URL}${data.path}`, {
+    const response = await fetch(`${archguard_URL}${data.path}`, {
       method: data.method,
       headers: {
-        'Authorization': `Bearer ${KANIDM_SA_TOKEN}`,
+        'Authorization': `Bearer ${archguard_SA_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body: data.body ? JSON.stringify(data.body) : undefined,
@@ -587,7 +587,7 @@ export const kanidmApiFn = createServerFn({ method: 'POST' })
 
     if (!response.ok) {
       const error = await response.text()
-      throw new Error(`Kanidm API ${response.status}: ${error}`)
+      throw new Error(`archguard API ${response.status}: ${error}`)
     }
 
     const text = await response.text()
@@ -599,17 +599,17 @@ export const kanidmApiFn = createServerFn({ method: 'POST' })
 
 ## 4. Modelo de Dados e Contratos de API
 
-### 4.1 Types Core — Kanidm Entities
+### 4.1 Types Core — archguard Entities
 
 ```typescript
-// src/lib/api/types/kanidm.ts
+// src/lib/api/types/archguard.ts
 
 // ══════════════════════════════════════════════
 // PERSON
 // ══════════════════════════════════════════════
 
-/** Raw Kanidm response — attrs são sempre string[] */
-export interface KanidmEntry {
+/** Raw archguard response — attrs são sempre string[] */
+export interface archguardEntry {
   attrs: Record<string, string[]>
 }
 
@@ -677,7 +677,7 @@ export interface Group {
   members: GroupMember[]
   memberOf: string[]
   memberCount: number
-  isBuiltin: boolean                        // grupo nativo do Kanidm
+  isBuiltin: boolean                        // grupo nativo do archguard
   isTenant: boolean                         // grupo raiz de tenant
   classes: string[]
 }
@@ -769,7 +769,7 @@ export interface CreateOAuth2ClientPayload {
 // ══════════════════════════════════════════════
 
 export interface SystemStatus {
-  kanidm: {
+  archguard: {
     status: 'ok' | 'error'
     version?: string
     domain?: string
@@ -802,12 +802,12 @@ export type AuditEventType =
   | 'token_generated' | 'token_revoked'
 ```
 
-### 4.2 Normalizer — Kanidm Raw → Console Types
+### 4.2 Normalizer — archguard Raw → Console Types
 
 ```typescript
 // src/lib/api/normalizers.ts
 
-import type { KanidmEntry, Person, Group, OAuth2Client, ServiceAccount } from './types/kanidm'
+import type { archguardEntry, Person, Group, OAuth2Client, ServiceAccount } from './types/archguard'
 
 const BUILTIN_GROUPS = new Set([
   'idm_admins', 'idm_people_admins', 'idm_oauth2_admins',
@@ -816,7 +816,7 @@ const BUILTIN_GROUPS = new Set([
   'system_admins', 'idm_hp_account_manage',
 ])
 
-export function normalizePerson(raw: KanidmEntry): Person {
+export function normalizePerson(raw: archguardEntry): Person {
   const a = raw.attrs
   return {
     id: a.uuid?.[0] ?? '',
@@ -834,7 +834,7 @@ export function normalizePerson(raw: KanidmEntry): Person {
   }
 }
 
-export function normalizeGroup(raw: KanidmEntry): Group {
+export function normalizeGroup(raw: archguardEntry): Group {
   const a = raw.attrs
   const name = a.name?.[0] ?? ''
   return {
@@ -854,7 +854,7 @@ export function normalizeGroup(raw: KanidmEntry): Group {
   }
 }
 
-export function normalizeOAuth2Client(raw: KanidmEntry): OAuth2Client {
+export function normalizeOAuth2Client(raw: archguardEntry): OAuth2Client {
   const a = raw.attrs
   const classes = a.class ?? []
   return {
@@ -869,7 +869,7 @@ export function normalizeOAuth2Client(raw: KanidmEntry): OAuth2Client {
     supplementalScopeMaps: parseScopeMaps(a.oauth2_rs_sup_scope_map ?? []),
     claimMaps: parseClaimMaps(a.oauth2_rs_claim_map ?? []),
     hasSecret: classes.includes('oauth2_resource_server_basic'),
-    isPkceEnabled: true, // Kanidm: PKCE é obrigatório por padrão
+    isPkceEnabled: true, // archguard: PKCE é obrigatório por padrão
     classes,
   }
 }
@@ -883,18 +883,18 @@ function derivePersonStatus(attrs: Record<string, string[]>): PersonStatus {
 }
 ```
 
-### 4.3 Kanidm REST API — Client Completo
+### 4.3 archguard REST API — Client Completo
 
 ```typescript
-// src/lib/api/kanidm-client.ts
+// src/lib/api/archguard-client.ts
 
-import { kanidmApiFn } from '../../server/kanidm-proxy'
+import { archguardApiFn } from '../../server/archguard-proxy'
 import { normalizePerson, normalizeGroup, normalizeOAuth2Client } from './normalizers'
-import type * as T from './types/kanidm'
+import type * as T from './types/archguard'
 
 // Helper para chamadas
 async function api(method: string, path: string, body?: unknown) {
-  return kanidmApiFn({ data: { method: method as any, path, body } })
+  return archguardApiFn({ data: { method: method as any, path, body } })
 }
 
 // ── PERSONS ─────────────────────────────────────
@@ -1524,7 +1524,7 @@ PASSO 4: Progresso
 │  │  rio_quality_vendedores  10       👤 Users    Equipe...    │  │
 │  │  rio_quality_gestores    3        👤 Users    Gerentes     │  │
 │  │  ─── builtin ────────────────────────────────────────────  │  │
-│  │  idm_admins              1        🔒 System   Kanidm admin │  │
+│  │  idm_admins              1        🔒 System   archguard admin │  │
 │  └────────────────────────────────────────────────────────────┘  │
 │                                                                   │
 │  ÁRVORE:                                                         │
@@ -1896,7 +1896,7 @@ export type Permission =
 
 ```typescript
 const GROUP_PERMISSIONS: Record<string, Permission[]> = {
-  // Kanidm built-in
+  // archguard built-in
   'idm_admins': ['system:admin'],
   'idm_people_admins': [
     'persons:read', 'persons:create', 'persons:update', 'persons:delete',
@@ -2025,13 +2025,13 @@ export function PermissionGate({ require, any, fallback, children }: PermissionG
 | **Service Accts** | Token só exibido uma vez na criação | Dialog não-persistente |
 | **Audit** | Tenant admin só vê eventos do seu tenant | Server filter |
 | **Settings** | Apenas system:admin pode alterar | Route guard + UI gate |
-| **Cred Reset** | Link expira conforme TTL (padrão 1h) | Kanidm enforces |
+| **Cred Reset** | Link expira conforme TTL (padrão 1h) | archguard enforces |
 | **Import CSV** | Limite 500 persons por import | Client validation |
 | **Import CSV** | Valida unicidade de username antes | Pre-check batch |
 
 ### 13.6 Multi-tenancy — Filtragem de Dados
 
-Kanidm não tem scoped queries nativo — filtragem é feita client-side:
+archguard não tem scoped queries nativo — filtragem é feita client-side:
 
 ```typescript
 // src/lib/hooks/use-persons.ts
@@ -2063,7 +2063,7 @@ export function usePersons(params?: SearchParams) {
 
 | Tipo de Estado | Solução | Justificativa |
 |---|---|---|
-| Server state (Kanidm data) | TanStack Query v5 | Cache, invalidação, mutations, loading/error |
+| Server state (archguard data) | TanStack Query v5 | Cache, invalidação, mutations, loading/error |
 | URL state (filtros, paginação) | TanStack Router search params | Type-safe, shareable, SSR |
 | Auth state | Route context + httpOnly cookies | Seguro, não exposto ao client |
 | UI local (modals, forms) | React useState/useReducer | Simples |
@@ -2430,7 +2430,7 @@ interface ConfirmDialogProps {
 ├──────────────────────────────────────────────────┤
 │  LAYER 3: Mutation Error                          │
 │  Captura erros de operações de escrita           │
-│  → Toast com mensagem específica do Kanidm       │
+│  → Toast com mensagem específica do archguard       │
 ├──────────────────────────────────────────────────┤
 │  LAYER 4: Form Validation                         │
 │  Zod + TanStack Form                             │
@@ -2438,12 +2438,12 @@ interface ConfirmDialogProps {
 └──────────────────────────────────────────────────┘
 ```
 
-### 16.2 Mapeamento de Erros Kanidm
+### 16.2 Mapeamento de Erros archguard
 
 ```typescript
 // src/lib/utils/error-mapper.ts
 
-const KANIDM_ERROR_MAP: Record<string, string> = {
+const archguard_ERROR_MAP: Record<string, string> = {
   'duplicate_value':    'Este valor já existe no sistema.',
   'no_matching_entries': 'Nenhum registro encontrado.',
   'access_denied':      'Sem permissão para esta operação.',
@@ -2455,15 +2455,15 @@ const KANIDM_ERROR_MAP: Record<string, string> = {
   'schema_violation':   'Os dados não seguem o formato esperado.',
 }
 
-export function mapKanidmError(error: unknown): string {
+export function maparchguardError(error: unknown): string {
   if (error instanceof Error) {
-    // Kanidm retorna erros no formato "Kanidm API 400: {...}"
-    const match = error.message.match(/Kanidm API (\d+): (.+)/)
+    // archguard retorna erros no formato "archguard API 400: {...}"
+    const match = error.message.match(/archguard API (\d+): (.+)/)
     if (match) {
       const [, status, body] = match
       try {
         const parsed = JSON.parse(body)
-        return KANIDM_ERROR_MAP[parsed.error] ?? parsed.error ?? `Erro ${status}`
+        return archguard_ERROR_MAP[parsed.error] ?? parsed.error ?? `Erro ${status}`
       } catch {
         return body
       }
@@ -2486,7 +2486,7 @@ const handleSubmit = async (data: CreatePersonInput) => {
     toast.success('Pessoa criada com sucesso!')
     navigate({ to: '/identities' })
   } catch (error) {
-    toast.error(mapKanidmError(error))
+    toast.error(maparchguardError(error))
   }
 }
 ```
@@ -2640,7 +2640,7 @@ export default i18n
 - [ ] `npm create @tanstack/start` + configuração do projeto
 - [ ] Shadcn/ui + Tailwind + Lucide setup
 - [ ] OIDC flow completo (login → callback → session → logout)
-- [ ] Server function proxy para Kanidm API
+- [ ] Server function proxy para archguard API
 - [ ] `_authed.tsx` guard com derivação de permissões
 - [ ] AppShell (sidebar + header + breadcrumb)
 - [ ] Busca global (Cmd+K)
@@ -2668,7 +2668,7 @@ export default i18n
 
 ### Fase 4 — Polish (Semanas 9–10)
 
-- [ ] Error handling completo + error mapper Kanidm
+- [ ] Error handling completo + error mapper archguard
 - [ ] Loading states + skeleton loaders
 - [ ] Optimistic updates em mutations críticas
 - [ ] Testes unitários (hooks, validators, normalizers)

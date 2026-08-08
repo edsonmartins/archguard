@@ -21,7 +21,7 @@
 | [ADR-001](#adr-001) | Framework — TanStack Start | Aceito |
 | [ADR-002](#adr-002) | UI Component Library — Shadcn/ui + Tailwind | Aceito |
 | [ADR-003](#adr-003) | State Management — TanStack Query + Store | Aceito |
-| [ADR-004](#adr-004) | Autenticação — OIDC PKCE via Kanidm | Aceito |
+| [ADR-004](#adr-004) | Autenticação — OIDC PKCE via archguard | Aceito |
 | [ADR-005](#adr-005) | API Client — Gerado via OpenAPI Generator | Aceito |
 | [ADR-006](#adr-006) | Autorização — RBAC por Grupos OIDC | Aceito |
 | [ADR-007](#adr-007) | Multi-Tenancy — Grupo hierárquico com filtro no Console | Aceito |
@@ -53,7 +53,7 @@
 
 ### Contexto
 
-O ArchGuard Console é uma SPA administrativa que consome APIs REST do Kanidm e AliasVault. Precisa de: file-based routing, data loading eficiente, autenticação via OIDC, SSR opcional para SEO de docs públicas, e runtime leve para rodar em container Docker mínimo.
+O ArchGuard Console é uma SPA administrativa que consome APIs REST do archguard e AliasVault. Precisa de: file-based routing, data loading eficiente, autenticação via OIDC, SSR opcional para SEO de docs públicas, e runtime leve para rodar em container Docker mínimo.
 
 ### Opções Avaliadas
 
@@ -167,7 +167,7 @@ Console administrativo precisa de componentes ricos (DataTable, Dialog, Command 
 
 ### Contexto
 
-Console consome duas APIs (Kanidm REST + AliasVault REST) e precisa de: cache inteligente, invalidação após mutations, polling para dados live, estado global para auth/preferences.
+Console consome duas APIs (archguard REST + AliasVault REST) e precisa de: cache inteligente, invalidação após mutations, polling para dados live, estado global para auth/preferences.
 
 ### Decisão
 
@@ -191,7 +191,7 @@ Convenção: [domínio, recurso, ...identificadores]
 ["id", "groups", "gid", "members"]   → membros de um grupo
 ["id", "oauth2"]                     → lista de OAuth2 clients
 ["id", "oauth2", "vendax"]           → client específico
-["id", "system", "status"]           → health check Kanidm
+["id", "system", "status"]           → health check archguard
 ["vault", "status"]                  → health check AliasVault
 ["vault", "stats"]                   → estatísticas do vault
 ```
@@ -221,14 +221,14 @@ Mutation: reset creds     → invalidar ["id", "persons", id, "creds"]
 ---
 
 <a id="adr-004"></a>
-## ADR-004: Autenticação — OIDC PKCE via Kanidm
+## ADR-004: Autenticação — OIDC PKCE via archguard
 
 **Status:** Aceito  
 **Data:** 2026-02-16  
 
 ### Contexto
 
-Console precisa autenticar administradores contra o ArchGuard ID (Kanidm) usando OIDC. Kanidm exige PKCE S256 para todos os OAuth2 clients.
+Console precisa autenticar administradores contra o ArchGuard ID (archguard) usando OIDC. archguard exige PKCE S256 para todos os OAuth2 clients.
 
 ### Decisão
 
@@ -239,7 +239,7 @@ Console precisa autenticar administradores contra o ArchGuard ID (Kanidm) usando
 ```
 ┌──────────────┐     ┌────────────────────┐     ┌──────────────┐
 │   Console    │     │  ArchGuard Gateway  │     │ ArchGuard ID │
-│   (Browser)  │     │     (nginx)         │     │  (Kanidm)    │
+│   (Browser)  │     │     (nginx)         │     │  (archguard)    │
 └──────┬───────┘     └─────────┬──────────┘     └──────┬───────┘
        │                        │                       │
        │  1. Acessa /dashboard  │                       │
@@ -287,13 +287,13 @@ export const OIDC_CONFIG = {
   scope: 'openid profile email groups',
   automaticSilentRenew: true,
   userStore: new WebStorageStateStore({ store: sessionStorage }),
-  // Kanidm PKCE S256 é automático no oidc-client-ts
+  // archguard PKCE S256 é automático no oidc-client-ts
 };
 
 export const userManager = new UserManager(OIDC_CONFIG);
 ```
 
-### Token Claims (Kanidm OIDC)
+### Token Claims (archguard OIDC)
 
 ```typescript
 interface ArchGuardIdToken {
@@ -322,7 +322,7 @@ interface ArchGuardIdToken {
 | Token próximo de expirar | Silent renew automático via iframe |
 | Silent renew falha | Redirect para login |
 | Usuário fecha/abre aba | Restaura sessão do sessionStorage |
-| Logout | Limpa tokens + redirect para Kanidm /logout |
+| Logout | Limpa tokens + redirect para archguard /logout |
 | 401 em API call | Tenta refresh; se falhar, redirect para login |
 
 ---
@@ -335,7 +335,7 @@ interface ArchGuardIdToken {
 
 ### Contexto
 
-Kanidm expõe OpenAPI schema em `/docs/v1/openapi.json`. Manter tipos e chamadas manualmente é propenso a erros e não escala com a evolução da API.
+archguard expõe OpenAPI schema em `/docs/v1/openapi.json`. Manter tipos e chamadas manualmente é propenso a erros e não escala com a evolução da API.
 
 ### Decisão
 
@@ -349,15 +349,15 @@ Gerar **TypeScript client** automaticamente usando `@openapitools/openapi-genera
 #!/bin/bash
 set -e
 
-KANIDM_URL="${KANIDM_URL:-https://auth.localhost:8443}"
+archguard_URL="${archguard_URL:-https://auth.localhost:8443}"
 OUTPUT_DIR="console/src/api/generated"
 
-echo "→ Baixando OpenAPI schema do Kanidm..."
-curl -sk "$KANIDM_URL/docs/v1/openapi.json" -o /tmp/kanidm-openapi.json
+echo "→ Baixando OpenAPI schema do archguard..."
+curl -sk "$archguard_URL/docs/v1/openapi.json" -o /tmp/archguard-openapi.json
 
 echo "→ Gerando TypeScript client..."
 npx @openapitools/openapi-generator-cli generate \
-  -i /tmp/kanidm-openapi.json \
+  -i /tmp/archguard-openapi.json \
   -g typescript-fetch \
   -o "$OUTPUT_DIR" \
   --additional-properties=supportsES6=true,typescriptThreePlus=true,enumPropertyNaming=UPPERCASE
@@ -368,7 +368,7 @@ echo "→ Client gerado em $OUTPUT_DIR"
 ### Uso no código
 
 ```typescript
-// api/kanidm-client.ts
+// api/archguard-client.ts
 import { Configuration, PersonApi, GroupApi, Oauth2Api, SystemApi } from './generated';
 import { userManager } from '../auth/oidc-config';
 
@@ -403,7 +403,7 @@ export async function getSystemApi() {
 
 | Trigger | Ação |
 |---|---|
-| Atualização do Kanidm | Regenerar client, rodar diff, testar |
+| Atualização do archguard | Regenerar client, rodar diff, testar |
 | CI pipeline | Validar que schema não quebrou tipos existentes |
 | Nova feature no Console que usa endpoint novo | Regenerar + verificar cobertura |
 
@@ -417,11 +417,11 @@ export async function getSystemApi() {
 
 ### Contexto
 
-O Console precisa controlar visibilidade e ações baseado no papel do usuário logado. Kanidm já provê grupos no token OIDC. Não queremos duplicar lógica de autorização.
+O Console precisa controlar visibilidade e ações baseado no papel do usuário logado. archguard já provê grupos no token OIDC. Não queremos duplicar lógica de autorização.
 
 ### Decisão
 
-**Role-Based Access Control (RBAC)** derivado dos grupos presentes no claim `groups` do ID Token do Kanidm.
+**Role-Based Access Control (RBAC)** derivado dos grupos presentes no claim `groups` do ID Token do archguard.
 
 ### Mapeamento de Roles
 
@@ -435,7 +435,7 @@ export enum ConsoleRole {
   VIEWER = 'viewer',               // Somente leitura
 }
 
-// Mapeamento: grupos Kanidm → role no Console
+// Mapeamento: grupos archguard → role no Console
 const GROUP_ROLE_MAP: Record<string, ConsoleRole> = {
   'archguard_admins': ConsoleRole.SUPER_ADMIN,
   'idm_admins': ConsoleRole.SUPER_ADMIN,
@@ -480,7 +480,7 @@ Detalhada na [RFC-004](#rfc-004).
 
 ### Contexto
 
-ArchGuard atende múltiplos clientes (Rio Quality, outros distribuidores). Cada cliente precisa ver apenas seus dados. O Kanidm não tem conceito nativo de tenant — usa grupos flat.
+ArchGuard atende múltiplos clientes (Rio Quality, outros distribuidores). Cada cliente precisa ver apenas seus dados. O archguard não tem conceito nativo de tenant — usa grupos flat.
 
 ### Decisão
 
@@ -535,7 +535,7 @@ export function useTenantFilter() {
 
 ### Segurança
 
-O filtro no Console é **UX only** — não é barreira de segurança. A segurança real está no Kanidm: o token do TENANT_ADMIN não tem permissão para ler/modificar recursos de outros tenants via API. O Console apenas esconde o que o admin não precisa ver.
+O filtro no Console é **UX only** — não é barreira de segurança. A segurança real está no archguard: o token do TENANT_ADMIN não tem permissão para ler/modificar recursos de outros tenants via API. O Console apenas esconde o que o admin não precisa ver.
 
 ---
 
@@ -567,7 +567,7 @@ O filtro no Console é **UX only** — não é barreira de segurança. A seguran
 |---|---|---|
 | Client errors | `window.onerror` + custom reporter | Console stdout → Loki |
 | API request tracing | TanStack Query `onError` global | Structured JSON logs |
-| Audit trail | Middleware no Gateway + Kanidm logs nativos | Loki / Grafana |
+| Audit trail | Middleware no Gateway + archguard logs nativos | Loki / Grafana |
 | Métricas | OpenTelemetry (futuro) | Prometheus / Grafana |
 
 ### Log Format
@@ -668,7 +668,7 @@ O ArchGuard Console é a interface administrativa unificada. Todos os fluxos ass
 │  ⚙️ Settings │                                                    │
 │              │                                                    │
 ├──────────────┴────────────────────────────────────────────────────┤
-│  ArchGuard v1.0 • Kanidm OK • Vault OK        IntegrAllTech 2026│
+│  ArchGuard v1.0 • archguard OK • Vault OK        IntegrAllTech 2026│
 └───────────────────────────────────────────────────────────────────┘
 ```
 
@@ -706,7 +706,7 @@ O ArchGuard Console é a interface administrativa unificada. Todos os fluxos ass
 │                                                                  │
 │  Saúde dos Serviços                                             │
 │  ┌──────────────────────────────────────────────────────┐       │
-│  │  ArchGuard ID (Kanidm)    ● Online   Uptime: 99.9%  │       │
+│  │  ArchGuard ID (archguard)    ● Online   Uptime: 99.9%  │       │
 │  │  ArchGuard Vault          ● Online   Uptime: 99.8%  │       │
 │  │  Gateway (nginx)          ● Online                   │       │
 │  └──────────────────────────────────────────────────────┘       │
@@ -716,7 +716,7 @@ O ArchGuard Console é a interface administrativa unificada. Todos os fluxos ass
 **Dados:**
 - Cards: queries `GET /v1/person` (count), `GET /v1/group` (count), `GET /v1/oauth2` (count), vault status
 - Atividade: `GET /v1/system/_audit` (se disponível) ou logs do Gateway
-- Saúde: `GET /status` do Kanidm + health check do Vault
+- Saúde: `GET /status` do archguard + health check do Vault
 
 **Visibilidade por Role:**
 - SUPER_ADMIN: Todos os cards, todos os tenants, todas as quick actions
@@ -728,7 +728,7 @@ O ArchGuard Console é a interface administrativa unificada. Todos os fluxos ass
 
 #### 3.2 Persons Management
 
-**Objetivo:** CRUD completo de identidades (persons) no Kanidm.
+**Objetivo:** CRUD completo de identidades (persons) no archguard.
 
 ##### 3.2.1 Lista de Persons
 
@@ -773,7 +773,7 @@ O ArchGuard Console é a interface administrativa unificada. Todos os fluxos ass
 
 **API Endpoints:**
 - `GET /v1/person` — lista
-- `GET /v1/person?filter=...` — busca (Kanidm suporta filtros LDAP-like)
+- `GET /v1/person?filter=...` — busca (archguard suporta filtros LDAP-like)
 
 ##### 3.2.2 Criar Pessoa — Wizard
 
@@ -1064,7 +1064,7 @@ Tabs: Atributos | Grupos | API Tokens
 ```
 
 **Tipo (derivado da convenção de nomenclatura):**
-- `sistema` — grupos nativos do Kanidm (idm_admins, etc.)
+- `sistema` — grupos nativos do archguard (idm_admins, etc.)
 - `tenant` — grupo raiz de um cliente (rio_quality)
 - `role` — grupo funcional dentro de um tenant (rio_quality_vendedores)
 - `app` — grupo de acesso a uma aplicação (vendax_users)
@@ -1273,7 +1273,7 @@ Tabs: Atributos | Grupos | API Tokens
    Tipo public: `POST /v1/oauth2/_public` com `{ name, displayname, origin }`
 2. `POST /v1/oauth2/{name}/_scopemap/{group}` — para cada grupo/scope pair
 3. Se basic: `GET /v1/oauth2/{name}/_basic_secret` — retorna o secret
-4. PKCE é habilitado por default no Kanidm
+4. PKCE é habilitado por default no archguard
 
 ##### 3.5.3 Detalhe do OAuth2 Client
 
@@ -1417,7 +1417,7 @@ Tab Danger Zone:
 │  Domínio:         auth.integralltech.com.br                     │
 │  Origin:          https://auth.integralltech.com.br             │
 │  TLS:             Let's Encrypt (válido até 2026-05-01)         │
-│  Versão Kanidm:   1.5.0                                        │
+│  Versão archguard:   1.5.0                                        │
 │  Versão AliasVault: 0.26.0                                     │
 │  Versão Console:  1.0.0                                        │
 │                                                                  │
@@ -1441,7 +1441,7 @@ Tab Danger Zone:
 │  TAB: Sobre                                                     │
 │  ──────────                                                     │
 │  ArchGuard v1.0.0 — Identity & Secrets Platform                │
-│  Powered by Kanidm and AliasVault                              │
+│  Powered by archguard and AliasVault                              │
 │  Open source by IntegrAllTech                                   │
 │  github.com/integralltech/archguard                             │
 └────────────────────────────────────────────────────────────────┘
@@ -1494,7 +1494,7 @@ Implementado com Shadcn `<Command>` component. Busca local nos dados em cache do
 ### 1. Tipos Core (TypeScript)
 
 ```typescript
-// types/kanidm.ts — Tipos alinhados ao schema Kanidm
+// types/archguard.ts — Tipos alinhados ao schema archguard
 
 // ═══════════════════════════════════════════
 // PERSON
@@ -1626,7 +1626,7 @@ export interface GroupSummary {
 }
 
 export enum GroupType {
-  SYSTEM = 'system',       // nativos Kanidm
+  SYSTEM = 'system',       // nativos archguard
   TENANT = 'tenant',       // grupo raiz de cliente
   ROLE = 'role',           // role dentro de tenant
   APP = 'app',             // acesso a uma aplicação
@@ -1792,7 +1792,7 @@ export interface AuthUser {
 }
 ```
 
-### 2. Contratos de API — Kanidm Endpoints
+### 2. Contratos de API — archguard Endpoints
 
 ```typescript
 // api/contracts.ts — Mapeamento de todos os endpoints utilizados
@@ -2039,7 +2039,7 @@ export const API_CONTRACTS = {
       method: 'GET',
       path: '/v1/oauth2/:id/_pkce_enable',
       response: '200 OK',
-      note: 'Kanidm habilita PKCE por default',
+      note: 'archguard habilita PKCE por default',
     },
     enableLocalhostRedirects: {
       method: 'GET',
@@ -2083,8 +2083,8 @@ export const API_CONTRACTS = {
 // api/hooks/usePersons.ts — Exemplo completo de hooks para Persons
 
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getPersonApi } from '../kanidm-client';
-import type { CreatePersonRequest, PersonSummary } from '../../types/kanidm';
+import { getPersonApi } from '../archguard-client';
+import type { CreatePersonRequest, PersonSummary } from '../../types/archguard';
 
 // ── Query Options (reutilizáveis em loaders e componentes) ──
 
@@ -2353,7 +2353,7 @@ export const Route = createFileRoute('/_authenticated/identity/persons/$personId
 
 import { createRootRouteWithContext, Outlet } from '@tanstack/react-router';
 import type { QueryClient } from '@tanstack/react-query';
-import type { AuthUser } from '@/types/kanidm';
+import type { AuthUser } from '@/types/archguard';
 
 interface RouterContext {
   queryClient: QueryClient;
@@ -2552,7 +2552,7 @@ console/src/components/
 │  │  Polling:   systemStatus (10s), vaultStatus (30s)         │   │
 │  │  Prefetch:  Route loaders ensureQueryData()               │   │
 │  │                                                           │   │
-│  │  → Source of truth para dados do Kanidm + AliasVault      │   │
+│  │  → Source of truth para dados do archguard + AliasVault      │   │
 │  └───────────────────────────────────────────────────────────┘   │
 │                         ▲                                         │
 │                         │ useQuery() / useMutation()             │
@@ -2598,7 +2598,7 @@ console/src/components/
 // stores/auth-store.ts
 
 import { Store } from '@tanstack/store';
-import type { AuthUser, ConsoleRole } from '@/types/kanidm';
+import type { AuthUser, ConsoleRole } from '@/types/archguard';
 import { deriveRole, deriveTenants } from '@/auth/roles';
 
 interface AuthState {
@@ -3047,7 +3047,7 @@ function PersonActions({ person }: { person: PersonSummary }) {
 | **O-001** | Apenas SUPER_ADMIN gerencia OAuth2 clients |
 | **O-002** | Client name (= client_id) deve ser slug válido, único |
 | **O-003** | Origin URL deve ser HTTPS (exceto localhost para dev) |
-| **O-004** | PKCE S256 é sempre habilitado (Kanidm requirement) |
+| **O-004** | PKCE S256 é sempre habilitado (archguard requirement) |
 | **O-005** | Basic secret é exibido apenas na criação |
 | **O-006** | Rotacionar secret invalida o anterior imediatamente |
 | **O-007** | Deletar client requer confirmação digitando o client name |

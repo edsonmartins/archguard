@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { normalizeGroups } from '@/server/auth'
 
-describe('normalizeGroups (Kanidm groups claim cleanup)', () => {
+describe('normalizeGroups (archguard groups claim cleanup)', () => {
   it('strips @domain SPN suffix', () => {
     expect(
       normalizeGroups([

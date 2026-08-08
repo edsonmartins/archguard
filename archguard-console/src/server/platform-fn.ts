@@ -54,7 +54,7 @@ export type PlatformRunbook = {
   external?: boolean
 }
 
-const KANIDM_URL = (
+const archguard_URL = (
   process.env.ARCHGUARD_ID_URL || 'https://id.archgate.com.br'
 ).replace(/\/$/, '')
 
@@ -87,8 +87,8 @@ async function timedProbe(
   }
 }
 
-async function probeKanidm(): Promise<PlatformService> {
-  const endpoint = KANIDM_URL
+async function probearchguard(): Promise<PlatformService> {
+  const endpoint = archguard_URL
   const r = await timedProbe(async () => {
     // Prefer public status; fall back to domain root
     const paths = ['/status', '/v1/system/status', '/']
@@ -97,7 +97,7 @@ async function probeKanidm(): Promise<PlatformService> {
       try {
         const res = await integrationFetch(`${endpoint}${p}`, {
           method: 'GET',
-          integration: 'kanidm',
+          integration: 'archguard',
           timeoutMs: 5_000,
         })
         if (res.ok || res.status === 401 || res.status === 403) {
@@ -124,8 +124,8 @@ async function probeKanidm(): Promise<PlatformService> {
     return { status: 'error', detail: lastErr }
   })
   return {
-    id: 'kanidm',
-    name: 'Kanidm (ArchGuard ID)',
+    id: 'archguard',
+    name: 'archguard (ArchGuard ID)',
     group: 'identity',
     endpoint,
     ...r,
@@ -423,12 +423,12 @@ const RUNBOOKS: PlatformRunbook[] = [
   {
     id: 'axis',
     title: 'Mentors Axis sync',
-    description: 'Proprietários → sites + tenant Kanidm',
+    description: 'Proprietários → sites + tenant archguard',
     href: '/integrations/mentors-axis',
   },
   {
     id: 'id',
-    title: 'Kanidm (stock)',
+    title: 'archguard (stock)',
     description: 'Issuer OIDC / identidade',
     href: 'https://id.archgate.com.br',
     external: true,
@@ -452,14 +452,14 @@ export const getPlatformOverviewFn = createServerFn({ method: 'GET' }).handler(
     )
 
     const [
-      kanidm,
+      archguard,
       openbao,
       warpgate,
       guacamole,
       axis,
       connector,
     ] = await Promise.all([
-      probeKanidm(),
+      probearchguard(),
       probeOpenBao(),
       probeWarpgate(),
       probeGuacamole(),
@@ -480,7 +480,7 @@ export const getPlatformOverviewFn = createServerFn({ method: 'GET' }).handler(
     const services: PlatformService[] = [
       consoleSvc,
       sitesSot,
-      kanidm,
+      archguard,
       openbao,
       warpgate,
       guacamole,
@@ -499,7 +499,7 @@ export const getPlatformOverviewFn = createServerFn({ method: 'GET' }).handler(
     }
 
     const endpoints = {
-      kanidm: KANIDM_URL,
+      archguard: archguard_URL,
       console: envEndpoint(
         'CONSOLE_PUBLIC_URL',
         'https://console.archgate.com.br',

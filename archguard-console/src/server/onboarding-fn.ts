@@ -197,7 +197,7 @@ export const runClientOnboardingWizardFn = createServerFn({ method: 'POST' })
       throw e
     }
 
-    // Step 2 — Kanidm tenant group
+    // Step 2 — archguard tenant group
     try {
       const kg = await ensureTenantGroup(tenant, data.cliente)
       steps.push({

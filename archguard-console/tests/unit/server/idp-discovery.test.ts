@@ -1,4 +1,4 @@
-// Kanidm publishes one issuer per OIDC client; ArchGuard publishes a single
+// archguard publishes one issuer per OIDC client; ArchGuard publishes a single
 // issuer for the deployment. Everything else (jwks_uri, userinfo_endpoint) is
 // read from the document, so the discovery URL is the only shape that changes.
 
@@ -37,8 +37,8 @@ afterEach(() => {
 })
 
 describe('discoveryUrl', () => {
-  it('uses the per-client path on Kanidm', async () => {
-    await load('kanidm', 'https://id.archgate.com.br')
+  it('uses the per-client path on archguard', async () => {
+    await load('archguard', 'https://id.archgate.com.br')
     expect(mod.discoveryUrl('archgate-connect')).toBe(
       'https://id.archgate.com.br/oauth2/openid/archgate-connect/.well-known/openid-configuration',
     )
@@ -51,7 +51,7 @@ describe('discoveryUrl', () => {
     )
   })
 
-  it('defaults to Kanidm so an existing deploy is untouched', async () => {
+  it('defaults to archguard so an existing deploy is untouched', async () => {
     await load(undefined, 'https://id.archgate.com.br')
     expect(mod.discoveryUrl('archguard-console')).toContain('/oauth2/openid/')
   })
@@ -90,7 +90,7 @@ describe('discover', () => {
       doc({ userinfo_endpoint: 'https://app.archguard.com.br/api/userinfo' }),
     )
     const d = await mod.discover('archgate-connect')
-    // `<issuer>/userinfo` is the Kanidm shape and would 404 on ArchGuard.
+    // `<issuer>/userinfo` is the archguard shape and would 404 on ArchGuard.
     expect(d.userinfo_endpoint).not.toBe(`${d.issuer}/userinfo`)
   })
 

@@ -36,12 +36,12 @@ export const guiaModulos: GuiaModulo[] = [
     objetivo:
       'Ponto de entrada do console: saúde da plataforma, atalhos para módulos e contadores de identidade. Configure o portão daqui — sessões de operador ficam no Connect.',
     problema:
-      'Sem um painel único, o admin se perde entre Kanidm, OpenBao e Warpgate. O Manager concentra o estado e o próximo passo.',
+      'Sem um painel único, o admin se perde entre archguard, OpenBao e Warpgate. O Manager concentra o estado e o próximo passo.',
     comoFunciona: [
-      'KPIs de pessoas, grupos e clients OAuth2 vêm do módulo de identidade (Kanidm via BFF)',
-      'Saúde OpenBao e Kanidm aparece nos cards de sistema',
+      'KPIs de pessoas, grupos e clients OAuth2 vêm do módulo de identidade (archguard via BFF)',
+      'Saúde OpenBao e archguard aparece nos cards de sistema',
       'Atalhos levam aos módulos de Acesso (sites, gateways, contas da org)',
-      'Tudo passa por SSO; permissões vêm dos grupos Kanidm',
+      'Tudo passa por SSO; permissões vêm dos grupos archguard',
     ],
     fluxoSugerido: [
       {
@@ -75,7 +75,7 @@ export const guiaModulos: GuiaModulo[] = [
     rota: '/identities',
     icone: '👤',
     titulo: 'Identidades',
-    subtitulo: 'Pessoas no IdP (Kanidm)',
+    subtitulo: 'Pessoas no IdP (archguard)',
     modulo: 'AG-ID',
     fase: 'Identidade',
     corAccent: '#7c3aed',
@@ -84,7 +84,7 @@ export const guiaModulos: GuiaModulo[] = [
     problema:
       'Sem identidade central, cada sistema tem usuário órfão. Offboarding fraco deixa acesso residual.',
     comoFunciona: [
-      'Lista e detalhe via API Kanidm (proxy server-side)',
+      'Lista e detalhe via API archguard (proxy server-side)',
       'Wizard de criação e import CSV',
       'Revogar acesso expira conta no IdP e fecha checkouts de contas da org',
       'Filtro por tenant conforme grupos do admin',
@@ -164,7 +164,7 @@ export const guiaModulos: GuiaModulo[] = [
     problema:
       'Sem grupos, cada permissão vira exceção manual e offboarding falha.',
     comoFunciona: [
-      'Grupos Kanidm com membros',
+      'Grupos archguard com membros',
       'derivePermissions mapeia grupo → permission strings',
       'Grupos tenant_* isolam sites por cliente',
     ],
@@ -199,7 +199,7 @@ export const guiaModulos: GuiaModulo[] = [
     fase: 'Identidade',
     corAccent: '#db2777',
     objetivo:
-      'Registrar aplicações (Manager, produtos, Connect) como clients OAuth2/OIDC no Kanidm — tudo pelo console.',
+      'Registrar aplicações (Manager, produtos, Connect) como clients OAuth2/OIDC no archguard — tudo pelo console.',
     problema:
       'Cada produto com login local vira senha compartilhada e offboarding impossível.',
     comoFunciona: [

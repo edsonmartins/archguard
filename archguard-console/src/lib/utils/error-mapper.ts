@@ -1,6 +1,6 @@
 // src/lib/utils/error-mapper.ts
 
-const KANIDM_ERROR_MAP: Record<string, string> = {
+const archguard_ERROR_MAP: Record<string, string> = {
   duplicate_value: 'Este valor já existe no sistema.',
   no_matching_entries: 'Nenhum registro encontrado.',
   access_denied: 'Sem permissão para esta operação.',
@@ -12,14 +12,14 @@ const KANIDM_ERROR_MAP: Record<string, string> = {
   schema_violation: 'Os dados não seguem o formato esperado.',
 }
 
-export function mapKanidmError(error: unknown): string {
+export function maparchguardError(error: unknown): string {
   if (error instanceof Error) {
-    const match = error.message.match(/Kanidm API (\d+): (.+)/)
+    const match = error.message.match(/archguard API (\d+): (.+)/)
     if (match) {
       const [, status, body] = match
       try {
         const parsed = JSON.parse(body)
-        return KANIDM_ERROR_MAP[parsed.error] ?? parsed.error ?? `Erro ${status}`
+        return archguard_ERROR_MAP[parsed.error] ?? parsed.error ?? `Erro ${status}`
       } catch {
         return body
       }

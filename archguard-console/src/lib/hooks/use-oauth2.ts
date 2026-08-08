@@ -7,10 +7,10 @@ import {
   type UseQueryOptions,
 } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { oauth2Api } from '@/lib/api/kanidm-client'
+import { oauth2Api } from '@/lib/api/archguard-client'
 import { queryKeys } from '@/lib/utils/query-keys'
-import { mapKanidmError } from '@/lib/utils/error-mapper'
-import type { OAuth2Client, CreateOAuth2ClientPayload } from '@/lib/api/types/kanidm'
+import { maparchguardError } from '@/lib/utils/error-mapper'
+import type { OAuth2Client, CreateOAuth2ClientPayload } from '@/lib/api/types/archguard'
 
 // ── QUERIES ──────────────────────────────────────
 
@@ -62,7 +62,7 @@ export function useCreateOAuth2Client() {
       toast.success('Cliente OAuth2 criado com sucesso')
     },
     onError: (error) => {
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
   })
 }
@@ -77,7 +77,7 @@ export function useDeleteOAuth2Client() {
       toast.success('Cliente OAuth2 removido com sucesso')
     },
     onError: (error) => {
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
   })
 }
@@ -102,7 +102,7 @@ export function useSetScopeMap() {
       toast.success('Scope map atualizado')
     },
     onError: (error) => {
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
   })
 }
@@ -125,7 +125,7 @@ export function useDeleteScopeMap() {
       toast.success('Scope map removido')
     },
     onError: (error) => {
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
   })
 }
@@ -150,7 +150,7 @@ export function useSetSupScopeMap() {
       toast.success('Sup scope map atualizado')
     },
     onError: (error) => {
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
   })
 }
@@ -177,7 +177,7 @@ export function useSetClaimMap() {
       toast.success('Claim map atualizado')
     },
     onError: (error) => {
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
   })
 }
@@ -195,7 +195,7 @@ export function useAddRedirectUrl() {
       toast.success('URL de redirect adicionada')
     },
     onError: (error) => {
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
   })
 }
@@ -213,7 +213,7 @@ export function useEnableLocalhostRedirects() {
       toast.success('Redirect localhost habilitado')
     },
     onError: (error) => {
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
   })
 }
@@ -231,7 +231,7 @@ export function usePreferShortUsername() {
       toast.success('Username curto habilitado')
     },
     onError: (error) => {
-      toast.error(mapKanidmError(error))
+      toast.error(maparchguardError(error))
     },
   })
 }

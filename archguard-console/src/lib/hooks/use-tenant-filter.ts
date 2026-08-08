@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { usePermissions } from './use-permissions'
 import { extractTenantPrefix } from '@/lib/api/normalizers'
-import type { Person, Group, OAuth2Client, ServiceAccount } from '@/lib/api/types/kanidm'
+import type { Person, Group, OAuth2Client, ServiceAccount } from '@/lib/api/types/archguard'
 
 const STORAGE_KEY = 'archguard_active_tenant'
 

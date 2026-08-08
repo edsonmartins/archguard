@@ -47,7 +47,7 @@ async function orchPost(
   return { status: res.status, data, text }
 }
 
-/** Bind a person to a group on the active IdP (Kanidm or ArchGuard). */
+/** Bind a person to a group on the active IdP (archguard or ArchGuard). */
 async function bindGroup(
   username: string,
   group: string,
@@ -57,8 +57,8 @@ async function bindGroup(
 }
 
 /**
- * Ensure person exists in platform adapters (orch) + tenant/groups in Kanidm.
- * Person must already exist in Kanidm (created via console identities).
+ * Ensure person exists in platform adapters (orch) + tenant/groups in archguard.
+ * Person must already exist in archguard (created via console identities).
  */
 export const provisionPersonAccessFn = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) => {
@@ -128,13 +128,13 @@ export const provisionPersonAccessFn = createServerFn({ method: 'POST' })
       })
     }
 
-    // Direct Kanidm membership (real path even if orch mock)
+    // Direct archguard membership (real path even if orch mock)
     for (const g of groups) {
       steps.push(await bindGroup(data.username, g))
     }
 
     const critical = steps.some(
-      (x) => x.component === 'kanidm_group' && x.ok,
+      (x) => x.component === 'archguard_group' && x.ok,
     )
     recordActivity(
       'POST',
