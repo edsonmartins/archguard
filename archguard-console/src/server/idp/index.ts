@@ -1,21 +1,16 @@
 // Identity-admin selection.
 //
-// `ARCHGATE_IDP` picks the adapter. It defaults to `kanidm` so an existing
-// deployment keeps its behaviour until the ArchGuard cutover is deliberately
-// switched on.
-
 import { archguardAdmin } from './archguard'
-import { kanidmAdmin } from './kanidm'
 import type { IdentityAdmin } from './types'
 
 export type IdpKind = IdentityAdmin['kind']
 
 export function idpKind(): IdpKind {
-  return process.env.ARCHGATE_IDP === 'archguard' ? 'archguard' : 'kanidm'
+  return 'archguard'
 }
 
 export function identityAdmin(): IdentityAdmin {
-  return idpKind() === 'archguard' ? archguardAdmin : kanidmAdmin
+  return archguardAdmin
 }
 
 /** Idempotent group creation on the active IdP. */

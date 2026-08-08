@@ -2,9 +2,7 @@
 //
 // The console does not only authenticate against the IdP — it writes to it:
 // ensures tenant groups, binds members and disables people on offboarding.
-// That surface was hardcoded against Kanidm's REST API. ArchGuard is now a
-// Casdoor fork with a different API, so the write path lives behind this port
-// and each IdP gets an adapter.
+// The write path lives behind this port and the ArchGuard adapter.
 //
 // Authentication (OIDC) is separate and stays in auth.ts / operator-session.ts.
 
@@ -24,7 +22,7 @@ export type AdminStep = {
 
 export interface IdentityAdmin {
   /** Which IdP this adapter talks to; shown in /platform diagnostics. */
-  readonly kind: 'kanidm' | 'archguard'
+  readonly kind: 'archguard'
 
   /** True when the adapter has the URL and credential it needs. */
   configured(): boolean
