@@ -16,6 +16,7 @@ import {
 import type { SessionData } from './auth'
 import { deriveTenants } from '@/lib/auth/roles'
 import { logger } from './logger'
+import { issueRustGuacSession, rustGuacConfigured } from './rustguac-proxy'
 
 export type UnifiedConnection = {
   id: string
@@ -169,6 +170,32 @@ export async function createUnifiedSession(
     process.env.WARPGATE_PUBLIC_URL || 'https://wg.archgate.com.br'
 
   const proto = (hit.protocol || body.protocol || '').toLowerCase()
+  // Opt-in until RustGuac is deployed on the console's internal network.
+  if (rustGuacConfigured() && ['ssh', 'rdp', 'vnc'].includes(proto)) {
+    const sites = filterSitesByTenant(await listSites(), session)
+    const site = sites.find((s) => hit.id.startsWith(`${s.slug}:`))
+    const targetConfig = site?.targets?.find((t) => t.nome === hit.target)
+    if (!targetConfig) throw new Error('Target não encontrado na configuração do site')
+    let password: string | undefined
+    let privateKey: string | undefined
+    if (targetConfig.secret_ref) {
+      const { readSecretData } = await import('./openbao-proxy')
+      const secret = await readSecretData(targetConfig.secret_ref)
+      password = secret?.password || secret?.value || secret?.secret
+      privateKey = secret?.private_key || secret?.key
+    }
+    const rust = await issueRustGuacSession({
+      protocol: proto,
+      hostname: targetConfig.host,
+      port: targetConfig.port,
+      username: targetConfig.username,
+      password,
+      private_key: privateKey,
+    })
+    const username = session.user?.name || session.user?.email || 'operator'
+    logger.info({ user: username, target: hit.target, protocol: proto, mode: 'rustguac' }, 'unified session RustGuac ticket issued')
+    return { ...rust, embed_mode: 'iframe' as const, launch: { engine: 'rustguac', target: hit.target, protocol: proto } }
+  }
   const wantsGuac =
     hit.engine === 'guacamole' ||
     proto === 'rdp' ||
