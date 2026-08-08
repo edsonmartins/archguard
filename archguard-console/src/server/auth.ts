@@ -32,6 +32,12 @@ export interface SessionData {
   permissions: Permission[]
   expiresAt: number
   refreshToken?: string
+  /** Authoritative ArchGuard tenant memberships resolved server-side. */
+  memberships?: Array<{
+    membership_id: string
+    organization_id: string
+    status: string
+  }>
 }
 
 // Refresh proactively when fewer than this many ms remain on the access token.

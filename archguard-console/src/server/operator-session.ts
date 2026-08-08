@@ -6,6 +6,7 @@ import { requireUnifiedSession } from './unified-bff'
 import { logger } from './logger'
 import { discover } from './idp/discovery'
 import { normalizeGroupNames } from './idp/groups'
+import { resolveArchGuardSessionContext } from './archguard-session-context'
 
 /**
  * Lab bearer (smokes / offline dev). Fail-closed by design:
@@ -127,6 +128,7 @@ export async function resolveOperatorSession(
   // archguard sends name@domain, ArchGuard sends <org>/name — normalize once here
   // so every consumer downstream compares bare group names.
   const groups = normalizeGroupNames(ui.groups)
+  const context = await resolveArchGuardSessionContext(ui.sub || username)
   return {
     isAuthenticated: true,
     isAdmin: groups.includes('archguard_super_admins'),
@@ -139,5 +141,6 @@ export async function resolveOperatorSession(
     groups,
     permissions: [],
     expiresAt: Date.now() + 60 * 60 * 1000,
+    memberships: context.memberships,
   } as SessionData
 }
