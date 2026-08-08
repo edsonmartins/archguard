@@ -17,6 +17,7 @@ import type { SessionData } from './auth'
 import { deriveTenants } from '@/lib/auth/roles'
 import { logger } from './logger'
 import { issueRustGuacSession, rustGuacConfigured } from './rustguac-proxy'
+import { checkOpenFga } from './openfga'
 
 export type UnifiedConnection = {
   id: string
@@ -181,6 +182,12 @@ export async function createUnifiedSession(
     const site = sites.find((s) => hit.id.startsWith(`${s.slug}:`))
     const targetConfig = site?.targets?.find((t) => t.nome === hit.target)
     if (!targetConfig) throw new Error('Target não encontrado na configuração do site')
+    const allowed = await checkOpenFga({
+      user: `user:${session.user?.id || session.user?.name || 'unknown'}`,
+      relation: 'connect',
+      object: `connection:${hit.id}`,
+    })
+    if (!allowed) throw new Error('OpenFGA negou acesso à conexão')
     let password: string | undefined
     let privateKey: string | undefined
     if (targetConfig.secret_ref) {
