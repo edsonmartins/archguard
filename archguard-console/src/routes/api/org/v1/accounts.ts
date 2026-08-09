@@ -94,7 +94,11 @@ export const Route = createFileRoute('/api/org/v1/accounts')({
               { status: 400, headers },
             )
           }
-          const scope = `${actor}:POST:/api/org/v1/accounts:${idemKey}`
+          const orgScope = (s.memberships ?? [])
+            .map((m) => m.organization_id)
+            .sort()
+            .join(',') || 'none'
+          const scope = `${orgScope}:${actor}:POST:/api/org/v1/accounts:${idemKey}`
           const hit = claimIdempotency(scope, hashBody(parsed.data))
           if (hit) {
             if (!hit.completed) {
