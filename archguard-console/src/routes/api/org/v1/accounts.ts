@@ -11,6 +11,11 @@ import {
 import { recordActivity } from '@/server/activity-log'
 import { logger } from '@/server/logger'
 import {
+  claimIdempotency,
+  completeIdempotency,
+  hashBody,
+} from '@/server/bff-idempotency'
+import {
   requireAnyPerm,
   requireSession,
   sessionActor,
@@ -73,6 +78,14 @@ export const Route = createFileRoute('/api/org/v1/accounts')({
         try {
           const s = requireSession()
           requireAnyPerm(s, ['org_accounts:admin'], 'org_accounts:admin')
+          const actor = sessionActor(s)
+          const idemKey = request.headers.get('Idempotency-Key')?.trim()
+          if (!idemKey || idemKey.length < 16 || idemKey.length > 128) {
+            return new Response(JSON.stringify({ error: 'Idempotency-Key required' }), {
+              status: 400,
+              headers,
+            })
+          }
           const raw = await request.json().catch(() => ({}))
           const parsed = bodySchema.safeParse(raw)
           if (!parsed.success) {
@@ -81,7 +94,20 @@ export const Route = createFileRoute('/api/org/v1/accounts')({
               { status: 400, headers },
             )
           }
-          const actor = sessionActor(s)
+          const scope = `${actor}:POST:/api/org/v1/accounts:${idemKey}`
+          const hit = claimIdempotency(scope, hashBody(parsed.data))
+          if (hit) {
+            if (!hit.completed) {
+              return new Response(JSON.stringify({ error: 'request already in progress' }), {
+                status: 409,
+                headers,
+              })
+            }
+            return new Response(JSON.stringify(hit.response), {
+              status: hit.statusCode || 200,
+              headers,
+            })
+          }
           const acc = upsertOrgAccount(parsed.data, actor)
           recordActivity(
             'POST',
@@ -91,6 +117,7 @@ export const Route = createFileRoute('/api/org/v1/accounts')({
             undefined,
             { slug: acc.slug, name: acc.name },
           )
+          completeIdempotency(scope, 200, acc)
           return new Response(JSON.stringify(acc), { status: 200, headers })
         } catch (e) {
           const msg = (e as Error).message || 'error'
