@@ -16,6 +16,7 @@ import {
   warpgateConfigured,
 } from './warpgate-proxy'
 import { forceCloseCheckoutsForPrincipal } from './org-checkouts'
+import { deleteOpenFgaGrantsForUser } from './openfga'
 
 /** Prefer internal compose service; host.docker.internal for agent-style */
 const ORCH_URL = (
@@ -168,6 +169,13 @@ export const revokePersonAccessFn = createServerFn({ method: 'POST' })
         ok: true,
         detail: 'skipped (not configured)',
       })
+    }
+
+    try {
+      const removed = await deleteOpenFgaGrantsForUser(`user:${username}`)
+      steps.push({ component: 'openfga', ok: true, detail: `${removed} grant(s) removed` })
+    } catch (e) {
+      steps.push({ component: 'openfga', ok: false, detail: (e as Error).message })
     }
 
     const archguardOk = steps.find((x) => x.component === 'archguard')?.ok

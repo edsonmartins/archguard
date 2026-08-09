@@ -14,6 +14,7 @@ import {
 import { logger } from './logger'
 import { integrationFetch } from './http-integration-client'
 import { addUserToGroup } from './idp'
+import { writeOpenFgaGrant } from './openfga'
 
 const ORCH_URL = (
   process.env.ORCHESTRATION_URL ||
@@ -316,8 +317,20 @@ export async function runGrantPersonTarget(
     })
   }
 
+  try {
+    await writeOpenFgaGrant({
+      user: `user:${data.username}`,
+      relation: 'connect',
+      object: `connection:${data.target}`,
+    })
+    steps.push({ component: 'openfga', ok: true, detail: 'grant materialized' })
+  } catch (e) {
+    steps.push({ component: 'openfga', ok: false, detail: (e as Error).message })
+  }
+
   // Success = Warpgate bind OK (critical path). Orch alone is not enough.
-  const ok = steps.some((x) => x.component === 'warpgate' && x.ok)
+  const ok = steps.some((x) => x.component === 'warpgate' && x.ok) &&
+    steps.every((x) => x.component !== 'openfga' || x.ok)
   recordActivity(
     'POST',
     `/archgate/persons/${encodeURIComponent(data.username)}/grant`,

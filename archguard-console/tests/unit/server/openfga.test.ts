@@ -40,4 +40,18 @@ describe('OpenFGA authorization check', () => {
     expect(openFgaConfigured()).toBe(false)
     await expect(checkOpenFga({ user: 'user:sub-1', relation: 'connect', object: 'connection:x' })).rejects.toThrow('not configured')
   })
+
+  it('materializes and removes direct grants', async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response('{}', { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ tuples: [{ key: { user: 'user:sub-1', relation: 'connect', object: 'connection:x' } }] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response('{}', { status: 200 }))
+    const { writeOpenFgaGrant, deleteOpenFgaGrantsForUser } = await import('@/server/openfga')
+    await expect(writeOpenFgaGrant({ user: 'user:sub-1', relation: 'connect', object: 'connection:x' })).resolves.toBeUndefined()
+    await expect(deleteOpenFgaGrantsForUser('user:sub-1')).resolves.toBe(1)
+    expect(fetchMock.mock.calls[0][0]).toBe('http://fga:8080/stores/store-1/write')
+    expect(String((fetchMock.mock.calls[0][1] as RequestInit).body)).toContain('connection:x')
+    expect(fetchMock.mock.calls[2][0]).toBe('http://fga:8080/stores/store-1/write')
+    expect(String((fetchMock.mock.calls[2][1] as RequestInit).body)).toContain('deletes')
+  })
 })
