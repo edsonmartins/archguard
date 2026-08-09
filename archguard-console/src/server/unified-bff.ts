@@ -17,7 +17,7 @@ import type { SessionData } from './auth'
 import { deriveTenants } from '@/lib/auth/roles'
 import { logger } from './logger'
 import { issueRustGuacSession, rustGuacConfigured } from './rustguac-proxy'
-import { checkOpenFga } from './openfga'
+import { checkOpenFga, openFgaConnectionObject } from './openfga'
 
 export type UnifiedConnection = {
   id: string
@@ -185,7 +185,7 @@ export async function createUnifiedSession(
     const allowed = await checkOpenFga({
       user: `user:${session.user?.id || session.user?.name || 'unknown'}`,
       relation: 'connect',
-      object: `connection:${hit.id}`,
+      object: openFgaConnectionObject(hit.id.slice(0, hit.id.indexOf(':')), hit.target),
     })
     if (!allowed) throw new Error('OpenFGA negou acesso à conexão')
     let password: string | undefined

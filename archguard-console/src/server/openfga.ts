@@ -22,6 +22,10 @@ export function openFgaEnabled(): boolean {
   return config().enabled
 }
 
+export function openFgaConnectionObject(siteSlug: string, target: string): string {
+  return `connection:${siteSlug}/${target}`
+}
+
 /**
  * Check one relationship. OpenFGA is optional until its store is provisioned,
  * but enabling it without a complete config or an allowed decision fails closed.

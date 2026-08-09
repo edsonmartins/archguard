@@ -14,7 +14,7 @@ import {
 import { logger } from './logger'
 import { integrationFetch } from './http-integration-client'
 import { addUserToGroup } from './idp'
-import { openFgaEnabled, writeOpenFgaGrant } from './openfga'
+import { openFgaConnectionObject, openFgaEnabled, writeOpenFgaGrant } from './openfga'
 
 const ORCH_URL = (
   process.env.ORCHESTRATION_URL ||
@@ -325,7 +325,7 @@ export async function runGrantPersonTarget(
         candidate.targets?.some((target) => target.nome === data.target),
       )
       if (!site) throw new Error(`Target não encontrado no catálogo: ${data.target}`)
-      object = `connection:${site.slug}:${data.target}`
+      object = openFgaConnectionObject(site.slug, data.target)
     }
     await writeOpenFgaGrant({
       user: `user:${data.username}`,
