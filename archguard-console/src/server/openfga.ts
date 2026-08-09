@@ -18,6 +18,10 @@ export function openFgaConfigured(): boolean {
   return !c.enabled || Boolean(c.url && c.store && c.model && c.token)
 }
 
+export function openFgaEnabled(): boolean {
+  return config().enabled
+}
+
 /**
  * Check one relationship. OpenFGA is optional until its store is provisioned,
  * but enabling it without a complete config or an allowed decision fails closed.
