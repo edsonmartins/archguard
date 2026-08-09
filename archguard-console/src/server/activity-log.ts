@@ -9,6 +9,7 @@ import { getDb } from './db'
 import type { ActivityLogEntry } from '@/lib/api/types/archguard'
 import { getSessionOrNull, sessionActor } from './session-guard'
 import { logger } from './logger'
+import { forwardAuditBatch } from './audit-forwarder'
 
 export function getActor(): string {
   const s = getSessionOrNull()
@@ -77,6 +78,7 @@ export function recordActivity(
       )
     })
     write()
+    void forwardAuditBatch()
   } catch (err) {
     // Never fail the primary mutation because audit write failed (e.g. empty/corrupt sqlite).
     logger.warn({ err: String(err), action: entry.action }, 'activity_log insert failed')
