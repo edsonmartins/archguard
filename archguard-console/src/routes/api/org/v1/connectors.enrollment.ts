@@ -19,6 +19,7 @@ const signSchema = z.object({
   csr: z.string().min(100).max(32_000),
 })
 const revokeSchema = z.object({ action: z.literal('revoke'), connector_id: z.string().min(1).max(128), serial_number: z.string().min(1).max(256) })
+const rotateSchema = signSchema.extend({ action: z.literal('rotate'), previous_serial_number: z.string().min(1).max(256) })
 
 export const Route = createFileRoute('/api/org/v1/connectors/enrollment')({
   server: {
@@ -51,6 +52,17 @@ export const Route = createFileRoute('/api/org/v1/connectors/enrollment')({
             await revokeConnectorCertificate(data.serial_number)
             const revoked = markConnectorCertificatesRevoked(data.connector_id)
             return Response.json({ revoked })
+          }
+          if ((body as { action?: string }).action === 'rotate') {
+            const data = rotateSchema.parse(body)
+            const enrollment = consumeConnectorEnrollment(data.token)
+            if (!enrollment) return Response.json({ error: 'invalid or expired enrollment token' }, { status: 401 })
+            const certificate = await signConnectorCertificate(data.csr)
+            registerConnectorCertificate({ serial_number: certificate.serial_number, connector_id: enrollment.connector_id, site_slug: enrollment.site_slug })
+            await revokeConnectorCertificate(data.previous_serial_number)
+            markConnectorCertificatesRevoked(enrollment.connector_id)
+            registerConnectorCertificate({ serial_number: certificate.serial_number, connector_id: enrollment.connector_id, site_slug: enrollment.site_slug })
+            return Response.json({ enrollment, certificate, rotated: true })
           }
           const session = requireSession()
           requireAnyPerm(session, ['sites:update'], 'sites:update')
