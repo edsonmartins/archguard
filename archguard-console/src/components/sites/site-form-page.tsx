@@ -48,6 +48,7 @@ const emptyTarget = (): SiteTarget => ({
   port: 22,
   roles: [],
   secret_ref: '',
+  openbao_database_role: '',
   connector_id: '',
 })
 
@@ -209,6 +210,7 @@ export function SiteFormPage({
       targets: form.targets.map((t) => ({
         ...t,
         secret_ref: t.secret_ref?.trim() || undefined,
+        openbao_database_role: t.openbao_database_role?.trim() || undefined,
         connector_id: t.connector_id?.trim() || undefined,
         roles:
           typeof t.roles === 'string'
@@ -631,6 +633,15 @@ export function SiteFormPage({
                 value={tgt.secret_ref || ''}
                 onChange={(e) =>
                   updateTarget(idx, { secret_ref: e.target.value })
+                }
+                disabled={!canWrite}
+              />
+              <Input
+                className="sm:col-span-2 font-mono text-xs"
+                placeholder="role OpenBao dinâmica (opcional, ex: archgate-lab-readonly)"
+                value={tgt.openbao_database_role || ''}
+                onChange={(e) =>
+                  updateTarget(idx, { openbao_database_role: e.target.value })
                 }
                 disabled={!canWrite}
               />

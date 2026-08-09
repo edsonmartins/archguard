@@ -52,6 +52,7 @@ const targetDraftSchema = z.object({
   roles: z.array(z.string()).default([]),
   username: z.string().optional(),
   secret_ref: z.string().optional(),
+  openbao_database_role: z.string().max(128).optional(),
   connector_id: z.string().optional(),
   notas: z.string().optional(),
 })
@@ -140,6 +141,7 @@ export const runClientOnboardingWizardFn = createServerFn({ method: 'POST' })
       roles: t.roles.length ? t.roles : roleDefault,
       username: t.username,
       secret_ref: t.secret_ref,
+      openbao_database_role: t.openbao_database_role,
       connector_id: t.connector_id,
       notas: t.notas,
     }))

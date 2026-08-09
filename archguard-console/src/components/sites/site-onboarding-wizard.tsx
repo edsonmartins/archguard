@@ -68,6 +68,7 @@ type TargetDraft = {
   engine: 'warpgate' | 'guacamole'
   connector_id: string
   username: string
+  openbao_database_role: string
 }
 
 const STEPS: { id: StepId; label: string; icon: typeof Building2 }[] = [
@@ -209,6 +210,8 @@ export function SiteOnboardingWizard() {
               port: t.port || 22,
               roles: roles.length ? roles : [],
               username: t.username || undefined,
+              openbao_database_role:
+                t.openbao_database_role.trim() || undefined,
               connector_id: t.connector_id || undefined,
             })),
         },
@@ -651,6 +654,20 @@ export function SiteOnboardingWizard() {
                     )
                   }
                 />
+                <Input
+                  className="sm:col-span-2 font-mono text-xs"
+                  placeholder="role OpenBao dinâmica (opcional)"
+                  value={t.openbao_database_role}
+                  onChange={(e) =>
+                    setTargets((ts) =>
+                      ts.map((x, i) =>
+                        i === idx
+                          ? { ...x, openbao_database_role: e.target.value }
+                          : x,
+                      ),
+                    )
+                  }
+                />
                 <Button
                   type="button"
                   variant="ghost"
@@ -678,6 +695,7 @@ export function SiteOnboardingWizard() {
                     engine: 'warpgate',
                     connector_id: connectors[0]?.id || '',
                     username: '',
+                    openbao_database_role: '',
                   },
                 ])
               }
