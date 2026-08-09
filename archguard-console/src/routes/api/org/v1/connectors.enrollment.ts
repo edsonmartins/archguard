@@ -4,6 +4,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 import { requireAnyPerm, requireSession, sessionActor } from '@/server/session-guard'
 import { issueConnectorEnrollment, consumeConnectorEnrollment } from '@/server/connector-enrollment'
+import { signConnectorCertificate } from '@/server/openbao-proxy'
 
 const issueSchema = z.object({
   action: z.literal('issue'),
@@ -12,6 +13,11 @@ const issueSchema = z.object({
   ttl_seconds: z.number().int().min(60).max(3600).optional(),
 })
 const consumeSchema = z.object({ action: z.literal('consume'), token: z.string().min(20).max(256) })
+const signSchema = z.object({
+  action: z.literal('sign'),
+  token: z.string().min(20).max(256),
+  csr: z.string().min(100).max(32_000),
+})
 
 export const Route = createFileRoute('/api/org/v1/connectors/enrollment')({
   server: {
@@ -24,6 +30,13 @@ export const Route = createFileRoute('/api/org/v1/connectors/enrollment')({
             const enrollment = consumeConnectorEnrollment(data.token)
             if (!enrollment) return Response.json({ error: 'invalid or expired enrollment token' }, { status: 401 })
             return Response.json({ enrollment })
+          }
+          if ((body as { action?: string }).action === 'sign') {
+            const data = signSchema.parse(body)
+            const enrollment = consumeConnectorEnrollment(data.token)
+            if (!enrollment) return Response.json({ error: 'invalid or expired enrollment token' }, { status: 401 })
+            const certificate = await signConnectorCertificate(data.csr)
+            return Response.json({ enrollment, certificate })
           }
           const session = requireSession()
           requireAnyPerm(session, ['sites:update'], 'sites:update')

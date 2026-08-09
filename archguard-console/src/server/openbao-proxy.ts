@@ -116,6 +116,34 @@ export function openbaoTokenKind(): 'app' | 'root' | 'none' {
   return resolved.kind
 }
 
+/** Sign a connector CSR using the lab-only PKI role; private keys stay on the connector. */
+export async function signConnectorCertificate(csr: string): Promise<{
+  certificate: string
+  ca_chain?: string[]
+  serial_number?: string
+}> {
+  if (!tokenConfigured()) throw new Error('OpenBao PKI não configurado')
+  if (!csr || csr.length > 32_000 || !csr.includes('BEGIN CERTIFICATE REQUEST')) {
+    throw new Error('CSR inválido')
+  }
+  const { status, data } = await api<{
+    data?: { certificate?: string; ca_chain?: string[]; serial_number?: string }
+  }>('POST', '/pki-connectors/sign/connector-lab', {
+    csr,
+    format: 'pem_bundle',
+    ttl: '24h',
+  })
+  const out = data.data
+  if (status >= 300 || !out?.certificate) {
+    throw new Error(`OpenBao PKI sign failed (${status})`)
+  }
+  return {
+    certificate: out.certificate,
+    ca_chain: out.ca_chain,
+    serial_number: out.serial_number,
+  }
+}
+
 export async function getHealth(): Promise<
   OpenBaoHealth & { http_status: number }
 > {
