@@ -156,6 +156,16 @@ function migrate(db: Database.Database): void {
     );
     CREATE INDEX IF NOT EXISTS idx_connector_enrollments_lookup
       ON connector_enrollments (site_slug, connector_id, expires_at);
+
+    CREATE TABLE IF NOT EXISTS connector_heartbeats (
+      connector_id       TEXT PRIMARY KEY,
+      message_id         TEXT NOT NULL,
+      status              TEXT NOT NULL,
+      agent_version       TEXT NOT NULL,
+      capabilities_json   TEXT NOT NULL DEFAULT '[]',
+      last_seen_at        TEXT NOT NULL,
+      payload_json        TEXT NOT NULL DEFAULT '{}'
+    );
   `)
   // Migrate older DBs that lack multi-connector column
   try {
