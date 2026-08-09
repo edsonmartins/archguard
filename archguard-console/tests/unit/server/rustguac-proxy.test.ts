@@ -34,6 +34,20 @@ describe('RustGuac session contract', () => {
     expect(result.tunnel_url).toBe('wss://guac.example.test/ws/sid-456')
   })
 
+  it('closes a server-side RustGuac session without exposing the API key', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('', { status: 204 }))
+    vi.stubGlobal('fetch', fetchMock)
+    process.env.RUSTGUAC_ENABLED = '1'
+    process.env.RUSTGUAC_URL = 'http://rustguac:8080'
+    process.env.RUSTGUAC_API_KEY = 'secret-key'
+    const { closeRustGuacSession } = await import('@/server/rustguac-proxy')
+    await closeRustGuacSession('session-1')
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('http://rustguac:8080/api/sessions/session-1')
+    expect(init.method).toBe('DELETE')
+    expect(new Headers(init.headers).get('Authorization')).toBe('Bearer secret-key')
+  })
+
   it('fails closed when RustGuac omits the session or ticket', () => {
     expect(() => buildRustGuacUrls({ session_id: '' }, 'ticket')).toThrow(
       'sessão sem id',

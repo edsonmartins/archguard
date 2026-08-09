@@ -76,7 +76,7 @@ export async function issueRustGuacSession(input: {
   username?: string
   password?: string
   private_key?: string
-}): Promise<{ embed_url: string; tunnel_url: string; connect_data: string; expires_in: number }> {
+}): Promise<{ session_id: string; embed_url: string; tunnel_url: string; connect_data: string; expires_in: number }> {
   if (!rustGuacConfigured()) throw new Error('RustGuac não configurado')
   const created = await api<RustGuacSession>('/api/sessions', {
     session_type: sessionType(input.protocol),
@@ -87,5 +87,16 @@ export async function issueRustGuacSession(input: {
     ...(input.private_key ? { private_key: input.private_key } : {}),
   })
   const result = await api<{ ticket?: string }>('/api/ws-ticket', {})
-  return buildRustGuacUrls(created, result.ticket || '')
+  return { session_id: created.session_id, ...buildRustGuacUrls(created, result.ticket || '') }
+}
+
+/** Close the broker session; the API key remains server-side. */
+export async function closeRustGuacSession(sessionId: string): Promise<void> {
+  if (!rustGuacConfigured()) throw new Error('RustGuac não configurado')
+  const res = await integrationFetch(`${RUSTGUAC_URL}/api/sessions/${encodeURIComponent(sessionId)}`, {
+    method: 'DELETE',
+    integration: 'rustguac',
+    headers: { Authorization: `Bearer ${RUSTGUAC_KEY}` },
+  })
+  if (!res.ok && res.status !== 404) throw new Error(`RustGuac close: ${res.status}`)
 }
