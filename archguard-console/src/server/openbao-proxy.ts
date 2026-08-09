@@ -144,6 +144,12 @@ export async function signConnectorCertificate(csr: string): Promise<{
   }
 }
 
+export async function revokeConnectorCertificate(serial_number: string): Promise<void> {
+  if (!tokenConfigured() || !serial_number) throw new Error('OpenBao PKI não configurado')
+  const { status } = await api('POST', '/pki-connectors/revoke', { serial_number })
+  if (status >= 300) throw new Error(`OpenBao PKI revoke failed (${status})`)
+}
+
 export async function getHealth(): Promise<
   OpenBaoHealth & { http_status: number }
 > {

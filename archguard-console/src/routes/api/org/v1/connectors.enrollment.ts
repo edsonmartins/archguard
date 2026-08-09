@@ -3,8 +3,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 import { requireAnyPerm, requireSession, sessionActor } from '@/server/session-guard'
-import { issueConnectorEnrollment, consumeConnectorEnrollment } from '@/server/connector-enrollment'
-import { signConnectorCertificate } from '@/server/openbao-proxy'
+import { issueConnectorEnrollment, consumeConnectorEnrollment, registerConnectorCertificate, markConnectorCertificatesRevoked } from '@/server/connector-enrollment'
+import { signConnectorCertificate, revokeConnectorCertificate } from '@/server/openbao-proxy'
 
 const issueSchema = z.object({
   action: z.literal('issue'),
@@ -18,6 +18,7 @@ const signSchema = z.object({
   token: z.string().min(20).max(256),
   csr: z.string().min(100).max(32_000),
 })
+const revokeSchema = z.object({ action: z.literal('revoke'), connector_id: z.string().min(1).max(128), serial_number: z.string().min(1).max(256) })
 
 export const Route = createFileRoute('/api/org/v1/connectors/enrollment')({
   server: {
@@ -36,7 +37,20 @@ export const Route = createFileRoute('/api/org/v1/connectors/enrollment')({
             const enrollment = consumeConnectorEnrollment(data.token)
             if (!enrollment) return Response.json({ error: 'invalid or expired enrollment token' }, { status: 401 })
             const certificate = await signConnectorCertificate(data.csr)
+            registerConnectorCertificate({
+              serial_number: certificate.serial_number,
+              connector_id: enrollment.connector_id,
+              site_slug: enrollment.site_slug,
+            })
             return Response.json({ enrollment, certificate })
+          }
+          if ((body as { action?: string }).action === 'revoke') {
+            const session = requireSession()
+            requireAnyPerm(session, ['sites:update'], 'sites:update')
+            const data = revokeSchema.parse(body)
+            await revokeConnectorCertificate(data.serial_number)
+            const revoked = markConnectorCertificatesRevoked(data.connector_id)
+            return Response.json({ revoked })
           }
           const session = requireSession()
           requireAnyPerm(session, ['sites:update'], 'sites:update')

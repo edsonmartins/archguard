@@ -80,3 +80,23 @@ export function consumeConnectorEnrollment(token: string): ConnectorEnrollment |
     created_at: match.created_at,
   }
 }
+
+export function registerConnectorCertificate(input: {
+  serial_number?: string
+  connector_id: string
+  site_slug: string
+}): void {
+  if (!input.serial_number) return
+  getDb().prepare(
+    `INSERT OR REPLACE INTO connector_certificates
+      (serial_number, connector_id, site_slug, issued_at, status, revoked_at)
+     VALUES (?, ?, ?, ?, 'active', NULL)`,
+  ).run(input.serial_number, input.connector_id, input.site_slug, new Date().toISOString())
+}
+
+export function markConnectorCertificatesRevoked(connectorId: string): number {
+  return getDb().prepare(
+    `UPDATE connector_certificates SET status = 'revoked', revoked_at = ?
+      WHERE connector_id = ? AND status = 'active'`,
+  ).run(new Date().toISOString(), connectorId).changes
+}

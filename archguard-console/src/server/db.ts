@@ -190,6 +190,17 @@ function migrate(db: Database.Database): void {
       last_seen_at        TEXT NOT NULL,
       payload_json        TEXT NOT NULL DEFAULT '{}'
     );
+
+    CREATE TABLE IF NOT EXISTS connector_certificates (
+      serial_number TEXT PRIMARY KEY,
+      connector_id  TEXT NOT NULL,
+      site_slug     TEXT NOT NULL,
+      issued_at     TEXT NOT NULL,
+      status        TEXT NOT NULL DEFAULT 'active',
+      revoked_at    TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_connector_certificates_active
+      ON connector_certificates (connector_id, status);
   `)
   // Migrate older DBs that lack multi-connector column
   try {
