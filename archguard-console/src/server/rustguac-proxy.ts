@@ -76,6 +76,12 @@ export async function issueRustGuacSession(input: {
   username?: string
   password?: string
   private_key?: string
+  session_policy?: {
+    enable_drive?: boolean
+    enable_recording?: boolean
+    disable_copy?: boolean
+    disable_paste?: boolean
+  }
 }): Promise<{ session_id: string; embed_url: string; tunnel_url: string; connect_data: string; expires_in: number }> {
   if (!rustGuacConfigured()) throw new Error('RustGuac não configurado')
   const created = await api<RustGuacSession>('/api/sessions', {
@@ -85,6 +91,7 @@ export async function issueRustGuacSession(input: {
     ...(input.username ? { username: input.username } : {}),
     ...(input.password ? { password: input.password } : {}),
     ...(input.private_key ? { private_key: input.private_key } : {}),
+    ...(input.session_policy || {}),
   })
   const result = await api<{ ticket?: string }>('/api/ws-ticket', {})
   return { session_id: created.session_id, ...buildRustGuacUrls(created, result.ticket || '') }

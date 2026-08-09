@@ -215,6 +215,7 @@ export async function createUnifiedSession(
       username: targetUsername,
       password,
       private_key: privateKey,
+      session_policy: targetConfig.session_policy,
     })
     const username = session.user?.name || session.user?.email || 'operator'
     logger.info({ user: username, target: hit.target, protocol: proto, mode: 'rustguac' }, 'unified session RustGuac ticket issued')

@@ -70,6 +70,14 @@ const siteInputSchema = z.object({
         secret_ref: z.string().optional(),
         openbao_database_role: z.string().max(128).optional(),
         connector_id: z.string().optional(),
+        session_policy: z
+          .object({
+            enable_drive: z.boolean().optional(),
+            enable_recording: z.boolean().optional(),
+            disable_copy: z.boolean().optional(),
+            disable_paste: z.boolean().optional(),
+          })
+          .optional(),
         notas: z.string().optional(),
       }),
     )

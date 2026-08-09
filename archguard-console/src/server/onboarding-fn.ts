@@ -52,8 +52,16 @@ const targetDraftSchema = z.object({
   roles: z.array(z.string()).default([]),
   username: z.string().optional(),
   secret_ref: z.string().optional(),
-  openbao_database_role: z.string().max(128).optional(),
-  connector_id: z.string().optional(),
+        openbao_database_role: z.string().max(128).optional(),
+        connector_id: z.string().optional(),
+        session_policy: z
+          .object({
+            enable_drive: z.boolean().optional(),
+            enable_recording: z.boolean().optional(),
+            disable_copy: z.boolean().optional(),
+            disable_paste: z.boolean().optional(),
+          })
+          .optional(),
   notas: z.string().optional(),
 })
 
@@ -143,6 +151,7 @@ export const runClientOnboardingWizardFn = createServerFn({ method: 'POST' })
       secret_ref: t.secret_ref,
       openbao_database_role: t.openbao_database_role,
       connector_id: t.connector_id,
+      session_policy: t.session_policy,
       notas: t.notas,
     }))
 

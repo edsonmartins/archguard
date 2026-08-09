@@ -17,6 +17,14 @@ export type SiteStack =
 
 export type SiteAmbiente = 'producao' | 'preprod' | 'dr' | 'lab' | 'staging'
 
+/** Non-secret per-session controls enforced by the RustGuac broker. */
+export interface SiteSessionPolicy {
+  enable_drive?: boolean
+  enable_recording?: boolean
+  disable_copy?: boolean
+  disable_paste?: boolean
+}
+
 export interface SiteTarget {
   nome: string
   engine: 'warpgate' | 'guacamole'
@@ -35,6 +43,8 @@ export interface SiteTarget {
   openbao_database_role?: string
   /** Optional connector id this target is reached through (multi-VPN sites). */
   connector_id?: string
+  /** RustGuac session controls; omitted values use the gateway defaults. */
+  session_policy?: SiteSessionPolicy
   notas?: string
 }
 

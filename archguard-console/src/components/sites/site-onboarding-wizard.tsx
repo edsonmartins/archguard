@@ -69,6 +69,12 @@ type TargetDraft = {
   connector_id: string
   username: string
   openbao_database_role: string
+  session_policy?: {
+    enable_drive?: boolean
+    enable_recording?: boolean
+    disable_copy?: boolean
+    disable_paste?: boolean
+  }
 }
 
 const STEPS: { id: StepId; label: string; icon: typeof Building2 }[] = [

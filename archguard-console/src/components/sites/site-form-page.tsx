@@ -50,6 +50,12 @@ const emptyTarget = (): SiteTarget => ({
   secret_ref: '',
   openbao_database_role: '',
   connector_id: '',
+  session_policy: {
+    enable_drive: false,
+    enable_recording: true,
+    disable_copy: false,
+    disable_paste: false,
+  },
 })
 
 const emptyConnector = (slug = ''): SiteConnector => ({
@@ -212,6 +218,7 @@ export function SiteFormPage({
         secret_ref: t.secret_ref?.trim() || undefined,
         openbao_database_role: t.openbao_database_role?.trim() || undefined,
         connector_id: t.connector_id?.trim() || undefined,
+        session_policy: t.session_policy,
         roles:
           typeof t.roles === 'string'
             ? String(t.roles)
@@ -587,6 +594,56 @@ export function SiteFormPage({
                 onChange={(e) => updateTarget(idx, { nome: e.target.value })}
                 disabled={!canWrite}
               />
+              <div className="sm:col-span-6 flex flex-wrap gap-4 rounded-md bg-muted/40 p-2 text-xs">
+                <label className="flex items-center gap-2">
+                  <Switch
+                    checked={tgt.session_policy?.enable_drive === true}
+                    onCheckedChange={(v) =>
+                      updateTarget(idx, {
+                        session_policy: { ...tgt.session_policy, enable_drive: v },
+                      })
+                    }
+                    disabled={!canWrite}
+                  />
+                  transferência de arquivos
+                </label>
+                <label className="flex items-center gap-2">
+                  <Switch
+                    checked={tgt.session_policy?.enable_recording !== false}
+                    onCheckedChange={(v) =>
+                      updateTarget(idx, {
+                        session_policy: { ...tgt.session_policy, enable_recording: v },
+                      })
+                    }
+                    disabled={!canWrite}
+                  />
+                  gravação
+                </label>
+                <label className="flex items-center gap-2">
+                  <Switch
+                    checked={tgt.session_policy?.disable_copy === true}
+                    onCheckedChange={(v) =>
+                      updateTarget(idx, {
+                        session_policy: { ...tgt.session_policy, disable_copy: v },
+                      })
+                    }
+                    disabled={!canWrite}
+                  />
+                  bloquear cópia
+                </label>
+                <label className="flex items-center gap-2">
+                  <Switch
+                    checked={tgt.session_policy?.disable_paste === true}
+                    onCheckedChange={(v) =>
+                      updateTarget(idx, {
+                        session_policy: { ...tgt.session_policy, disable_paste: v },
+                      })
+                    }
+                    disabled={!canWrite}
+                  />
+                  bloquear colagem
+                </label>
+              </div>
               <Select
                 value={tgt.engine}
                 onValueChange={(v) =>
