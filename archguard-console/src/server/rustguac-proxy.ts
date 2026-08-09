@@ -75,6 +75,22 @@ export async function listRustGuacRecordings(): Promise<RustGuacRecording[]> {
   return apiGet<RustGuacRecording[]>('/api/recordings')
 }
 
+/** Stream one recording through the authenticated server-side integration. */
+export async function fetchRustGuacRecording(name: string): Promise<Response> {
+  if (!rustGuacConfigured()) throw new Error('RustGuac não configurado')
+  if (!/^[0-9a-f-]{36}\.guac$/i.test(name)) {
+    throw new Error('nome de gravação inválido')
+  }
+  return integrationFetch(
+    `${RUSTGUAC_URL}/api/recordings/${encodeURIComponent(name)}`,
+    {
+      method: 'GET',
+      integration: 'rustguac',
+      headers: { Authorization: `Bearer ${RUSTGUAC_KEY}` },
+    },
+  )
+}
+
 function sessionType(protocol: string): 'ssh' | 'rdp' | 'vnc' {
   const p = protocol.toLowerCase()
   return p === 'rdp' || p === 'vnc' ? p : 'ssh'
