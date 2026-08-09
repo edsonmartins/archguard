@@ -44,6 +44,37 @@ async function api<T>(path: string, body: unknown): Promise<T> {
   }
 }
 
+async function apiGet<T>(path: string): Promise<T> {
+  const res = await integrationFetch(`${RUSTGUAC_URL}${path}`, {
+    method: 'GET',
+    integration: 'rustguac',
+    headers: { Authorization: `Bearer ${RUSTGUAC_KEY}` },
+  })
+  const text = await res.text()
+  if (!res.ok) throw new Error(`RustGuac ${path}: ${res.status} ${text.slice(0, 300)}`)
+  try {
+    return JSON.parse(text) as T
+  } catch {
+    throw new Error(`RustGuac ${path}: invalid JSON response`)
+  }
+}
+
+export type RustGuacRecording = {
+  name: string
+  size_bytes: number
+  modified?: string
+  created_at?: string
+  user?: string
+  session_type?: string
+  address_book_entry?: string
+}
+
+/** List recording metadata server-side; recording bytes never pass through this call. */
+export async function listRustGuacRecordings(): Promise<RustGuacRecording[]> {
+  if (!rustGuacConfigured()) throw new Error('RustGuac não configurado')
+  return apiGet<RustGuacRecording[]>('/api/recordings')
+}
+
 function sessionType(protocol: string): 'ssh' | 'rdp' | 'vnc' {
   const p = protocol.toLowerCase()
   return p === 'rdp' || p === 'vnc' ? p : 'ssh'
