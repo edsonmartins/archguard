@@ -192,18 +192,27 @@ export async function createUnifiedSession(
     let password: string | undefined
     let privateKey: string | undefined
     let leaseId: string | undefined
+    let targetUsername = targetConfig.username
+    if (targetConfig.openbao_database_role) {
+      const { issueDatabaseCredentials } = await import('./openbao-proxy')
+      const dynamic = await issueDatabaseCredentials(targetConfig.openbao_database_role)
+      password = dynamic.password
+      leaseId = dynamic.lease_id
+      // Dynamic DB credentials carry their own username and must override SoT hints.
+      targetUsername = dynamic.username
+    }
     if (targetConfig.secret_ref) {
       const { readSecretData } = await import('./openbao-proxy')
       const secret = await readSecretData(targetConfig.secret_ref)
       password = secret?.password || secret?.value || secret?.secret
       privateKey = secret?.private_key || secret?.key
-      leaseId = secret?.lease_id
+      leaseId = leaseId || secret?.lease_id
     }
     const rust = await issueRustGuacSession({
       protocol: proto,
       hostname: targetConfig.host,
       port: targetConfig.port,
-      username: targetConfig.username,
+      username: targetUsername,
       password,
       private_key: privateKey,
     })

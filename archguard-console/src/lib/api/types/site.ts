@@ -31,6 +31,8 @@ export interface SiteTarget {
    * Examples: `secret/data/archgate/targets/rio-api-ssh` or `kv/data/targets/x`.
    */
   secret_ref?: string
+  /** Optional OpenBao database role for an ephemeral target credential. */
+  openbao_database_role?: string
   /** Optional connector id this target is reached through (multi-VPN sites). */
   connector_id?: string
   notas?: string

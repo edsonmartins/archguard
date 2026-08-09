@@ -271,6 +271,24 @@ export async function revokeLease(lease_id: string): Promise<void> {
   }
 }
 
+export async function issueDatabaseCredentials(role: string): Promise<{
+  username: string
+  password: string
+  lease_id: string
+}> {
+  if (!tokenConfigured()) throw new Error('OPENBAO_APP_TOKEN ausente')
+  const safeRole = role.trim()
+  if (!safeRole || !/^[a-zA-Z0-9_-]+$/.test(safeRole)) throw new Error('role OpenBao inválida')
+  const { status, data } = await api<{
+    lease_id?: string
+    data?: { username?: string; password?: string }
+  }>('GET', `/database/creds/${encodeURIComponent(safeRole)}`)
+  if (status >= 400 || !data.lease_id || !data.data?.username || !data.data.password) {
+    throw new Error(`OpenBao database creds failed: ${status}`)
+  }
+  return { username: data.data.username, password: data.data.password, lease_id: data.lease_id }
+}
+
 export async function getJwtConfig(): Promise<Record<string, unknown> | null> {
   if (!tokenConfigured()) return null
   const { status, data } = await api<{ data?: Record<string, unknown> }>(

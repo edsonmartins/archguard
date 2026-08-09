@@ -68,6 +68,7 @@ const siteInputSchema = z.object({
         roles: z.array(z.string()),
         username: z.string().optional(),
         secret_ref: z.string().optional(),
+        openbao_database_role: z.string().max(128).optional(),
         connector_id: z.string().optional(),
         notas: z.string().optional(),
       }),
