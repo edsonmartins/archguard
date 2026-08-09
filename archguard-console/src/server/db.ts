@@ -141,6 +141,21 @@ function migrate(db: Database.Database): void {
       closed_at   TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_broker_sessions_open ON broker_sessions (closed_at);
+
+    -- Single-use connector enrollment metadata; token material is never stored.
+    CREATE TABLE IF NOT EXISTS connector_enrollments (
+      id            TEXT PRIMARY KEY,
+      token_hash    TEXT NOT NULL UNIQUE,
+      site_slug     TEXT NOT NULL,
+      connector_id  TEXT NOT NULL,
+      expires_at    TEXT NOT NULL,
+      created_at    TEXT NOT NULL,
+      created_by    TEXT NOT NULL,
+      used_at       TEXT,
+      revoked_at    TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_connector_enrollments_lookup
+      ON connector_enrollments (site_slug, connector_id, expires_at);
   `)
   // Migrate older DBs that lack multi-connector column
   try {
