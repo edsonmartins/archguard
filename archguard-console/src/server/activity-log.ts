@@ -45,14 +45,38 @@ export function recordActivity(
   }
 
   try {
-    getDb()
-      .prepare(
+    const db = getDb()
+    const write = db.transaction(() => {
+      db.prepare(
         `INSERT INTO activity_log
            (id, timestamp, actor, action, method, path, target, result, error_message)
          VALUES
            (@id, @timestamp, @actor, @action, @method, @path, @target, @result, @errorMessage)`,
+      ).run(entry)
+      // Outbox payload is deliberately limited to redacted audit metadata.
+      db.prepare(
+        `INSERT INTO audit_outbox
+           (event_id, occurred_at, event_type, payload_json, available_at)
+         VALUES (?, ?, ?, ?, ?)`,
+      ).run(
+        entry.id,
+        entry.timestamp,
+        'archgate.activity.v1',
+        JSON.stringify({
+          event_id: entry.id,
+          occurred_at: entry.timestamp,
+          actor: entry.actor,
+          action: entry.action,
+          method: entry.method,
+          path: entry.path,
+          target: entry.target,
+          result: entry.result,
+          error: entry.errorMessage,
+        }),
+        entry.timestamp,
       )
-      .run(entry)
+    })
+    write()
   } catch (err) {
     // Never fail the primary mutation because audit write failed (e.g. empty/corrupt sqlite).
     logger.warn({ err: String(err), action: entry.action }, 'activity_log insert failed')

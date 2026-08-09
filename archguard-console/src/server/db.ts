@@ -60,6 +60,20 @@ function migrate(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_activity_timestamp ON activity_log (timestamp DESC);
     CREATE INDEX IF NOT EXISTS idx_activity_actor ON activity_log (actor);
 
+    CREATE TABLE IF NOT EXISTS audit_outbox (
+      event_id      TEXT PRIMARY KEY,
+      occurred_at   TEXT NOT NULL,
+      event_type    TEXT NOT NULL,
+      payload_json  TEXT NOT NULL,
+      status        TEXT NOT NULL DEFAULT 'pending',
+      attempts      INTEGER NOT NULL DEFAULT 0,
+      available_at  TEXT NOT NULL,
+      last_error    TEXT,
+      published_at  TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_audit_outbox_pending
+      ON audit_outbox (status, available_at);
+
     CREATE TABLE IF NOT EXISTS bff_idempotency (
       scope_key       TEXT PRIMARY KEY,
       body_hash       TEXT NOT NULL,
