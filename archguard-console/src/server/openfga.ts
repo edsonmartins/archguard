@@ -79,10 +79,14 @@ export async function deleteOpenFgaGrantsForUser(user: string): Promise<number> 
   const c = config()
   if (!c.enabled) return 0
   if (!openFgaConfigured()) throw new Error('OpenFGA is not configured')
-  const params = new URLSearchParams({ user, relation: 'connect', type: 'connection' })
   const read = await integrationFetch(
-    `${c.url}/stores/${encodeURIComponent(c.store)}/read?${params.toString()}`,
-    { method: 'GET', integration: 'openfga', headers: { Authorization: `Bearer ${c.token}` } },
+    `${c.url}/stores/${encodeURIComponent(c.store)}/read`,
+    {
+      method: 'POST',
+      integration: 'openfga',
+      headers: { Authorization: `Bearer ${c.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tuple_key: { user, relation: 'connect', object: 'connection:' } }),
+    },
   )
   if (!read.ok) throw new Error(`OpenFGA read failed: ${read.status}`)
   const body = (await read.json()) as { tuples?: Array<{ key?: TupleKey }> }
