@@ -1,6 +1,6 @@
 // src/server/db.ts
 //
-// SQLite database for the activity log. better-sqlite3 is synchronous, has
+// SQLite database for the activity log and control-plane idempotency. better-sqlite3 is synchronous, has
 // no external server dependency and is fast enough for the audit volume
 // the console will produce (a few writes per minute, occasional reads).
 // Sites may use PostgreSQL (CONSOLE_DATABASE_URL); activity_log stays on SQLite.
@@ -59,6 +59,16 @@ function migrate(db: Database.Database): void {
     );
     CREATE INDEX IF NOT EXISTS idx_activity_timestamp ON activity_log (timestamp DESC);
     CREATE INDEX IF NOT EXISTS idx_activity_actor ON activity_log (actor);
+
+    CREATE TABLE IF NOT EXISTS bff_idempotency (
+      scope_key       TEXT PRIMARY KEY,
+      body_hash       TEXT NOT NULL,
+      status_code     INTEGER,
+      response_json   TEXT,
+      created_at      TEXT NOT NULL,
+      completed_at    TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_bff_idempotency_created ON bff_idempotency (created_at);
 
     -- ArchGate site / client inventory (connectivity + targets metadata)
     CREATE TABLE IF NOT EXISTS sites (
