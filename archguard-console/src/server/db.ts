@@ -133,6 +133,14 @@ function migrate(db: Database.Database): void {
       updated_at  TEXT NOT NULL,
       updated_by  TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS broker_sessions (
+      session_id  TEXT PRIMARY KEY,
+      lease_id    TEXT,
+      created_at  TEXT NOT NULL,
+      closed_at   TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_broker_sessions_open ON broker_sessions (closed_at);
   `)
   // Migrate older DBs that lack multi-connector column
   try {
@@ -171,6 +179,25 @@ function migrate(db: Database.Database): void {
 export function getDb(): Database.Database {
   if (!_db) _db = open()
   return _db
+}
+
+export function registerBrokerSession(sessionId: string, leaseId?: string): void {
+  getDb().prepare(
+    `INSERT OR REPLACE INTO broker_sessions (session_id, lease_id, created_at, closed_at)
+     VALUES (?, ?, ?, NULL)`,
+  ).run(sessionId, leaseId || null, new Date().toISOString())
+}
+
+export function getBrokerSession(sessionId: string): { lease_id: string | null; closed_at: string | null } | undefined {
+  return getDb().prepare(
+    'SELECT lease_id, closed_at FROM broker_sessions WHERE session_id = ?',
+  ).get(sessionId) as { lease_id: string | null; closed_at: string | null } | undefined
+}
+
+export function closeBrokerSession(sessionId: string): void {
+  getDb().prepare(
+    'UPDATE broker_sessions SET closed_at = ? WHERE session_id = ? AND closed_at IS NULL',
+  ).run(new Date().toISOString(), sessionId)
 }
 
 /** For tests: close and re-open against a fresh path. */

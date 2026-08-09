@@ -18,6 +18,7 @@ import { deriveTenants } from '@/lib/auth/roles'
 import { logger } from './logger'
 import { issueRustGuacSession, rustGuacConfigured } from './rustguac-proxy'
 import { checkOpenFga, openFgaConnectionObject } from './openfga'
+import { registerBrokerSession } from './db'
 
 export type UnifiedConnection = {
   id: string
@@ -190,11 +191,13 @@ export async function createUnifiedSession(
     if (!allowed) throw new Error('OpenFGA negou acesso à conexão')
     let password: string | undefined
     let privateKey: string | undefined
+    let leaseId: string | undefined
     if (targetConfig.secret_ref) {
       const { readSecretData } = await import('./openbao-proxy')
       const secret = await readSecretData(targetConfig.secret_ref)
       password = secret?.password || secret?.value || secret?.secret
       privateKey = secret?.private_key || secret?.key
+      leaseId = secret?.lease_id
     }
     const rust = await issueRustGuacSession({
       protocol: proto,
@@ -206,6 +209,7 @@ export async function createUnifiedSession(
     })
     const username = session.user?.name || session.user?.email || 'operator'
     logger.info({ user: username, target: hit.target, protocol: proto, mode: 'rustguac' }, 'unified session RustGuac ticket issued')
+    registerBrokerSession(rust.session_id, leaseId)
     return { ...rust, embed_mode: 'iframe' as const, launch: { engine: 'rustguac', target: hit.target, protocol: proto } }
   }
   const wantsGuac =

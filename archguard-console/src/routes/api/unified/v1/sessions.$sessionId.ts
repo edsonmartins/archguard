@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { resolveOperatorSession } from '@/server/operator-session'
-import { closeRustGuacSession } from '@/server/rustguac-proxy'
+import { closeBrokerSessionAndLease } from '@/server/broker-session'
 import { unifiedCorsHeaders } from '@/server/unified-cors'
 
 export const Route = createFileRoute('/api/unified/v1/sessions/$sessionId')({
@@ -13,7 +13,7 @@ export const Route = createFileRoute('/api/unified/v1/sessions/$sessionId')({
         }
         try {
           await resolveOperatorSession(request)
-          await closeRustGuacSession(params.sessionId)
+          await closeBrokerSessionAndLease(params.sessionId)
           return new Response(JSON.stringify({ ok: true }), { status: 200, headers })
         } catch (e) {
           const msg = (e as Error).message || 'error'
