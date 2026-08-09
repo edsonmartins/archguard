@@ -15,6 +15,11 @@ import {
 } from '@/server/openbao-proxy'
 import { notifyPendingCheckout } from '@/server/org-notify'
 import { recordActivity } from '@/server/activity-log'
+import {
+  claimIdempotency,
+  completeIdempotency,
+  hashBody,
+} from '@/server/bff-idempotency'
 import { logger } from '@/server/logger'
 import {
   requireAnyPerm,
@@ -57,6 +62,31 @@ export const Route = createFileRoute('/api/org/v1/accounts/$id/checkout')({
           const actor = sessionActor(s)
           const ttl = parsed.data.ttl_seconds ?? TTL_DEFAULT
           const reason = parsed.data.reason.trim()
+          const idemKey = request.headers.get('Idempotency-Key')?.trim()
+          if (!idemKey || idemKey.length < 16 || idemKey.length > 128) {
+            return new Response(JSON.stringify({ error: 'Idempotency-Key required' }), {
+              status: 400,
+              headers,
+            })
+          }
+          const orgScope = (s.memberships ?? [])
+            .map((m) => m.organization_id)
+            .sort()
+            .join(',') || 'none'
+          const scope = `${orgScope}:${actor}:POST:/api/org/v1/accounts/${params.id}/checkout:${idemKey}`
+          const hit = claimIdempotency(scope, hashBody(parsed.data))
+          if (hit) {
+            if (!hit.completed) {
+              return new Response(JSON.stringify({ error: 'request already in progress' }), {
+                status: 409,
+                headers,
+              })
+            }
+            return new Response(JSON.stringify(hit.response), {
+              status: hit.statusCode || 200,
+              headers,
+            })
+          }
 
           if (acc.requires_dual_control) {
             const checkout = createCheckout({
@@ -89,14 +119,13 @@ export const Route = createFileRoute('/api/org/v1/accounts/$id/checkout')({
               ttl_seconds: ttl,
               criticality: acc.criticality,
             })
-            return new Response(
-              JSON.stringify({
+            const response = {
                 checkout,
                 openbao_configured: openbaoTokenConfigured(),
                 message: 'pending dual-control',
-              }),
-              { status: 200, headers },
-            )
+              }
+            completeIdempotency(scope, 200, response)
+            return new Response(JSON.stringify(response), { status: 200, headers })
           }
 
           const checkout = createCheckout({
@@ -117,16 +146,15 @@ export const Route = createFileRoute('/api/org/v1/accounts/$id/checkout')({
               !acc.secret_ref ? 'secret_ref missing' : 'openbao missing',
               { checkout_id: checkout.id },
             )
-            return new Response(
-              JSON.stringify({
+            const response = {
                 checkout,
                 openbao_configured: openbaoTokenConfigured(),
                 message: !acc.secret_ref
                   ? 'secret_ref missing'
                   : 'OPENBAO_APP_TOKEN missing',
-              }),
-              { status: 200, headers },
-            )
+              }
+            completeIdempotency(scope, 200, response)
+            return new Response(JSON.stringify(response), { status: 200, headers })
           }
 
           const fields = await readSecretData(acc.secret_ref)
@@ -139,14 +167,13 @@ export const Route = createFileRoute('/api/org/v1/accounts/$id/checkout')({
               'secret not found',
               { checkout_id: checkout.id },
             )
-            return new Response(
-              JSON.stringify({
+            const response = {
                 checkout,
                 openbao_configured: true,
                 message: `secret not found at ${acc.secret_ref}`,
-              }),
-              { status: 200, headers },
-            )
+              }
+            completeIdempotency(scope, 200, response)
+            return new Response(JSON.stringify(response), { status: 200, headers })
           }
 
           recordActivity(
@@ -163,8 +190,7 @@ export const Route = createFileRoute('/api/org/v1/accounts/$id/checkout')({
             },
           )
 
-          return new Response(
-            JSON.stringify({
+          const response = {
               checkout,
               openbao_configured: true,
               secret: {
@@ -178,9 +204,9 @@ export const Route = createFileRoute('/api/org/v1/accounts/$id/checkout')({
                 api_key: fields.api_key || fields.token || fields.key,
                 fields,
               },
-            }),
-            { status: 200, headers },
-          )
+            }
+          completeIdempotency(scope, 200, response)
+          return new Response(JSON.stringify(response), { status: 200, headers })
         } catch (e) {
           const msg = (e as Error).message || 'error'
           const status = msg.includes('Unauthorized')
