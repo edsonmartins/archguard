@@ -40,6 +40,7 @@ import {
   deployConnectorFn,
   getConnectorStatusFn,
   probeConnectorFn,
+  planConnectorUpgradeFn,
   stopConnectorFn,
   updateConnectorChecklistFn,
 } from '@/server/connector-fn'
@@ -59,6 +60,9 @@ export function ConnectorStatusPanel({ slug }: { slug: string }) {
   const [rawConfig, setRawConfig] = useState('')
   const [probeHost, setProbeHost] = useState('')
   const [probePort, setProbePort] = useState('22')
+  const [upgradeVersion, setUpgradeVersion] = useState('')
+  const [upgradeUrl, setUpgradeUrl] = useState('')
+  const [upgradeSha256, setUpgradeSha256] = useState('')
 
   const q = useQuery({
     queryKey: ['connector', slug],
@@ -164,6 +168,21 @@ export function ConnectorStatusPanel({ slug }: { slug: string }) {
     onSuccess: (r) => {
       if (r.ok) toast.success(`Alcance OK ${r.host}:${r.port}`)
       else toast.error(`Sem alcance: ${r.detail || 'fail'}`)
+    },
+    onError: (e) => toast.error((e as Error).message),
+  })
+
+  const upgradePlan = useMutation({
+    mutationFn: () => planConnectorUpgradeFn({
+      data: {
+        slug,
+        version: upgradeVersion.trim(),
+        url: upgradeUrl.trim(),
+        sha256: upgradeSha256.trim(),
+      },
+    }),
+    onSuccess: (result) => {
+      toast.success(`Plano de upgrade validado: ${(result.plan as { upgrade?: { action?: string } })?.upgrade?.action || 'pending_approval'}`)
     },
     onError: (e) => toast.error((e as Error).message),
   })
@@ -492,6 +511,39 @@ export function ConnectorStatusPanel({ slug }: { slug: string }) {
         </Card>
       )}
       <ConnectorInventoryCard />
+      {canWrite && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Planejar upgrade</CardTitle>
+            <CardDescription>
+              Valida o manifesto no agent. Nenhum arquivo é baixado ou aplicado nesta etapa.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Versão alvo</Label>
+              <Input value={upgradeVersion} onChange={(e) => setUpgradeVersion(e.target.value)} placeholder="1.1.0" />
+            </div>
+            <div className="space-y-1">
+              <Label>URL HTTPS do artefato</Label>
+              <Input value={upgradeUrl} onChange={(e) => setUpgradeUrl(e.target.value)} placeholder="https://.../connector" />
+            </div>
+            <div className="space-y-1 sm:col-span-2">
+              <Label>SHA-256</Label>
+              <Input className="font-mono" value={upgradeSha256} onChange={(e) => setUpgradeSha256(e.target.value)} placeholder="64 caracteres hexadecimais" />
+            </div>
+            <div className="sm:col-span-2">
+              <Button
+                variant="outline"
+                disabled={upgradePlan.isPending || !upgradeVersion.trim() || !upgradeUrl.trim() || upgradeSha256.trim().length !== 64}
+                onClick={() => upgradePlan.mutate()}
+              >
+                {upgradePlan.isPending ? 'Validando…' : 'Validar plano'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
