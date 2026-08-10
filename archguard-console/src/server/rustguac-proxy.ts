@@ -1,6 +1,7 @@
 // Server-side RustGuac session broker. API keys and target credentials never
 // leave the console; the browser receives only a short-lived ws ticket URL.
 import { integrationFetch } from './http-integration-client'
+import { getDb } from './db'
 
 const RUSTGUAC_URL = (
   process.env.RUSTGUAC_URL || 'http://archgate-rustguac:8080'
@@ -67,12 +68,54 @@ export type RustGuacRecording = {
   user?: string
   session_type?: string
   address_book_entry?: string
+  legal_hold?: boolean
+  retain_until?: string | null
+}
+
+export type RecordingRetention = {
+  legal_hold: boolean
+  retain_until: string | null
+  updated_at: string | null
+  updated_by: string | null
+}
+
+export function getRecordingRetention(name: string): RecordingRetention {
+  const row = getDb().prepare(
+    `SELECT legal_hold, retain_until, updated_at, updated_by
+       FROM recording_retention WHERE recording_name = ?`,
+  ).get(name) as { legal_hold: number; retain_until: string | null; updated_at: string; updated_by: string } | undefined
+  return row
+    ? { legal_hold: row.legal_hold === 1, retain_until: row.retain_until, updated_at: row.updated_at, updated_by: row.updated_by }
+    : { legal_hold: false, retain_until: null, updated_at: null, updated_by: null }
+}
+
+export function setRecordingRetention(input: {
+  name: string
+  legal_hold: boolean
+  retain_until: string | null
+  updated_by: string
+}): RecordingRetention {
+  const now = new Date().toISOString()
+  getDb().prepare(
+    `INSERT INTO recording_retention (recording_name, legal_hold, retain_until, updated_at, updated_by)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(recording_name) DO UPDATE SET
+       legal_hold=excluded.legal_hold,
+       retain_until=excluded.retain_until,
+       updated_at=excluded.updated_at,
+       updated_by=excluded.updated_by`,
+  ).run(input.name, input.legal_hold ? 1 : 0, input.retain_until, now, input.updated_by)
+  return getRecordingRetention(input.name)
 }
 
 /** List recording metadata server-side; recording bytes never pass through this call. */
 export async function listRustGuacRecordings(): Promise<RustGuacRecording[]> {
   if (!rustGuacConfigured()) throw new Error('RustGuac não configurado')
-  return apiGet<RustGuacRecording[]>('/api/recordings')
+  const recordings = await apiGet<RustGuacRecording[]>('/api/recordings')
+  return recordings.map((recording) => {
+    const retention = getRecordingRetention(recording.name)
+    return { ...recording, legal_hold: retention.legal_hold, retain_until: retention.retain_until }
+  })
 }
 
 /** Stream one recording through the authenticated server-side integration. */

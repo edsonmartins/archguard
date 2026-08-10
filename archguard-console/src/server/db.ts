@@ -212,6 +212,16 @@ function migrate(db: Database.Database): void {
     );
     CREATE INDEX IF NOT EXISTS idx_connector_certificates_active
       ON connector_certificates (connector_id, status);
+
+    CREATE TABLE IF NOT EXISTS recording_retention (
+      recording_name TEXT PRIMARY KEY,
+      legal_hold     INTEGER NOT NULL DEFAULT 0,
+      retain_until   TEXT,
+      updated_at     TEXT NOT NULL,
+      updated_by     TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_recording_retention_until
+      ON recording_retention (retain_until);
   `)
   // Migrate older DBs that lack multi-connector column
   try {
