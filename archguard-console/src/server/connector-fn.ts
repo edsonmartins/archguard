@@ -482,7 +482,7 @@ export const getConnectorUpgradePlansFn = createServerFn({ method: 'GET' })
     if (!site) throw new Error('Site não encontrado')
     assertSiteTenantAccess(site, s)
     const plans = getDb().prepare(
-      `SELECT id, site_slug, version, artifact_url, sha256, status, created_at, created_by
+      `SELECT id, site_slug, version, artifact_url, sha256, status, created_at, created_by, decided_at, decided_by
          FROM connector_upgrade_plans
         WHERE site_slug = ?
         ORDER BY created_at DESC
@@ -496,6 +496,45 @@ export const getConnectorUpgradePlansFn = createServerFn({ method: 'GET' })
       status: string
       created_at: string
       created_by: string
+      decided_at?: string | null
+      decided_by?: string | null
     }>
     return { plans }
+  })
+
+export const decideConnectorUpgradePlanFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: unknown) => {
+    const r = z.object({
+      slug: z.string().min(1),
+      plan_id: z.string().uuid(),
+      decision: z.enum(['approve', 'reject']),
+    }).safeParse(data)
+    if (!r.success) throw new Error(r.error.message)
+    return r.data
+  })
+  .handler(async ({ data }) => {
+    const s = requireSession()
+    requireAnyPerm(s, ['sites:update', 'gateways:manage'], 'sites:update')
+    const site = await getSite(data.slug)
+    if (!site) throw new Error('Site não encontrado')
+    assertSiteTenantAccess(site, s)
+    const db = getDb()
+    const current = db.prepare(
+      'SELECT status FROM connector_upgrade_plans WHERE id = ? AND site_slug = ?',
+    ).get(data.plan_id, data.slug) as { status?: string } | undefined
+    if (!current) throw new Error('Plano não encontrado')
+    if (current.status !== 'pending_approval') {
+      throw new Error(`Plano não está pendente (status: ${current.status})`)
+    }
+    const status = data.decision === 'approve' ? 'approved' : 'rejected'
+    const actor = sessionActor(s)
+    const decidedAt = new Date().toISOString()
+    db.prepare(
+      'UPDATE connector_upgrade_plans SET status = ?, decided_at = ?, decided_by = ? WHERE id = ? AND site_slug = ?',
+    ).run(status, decidedAt, actor, data.plan_id, data.slug)
+    recordActivity('POST', `/archgate/connector/${data.slug}/upgrade-plan/${data.plan_id}/${data.decision}`, actor, 'success', undefined, {
+      plan_id: data.plan_id,
+      decision: data.decision,
+    })
+    return { ok: true, plan_id: data.plan_id, status, decided_at: decidedAt, decided_by: actor }
   })

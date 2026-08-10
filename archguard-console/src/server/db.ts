@@ -231,11 +231,19 @@ function migrate(db: Database.Database): void {
       sha256        TEXT NOT NULL,
       status        TEXT NOT NULL DEFAULT 'pending_approval',
       created_at    TEXT NOT NULL,
-      created_by    TEXT NOT NULL
+      created_by    TEXT NOT NULL,
+      decided_at    TEXT,
+      decided_by    TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_connector_upgrade_plans_site
       ON connector_upgrade_plans (site_slug, created_at DESC);
   `)
+  for (const statement of [
+    'ALTER TABLE connector_upgrade_plans ADD COLUMN decided_at TEXT',
+    'ALTER TABLE connector_upgrade_plans ADD COLUMN decided_by TEXT',
+  ]) {
+    try { db.exec(statement) } catch { /* column already exists */ }
+  }
   // Migrate older DBs that lack multi-connector column
   try {
     const cols = db.prepare(`PRAGMA table_info(sites)`).all() as { name: string }[]

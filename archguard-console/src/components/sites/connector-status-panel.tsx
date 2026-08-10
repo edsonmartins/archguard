@@ -12,6 +12,8 @@ import {
   Play,
   Square,
   Radar,
+  Check,
+  X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
@@ -42,6 +44,7 @@ import {
   probeConnectorFn,
   planConnectorUpgradeFn,
   getConnectorUpgradePlansFn,
+  decideConnectorUpgradePlanFn,
   stopConnectorFn,
   updateConnectorChecklistFn,
 } from '@/server/connector-fn'
@@ -546,18 +549,28 @@ export function ConnectorStatusPanel({ slug }: { slug: string }) {
           </CardContent>
         </Card>
       )}
-      <UpgradePlanHistory slug={slug} />
+      <UpgradePlanHistory slug={slug} canWrite={canWrite} />
     </div>
   )
 }
 
-function UpgradePlanHistory({ slug }: { slug: string }) {
+function UpgradePlanHistory({ slug, canWrite }: { slug: string; canWrite: boolean }) {
+  const qc = useQueryClient()
   const q = useQuery({
     queryKey: ['connector-upgrade-plans', slug],
     queryFn: () => getConnectorUpgradePlansFn({ data: { slug } }),
     staleTime: 15_000,
   })
   const plans = q.data?.plans || []
+  const decide = useMutation({
+    mutationFn: (input: { plan_id: string; decision: 'approve' | 'reject' }) =>
+      decideConnectorUpgradePlanFn({ data: { slug, ...input } }),
+    onSuccess: (result) => {
+      toast.success(`Plano ${result.status === 'approved' ? 'aprovado' : 'rejeitado'}`)
+      void qc.invalidateQueries({ queryKey: ['connector-upgrade-plans', slug] })
+    },
+    onError: (e) => toast.error((e as Error).message),
+  })
 
   return (
     <Card>
@@ -577,7 +590,19 @@ function UpgradePlanHistory({ slug }: { slug: string }) {
               <div key={plan.id} className="rounded border p-3 text-sm space-y-1">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-medium">{plan.version}</span>
-                  <Badge variant={plan.status === 'noop' ? 'secondary' : 'outline'}>{plan.status}</Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={plan.status === 'noop' ? 'secondary' : 'outline'}>{plan.status}</Badge>
+                    {canWrite && plan.status === 'pending_approval' && (
+                      <>
+                        <Button size="sm" variant="outline" disabled={decide.isPending} onClick={() => decide.mutate({ plan_id: plan.id, decision: 'approve' })}>
+                          <Check className="h-3.5 w-3.5 mr-1" /> Aprovar
+                        </Button>
+                        <Button size="sm" variant="ghost" disabled={decide.isPending} onClick={() => decide.mutate({ plan_id: plan.id, decision: 'reject' })}>
+                          <X className="h-3.5 w-3.5 mr-1" /> Rejeitar
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div className="text-xs text-muted-foreground break-all">
                   SHA-256: <span className="font-mono">{plan.sha256}</span>
@@ -586,6 +611,11 @@ function UpgradePlanHistory({ slug }: { slug: string }) {
                 <div className="text-xs text-muted-foreground">
                   {new Date(plan.created_at).toLocaleString()} · {plan.created_by}
                 </div>
+                {plan.decided_at && (
+                  <div className="text-xs text-muted-foreground">
+                    Decisão: {new Date(plan.decided_at).toLocaleString()} · {plan.decided_by || '—'}
+                  </div>
+                )}
               </div>
             ))}
           </div>
