@@ -188,8 +188,19 @@ function migrate(db: Database.Database): void {
       agent_version       TEXT NOT NULL,
       capabilities_json   TEXT NOT NULL DEFAULT '[]',
       last_seen_at        TEXT NOT NULL,
-      payload_json        TEXT NOT NULL DEFAULT '{}'
+       payload_json        TEXT NOT NULL DEFAULT '{}'
     );
+    CREATE TABLE IF NOT EXISTS connector_inventory_history (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      connector_id      TEXT NOT NULL,
+      message_id        TEXT NOT NULL,
+      status            TEXT NOT NULL,
+      agent_version     TEXT NOT NULL,
+      observed_at       TEXT NOT NULL,
+      inventory_json    TEXT NOT NULL DEFAULT '{}'
+    );
+    CREATE INDEX IF NOT EXISTS idx_connector_inventory_history_lookup
+      ON connector_inventory_history (connector_id, observed_at DESC);
 
     CREATE TABLE IF NOT EXISTS connector_certificates (
       serial_number TEXT PRIMARY KEY,

@@ -34,8 +34,10 @@ export function recordConnectorHeartbeat(input: ConnectorHeartbeat): void {
     throw new Error('invalid connector heartbeat payload')
   }
   const now = new Date().toISOString()
-  getDb().prepare(
-    `INSERT INTO connector_heartbeats
+  const db = getDb()
+  const write = db.transaction(() => {
+    db.prepare(
+      `INSERT INTO connector_heartbeats
        (connector_id, message_id, status, agent_version, capabilities_json, last_seen_at, payload_json)
      VALUES (?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(connector_id) DO UPDATE SET
@@ -45,13 +47,36 @@ export function recordConnectorHeartbeat(input: ConnectorHeartbeat): void {
        capabilities_json=excluded.capabilities_json,
        last_seen_at=excluded.last_seen_at,
        payload_json=excluded.payload_json`,
-  ).run(
-    input.connector_id,
-    input.message_id,
-    p.status,
-    p.agent_version,
-    JSON.stringify(p.capabilities || []),
-    now,
-    JSON.stringify(p),
-  )
+      ).run(
+      input.connector_id,
+      input.message_id,
+      p.status,
+      p.agent_version,
+      JSON.stringify(p.capabilities || []),
+      now,
+      JSON.stringify(p),
+    )
+    db.prepare(
+      `INSERT INTO connector_inventory_history
+         (connector_id, message_id, status, agent_version, observed_at, inventory_json)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    ).run(
+      input.connector_id,
+      input.message_id,
+      p.status,
+      p.agent_version,
+      now,
+      JSON.stringify(p.inventory || {}),
+    )
+    // Keep the local operational history bounded while retaining recent changes.
+    db.prepare(
+      `DELETE FROM connector_inventory_history
+        WHERE connector_id = ?
+          AND id NOT IN (
+            SELECT id FROM connector_inventory_history
+             WHERE connector_id = ? ORDER BY observed_at DESC LIMIT 100
+          )`,
+    ).run(input.connector_id, input.connector_id)
+  })
+  write()
 }
