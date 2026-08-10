@@ -26,6 +26,7 @@ import {
 } from './session-guard'
 import {
   agentHealth,
+  agentPlanUpgrade,
   agentListConnectors,
   agentProbe,
   agentPutConfig,
@@ -421,6 +422,7 @@ export const probeConnectorFn = createServerFn({ method: 'POST' })
     if (!r.success) throw new Error(r.error.message)
     return r.data
   })
+
   .handler(async ({ data }) => {
     const s = requireSession()
     requireAnyPerm(s, ['sites:read', 'sites:update'], 'sites:read')
@@ -428,4 +430,30 @@ export const probeConnectorFn = createServerFn({ method: 'POST' })
     if (!site) throw new Error('Site não encontrado')
     assertSiteTenantAccess(site, s)
     return agentProbe(data.host, data.port)
+  })
+
+export const planConnectorUpgradeFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: unknown) => {
+    const r = z.object({
+      slug: z.string().min(1),
+      version: z.string().min(1).max(64),
+      url: z.string().url().startsWith('https://'),
+      sha256: z.string().regex(/^[0-9a-fA-F]{64}$/),
+    }).safeParse(data)
+    if (!r.success) throw new Error(r.error.message)
+    return r.data
+  })
+  .handler(async ({ data }) => {
+    const s = requireSession()
+    requireAnyPerm(s, ['sites:update', 'gateways:manage'], 'sites:update')
+    const site = await getSite(data.slug)
+    if (!site) throw new Error('Site não encontrado')
+    assertSiteTenantAccess(site, s)
+    const plan = await agentPlanUpgrade({ version: data.version, url: data.url, sha256: data.sha256 })
+    recordActivity('POST', `/archgate/connector/${data.slug}/upgrade-plan`, sessionActor(s), 'success', undefined, {
+      version: data.version,
+      url: data.url,
+      sha256_suffix: data.sha256.slice(-12),
+    })
+    return { ok: true, plan }
   })
