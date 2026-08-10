@@ -45,6 +45,7 @@ import {
   planConnectorUpgradeFn,
   getConnectorUpgradePlansFn,
   decideConnectorUpgradePlanFn,
+  rolloutConnectorUpgradeFn,
   stopConnectorFn,
   updateConnectorChecklistFn,
 } from '@/server/connector-fn'
@@ -571,6 +572,15 @@ function UpgradePlanHistory({ slug, canWrite }: { slug: string; canWrite: boolea
     },
     onError: (e) => toast.error((e as Error).message),
   })
+  const rollout = useMutation({
+    mutationFn: (input: { plan_id: string; action: 'stage' | 'apply' | 'rollback' }) =>
+      rolloutConnectorUpgradeFn({ data: { slug, ...input } }),
+    onSuccess: (result) => {
+      toast.success(`Rollout: ${result.status}`)
+      void qc.invalidateQueries({ queryKey: ['connector-upgrade-plans', slug] })
+    },
+    onError: (e) => toast.error((e as Error).message),
+  })
 
   return (
     <Card>
@@ -601,6 +611,21 @@ function UpgradePlanHistory({ slug, canWrite }: { slug: string; canWrite: boolea
                           <X className="h-3.5 w-3.5 mr-1" /> Rejeitar
                         </Button>
                       </>
+                    )}
+                    {canWrite && plan.status === 'approved' && (
+                      <Button size="sm" variant="outline" disabled={rollout.isPending} onClick={() => rollout.mutate({ plan_id: plan.id, action: 'stage' })}>
+                        Baixar e validar
+                      </Button>
+                    )}
+                    {canWrite && plan.status === 'staged' && (
+                      <Button size="sm" disabled={rollout.isPending} onClick={() => rollout.mutate({ plan_id: plan.id, action: 'apply' })}>
+                        Aplicar e reiniciar
+                      </Button>
+                    )}
+                    {canWrite && plan.status === 'applied' && (
+                      <Button size="sm" variant="ghost" disabled={rollout.isPending} onClick={() => rollout.mutate({ plan_id: plan.id, action: 'rollback' })}>
+                        Rollback
+                      </Button>
                     )}
                   </div>
                 </div>

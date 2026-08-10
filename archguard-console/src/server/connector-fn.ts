@@ -29,6 +29,9 @@ import {
 import {
   agentHealth,
   agentPlanUpgrade,
+  agentStageUpgrade,
+  agentApplyUpgrade,
+  agentRollbackUpgrade,
   agentListConnectors,
   agentProbe,
   agentPutConfig,
@@ -537,4 +540,53 @@ export const decideConnectorUpgradePlanFn = createServerFn({ method: 'POST' })
       decision: data.decision,
     })
     return { ok: true, plan_id: data.plan_id, status, decided_at: decidedAt, decided_by: actor }
+  })
+
+export const rolloutConnectorUpgradeFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: unknown) => {
+    const r = z.object({
+      slug: z.string().min(1),
+      plan_id: z.string().uuid(),
+      action: z.enum(['stage', 'apply', 'rollback']),
+    }).safeParse(data)
+    if (!r.success) throw new Error(r.error.message)
+    return r.data
+  })
+  .handler(async ({ data }) => {
+    const s = requireSession()
+    requireAnyPerm(s, ['sites:update', 'gateways:manage'], 'sites:update')
+    const site = await getSite(data.slug)
+    if (!site) throw new Error('Site não encontrado')
+    assertSiteTenantAccess(site, s)
+    const db = getDb()
+    const plan = db.prepare(
+      'SELECT id, version, artifact_url, sha256, status FROM connector_upgrade_plans WHERE id = ? AND site_slug = ?',
+    ).get(data.plan_id, data.slug) as { id: string; version: string; artifact_url: string; sha256: string; status: string } | undefined
+    if (!plan) throw new Error('Plano não encontrado')
+    if (data.action === 'rollback' && plan.status !== 'applied') {
+      throw new Error(`Plano não está aplicado (status: ${plan.status})`)
+    }
+    if (data.action !== 'rollback' && !['approved', 'staged'].includes(plan.status)) {
+      throw new Error(`Plano precisa estar aprovado (status: ${plan.status})`)
+    }
+    let result: unknown
+    let status = plan.status
+    if (data.action === 'stage') {
+      result = await agentStageUpgrade({ version: plan.version, url: plan.artifact_url, sha256: plan.sha256 })
+      status = 'staged'
+    } else if (data.action === 'apply') {
+      if (plan.status !== 'staged') throw new Error(`Plano precisa estar staged (status: ${plan.status})`)
+      result = await agentApplyUpgrade(plan.version)
+      status = 'applied'
+    } else {
+      result = await agentRollbackUpgrade()
+      status = 'rolled_back'
+    }
+    db.prepare('UPDATE connector_upgrade_plans SET status = ?, decided_at = COALESCE(decided_at, ?), decided_by = COALESCE(decided_by, ?) WHERE id = ? AND site_slug = ?')
+      .run(status, new Date().toISOString(), sessionActor(s), data.plan_id, data.slug)
+    recordActivity('POST', `/archgate/connector/${data.slug}/upgrade-plan/${data.plan_id}/${data.action}`, sessionActor(s), 'success', undefined, {
+      plan_id: data.plan_id,
+      action: data.action,
+    })
+    return { ok: true, plan_id: data.plan_id, status, result }
   })

@@ -150,6 +150,25 @@ export async function agentPlanUpgrade(input: {
   return data
 }
 
+export async function agentStageUpgrade(input: {
+  version: string
+  url: string
+  sha256: string
+}): Promise<unknown> {
+  const { data } = await agentApi('POST', '/v1/upgrade/stage', input)
+  return data
+}
+
+export async function agentApplyUpgrade(version: string): Promise<unknown> {
+  const { data } = await agentApi('POST', '/v1/upgrade/apply', { version })
+  return data
+}
+
+export async function agentRollbackUpgrade(): Promise<unknown> {
+  const { data } = await agentApi('POST', '/v1/upgrade/rollback', {})
+  return data
+}
+
 /** Build openfortivpn conf from structured fields (no password in SoT). */
 export function buildFortiConf(input: {
   host: string
