@@ -133,6 +133,23 @@ export async function agentProbe(
   return data
 }
 
+/** Return bounded, redacted diagnostics collected by the host agent. */
+export async function agentDiagnostics(lines = 40): Promise<unknown> {
+  const bounded = Math.max(1, Math.min(lines, 100))
+  const { data } = await agentApi('GET', `/v1/diagnostics?lines=${bounded}`)
+  return data
+}
+
+/** Validate an upgrade manifest without downloading or applying it. */
+export async function agentPlanUpgrade(input: {
+  version: string
+  url: string
+  sha256: string
+}): Promise<unknown> {
+  const { data } = await agentApi('POST', '/v1/upgrade/plan', input)
+  return data
+}
+
 /** Build openfortivpn conf from structured fields (no password in SoT). */
 export function buildFortiConf(input: {
   host: string
