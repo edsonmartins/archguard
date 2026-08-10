@@ -2,6 +2,7 @@
 
 import { createFileRoute } from '@tanstack/react-router'
 import { recordConnectorHeartbeat, type ConnectorHeartbeat } from '@/server/connector-heartbeat'
+import { getDb } from '@/server/db'
 
 export const Route = createFileRoute('/api/org/v1/connectors/heartbeat')({
   server: {
@@ -16,6 +17,16 @@ export const Route = createFileRoute('/api/org/v1/connectors/heartbeat')({
           return Response.json({ error: 'client certificate not verified' }, { status: 401 })
         }
         const certificateConnector = request.headers.get('x-connector-id') || ''
+        if (process.env.CONNECTOR_MTLS_REQUIRE_CERT_REGISTRY === '1') {
+          const serial = request.headers.get('x-connector-cert-serial') || ''
+          if (!serial) return Response.json({ error: 'certificate serial missing' }, { status: 401 })
+          const cert = getDb().prepare(
+            'SELECT connector_id, status FROM connector_certificates WHERE serial_number = ?',
+          ).get(serial) as { connector_id: string; status: string } | undefined
+          if (!cert || cert.connector_id !== certificateConnector || cert.status !== 'active') {
+            return Response.json({ error: 'certificate revoked or unknown' }, { status: 401 })
+          }
+        }
         try {
           const body = (await request.json()) as ConnectorHeartbeat
           if (!certificateConnector || certificateConnector !== body.connector_id) {
