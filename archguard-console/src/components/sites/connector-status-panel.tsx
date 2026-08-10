@@ -491,6 +491,71 @@ export function ConnectorStatusPanel({ slug }: { slug: string }) {
           </CardContent>
         </Card>
       )}
+      <ConnectorInventoryCard />
     </div>
+  )
+}
+
+function ConnectorInventoryCard() {
+  const q = useQuery({
+    queryKey: ['connector-inventory'],
+    queryFn: async () => {
+      const res = await fetch('/api/org/v1/connectors/inventory')
+      if (!res.ok) throw new Error(`Inventário indisponível (${res.status})`)
+      return (await res.json()) as {
+        connectors: Array<{
+          connector_id: string
+          status: string
+          agent_version: string
+          capabilities: string[]
+          last_seen_at: string
+          inventory: {
+            os?: string
+            os_release?: string
+            architecture?: string
+            hostname?: string
+            interfaces?: string[]
+          }
+        }>
+      }
+    },
+    staleTime: 15_000,
+  })
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Inventário runtime</CardTitle>
+        <CardDescription>
+          Último heartbeat recebido; nenhum segredo ou conteúdo de alvo é exibido.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {q.isLoading && <Skeleton className="h-20 w-full" />}
+        {q.isError && <p className="text-sm text-muted-foreground">{(q.error as Error).message}</p>}
+        {!q.isLoading && !q.isError && q.data?.connectors.length === 0 && (
+          <p className="text-sm text-muted-foreground">Nenhum heartbeat registrado.</p>
+        )}
+        {q.data?.connectors.map((connector) => (
+          <div key={connector.connector_id} className="rounded border p-3 space-y-2 text-sm">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-medium">{connector.connector_id}</span>
+              <Badge variant={connector.status === 'ready' ? 'default' : 'destructive'}>{connector.status}</Badge>
+            </div>
+            <div className="grid gap-1 sm:grid-cols-2 text-xs text-muted-foreground">
+              <span>Agent: {connector.agent_version}</span>
+              <span>Último heartbeat: {new Date(connector.last_seen_at).toLocaleString()}</span>
+              <span>Host: {connector.inventory.hostname || '—'}</span>
+              <span>SO: {[connector.inventory.os, connector.inventory.os_release].filter(Boolean).join(' ') || '—'}</span>
+              <span>Arquitetura: {connector.inventory.architecture || '—'}</span>
+              <span>Interfaces: {connector.inventory.interfaces?.join(', ') || '—'}</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {connector.capabilities.map((capability) => <Badge key={capability} variant="outline">{capability}</Badge>)}
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   )
 }
