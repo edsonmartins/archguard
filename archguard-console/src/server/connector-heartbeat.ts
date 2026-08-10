@@ -12,6 +12,13 @@ export type ConnectorHeartbeat = {
     capabilities?: string[]
     uptime_seconds?: number
     last_config_revision?: string
+    inventory?: {
+      os?: string
+      os_release?: string
+      architecture?: string
+      hostname?: string
+      interfaces?: string[]
+    }
   }
 }
 
