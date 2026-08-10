@@ -468,3 +468,34 @@ export const planConnectorUpgradeFn = createServerFn({ method: 'POST' })
     })
     return { ok: true, plan_id: planId, status, plan }
   })
+
+export const getConnectorUpgradePlansFn = createServerFn({ method: 'GET' })
+  .inputValidator((data: unknown) => {
+    const r = z.object({ slug: z.string().min(1) }).safeParse(data)
+    if (!r.success) throw new Error(r.error.message)
+    return r.data
+  })
+  .handler(async ({ data }) => {
+    const s = requireSession()
+    requireAnyPerm(s, ['sites:read', 'sites:update', 'gateways:manage'], 'sites:read')
+    const site = await getSite(data.slug)
+    if (!site) throw new Error('Site não encontrado')
+    assertSiteTenantAccess(site, s)
+    const plans = getDb().prepare(
+      `SELECT id, site_slug, version, artifact_url, sha256, status, created_at, created_by
+         FROM connector_upgrade_plans
+        WHERE site_slug = ?
+        ORDER BY created_at DESC
+        LIMIT 25`,
+    ).all(data.slug) as Array<{
+      id: string
+      site_slug: string
+      version: string
+      artifact_url: string
+      sha256: string
+      status: string
+      created_at: string
+      created_by: string
+    }>
+    return { plans }
+  })

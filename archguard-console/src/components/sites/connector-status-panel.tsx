@@ -41,6 +41,7 @@ import {
   getConnectorStatusFn,
   probeConnectorFn,
   planConnectorUpgradeFn,
+  getConnectorUpgradePlansFn,
   stopConnectorFn,
   updateConnectorChecklistFn,
 } from '@/server/connector-fn'
@@ -183,6 +184,7 @@ export function ConnectorStatusPanel({ slug }: { slug: string }) {
     }),
     onSuccess: (result) => {
       toast.success(`Plano de upgrade validado: ${(result.plan as { upgrade?: { action?: string } })?.upgrade?.action || 'pending_approval'}`)
+      void qc.invalidateQueries({ queryKey: ['connector-upgrade-plans', slug] })
     },
     onError: (e) => toast.error((e as Error).message),
   })
@@ -544,7 +546,52 @@ export function ConnectorStatusPanel({ slug }: { slug: string }) {
           </CardContent>
         </Card>
       )}
+      <UpgradePlanHistory slug={slug} />
     </div>
+  )
+}
+
+function UpgradePlanHistory({ slug }: { slug: string }) {
+  const q = useQuery({
+    queryKey: ['connector-upgrade-plans', slug],
+    queryFn: () => getConnectorUpgradePlansFn({ data: { slug } }),
+    staleTime: 15_000,
+  })
+  const plans = q.data?.plans || []
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Histórico de planos</CardTitle>
+        <CardDescription>Últimos 25 planos registrados para este site.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {q.isLoading && <Skeleton className="h-16 w-full" />}
+        {q.isError && <p className="text-sm text-destructive">{(q.error as Error).message}</p>}
+        {!q.isLoading && !q.isError && plans.length === 0 && (
+          <p className="text-sm text-muted-foreground">Nenhum plano registrado.</p>
+        )}
+        {plans.length > 0 && (
+          <div className="space-y-2">
+            {plans.map((plan) => (
+              <div key={plan.id} className="rounded border p-3 text-sm space-y-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-medium">{plan.version}</span>
+                  <Badge variant={plan.status === 'noop' ? 'secondary' : 'outline'}>{plan.status}</Badge>
+                </div>
+                <div className="text-xs text-muted-foreground break-all">
+                  SHA-256: <span className="font-mono">{plan.sha256}</span>
+                </div>
+                <div className="text-xs text-muted-foreground break-all">Artefato: {plan.artifact_url}</div>
+                <div className="text-xs text-muted-foreground">
+                  {new Date(plan.created_at).toLocaleString()} · {plan.created_by}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
