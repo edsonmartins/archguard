@@ -3,6 +3,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 import { requireAnyPerm, requireSession, sessionActor } from '@/server/session-guard'
+import { getDb } from '@/server/db'
 import { issueConnectorEnrollment, consumeConnectorEnrollment, registerConnectorCertificate, markConnectorCertificatesRevoked } from '@/server/connector-enrollment'
 import { signConnectorCertificate, revokeConnectorCertificate } from '@/server/openbao-proxy'
 
@@ -20,6 +21,26 @@ const signSchema = z.object({
 })
 const revokeSchema = z.object({ action: z.literal('revoke'), connector_id: z.string().min(1).max(128), serial_number: z.string().min(1).max(256) })
 const rotateSchema = signSchema.extend({ action: z.literal('rotate'), previous_serial_number: z.string().min(1).max(256) })
+
+function canManageSite(session: ReturnType<typeof requireSession>, siteSlug: string): boolean {
+  if (session.permissions?.includes('system:admin') || session.groups?.some((group) => group === 'archguard_super_admins' || group === 'system:admin')) {
+    return true
+  }
+  const site = getDb().prepare('SELECT tenant_group FROM sites WHERE slug = ?').get(siteSlug) as { tenant_group?: string } | undefined
+  return Boolean(site?.tenant_group && session.groups?.includes(site.tenant_group))
+}
+
+function siteForConnector(connectorId: string): string | null {
+  const rows = getDb().prepare('SELECT slug, connector_id, connectors_json FROM sites').all() as Array<{ slug: string; connector_id: string | null; connectors_json: string }>
+  for (const site of rows) {
+    if (site.connector_id === connectorId) return site.slug
+    try {
+      const connectors = JSON.parse(site.connectors_json || '[]') as Array<{ id?: string }>
+      if (connectors.some((connector) => connector.id === connectorId)) return site.slug
+    } catch { /* malformed inventory is ignored */ }
+  }
+  return null
+}
 
 export const Route = createFileRoute('/api/org/v1/connectors/enrollment')({
   server: {
@@ -46,9 +67,13 @@ export const Route = createFileRoute('/api/org/v1/connectors/enrollment')({
             return Response.json({ enrollment, certificate })
           }
           if ((body as { action?: string }).action === 'revoke') {
-            const session = requireSession()
-            requireAnyPerm(session, ['sites:update'], 'sites:update')
-            const data = revokeSchema.parse(body)
+          const session = requireSession()
+          requireAnyPerm(session, ['sites:update'], 'sites:update')
+          const data = revokeSchema.parse(body)
+            const siteSlug = siteForConnector(data.connector_id)
+            if (!siteSlug || !canManageSite(session, siteSlug)) {
+              return Response.json({ error: 'connector is outside the operator tenant' }, { status: 403 })
+            }
             await revokeConnectorCertificate(data.serial_number)
             const revoked = markConnectorCertificatesRevoked(data.connector_id)
             return Response.json({ revoked })
@@ -67,6 +92,9 @@ export const Route = createFileRoute('/api/org/v1/connectors/enrollment')({
           const session = requireSession()
           requireAnyPerm(session, ['sites:update'], 'sites:update')
           const data = issueSchema.parse(body)
+          if (!canManageSite(session, data.site_slug)) {
+            return Response.json({ error: 'site is outside the operator tenant' }, { status: 403 })
+          }
           const issued = issueConnectorEnrollment({
             ...data,
             created_by: sessionActor(session),
