@@ -222,6 +222,19 @@ function migrate(db: Database.Database): void {
     );
     CREATE INDEX IF NOT EXISTS idx_recording_retention_until
       ON recording_retention (retain_until);
+
+    CREATE TABLE IF NOT EXISTS connector_upgrade_plans (
+      id            TEXT PRIMARY KEY,
+      site_slug     TEXT NOT NULL,
+      version       TEXT NOT NULL,
+      artifact_url  TEXT NOT NULL,
+      sha256        TEXT NOT NULL,
+      status        TEXT NOT NULL DEFAULT 'pending_approval',
+      created_at    TEXT NOT NULL,
+      created_by    TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_connector_upgrade_plans_site
+      ON connector_upgrade_plans (site_slug, created_at DESC);
   `)
   // Migrate older DBs that lack multi-connector column
   try {

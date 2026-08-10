@@ -4,6 +4,8 @@ import type { JsonObject } from '@/lib/json'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { lookup } from 'node:dns/promises'
+import { randomUUID } from 'node:crypto'
+import { getDb } from './db'
 import { getSite, upsertSite } from './sites'
 import {
   checklistProgress,
@@ -450,10 +452,19 @@ export const planConnectorUpgradeFn = createServerFn({ method: 'POST' })
     if (!site) throw new Error('Site não encontrado')
     assertSiteTenantAccess(site, s)
     const plan = await agentPlanUpgrade({ version: data.version, url: data.url, sha256: data.sha256 })
+    const planData = plan as { upgrade?: { action?: string } }
+    const planId = randomUUID()
+    const status = planData.upgrade?.action === 'noop' ? 'noop' : 'pending_approval'
+    getDb().prepare(
+      `INSERT INTO connector_upgrade_plans
+         (id, site_slug, version, artifact_url, sha256, status, created_at, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(planId, data.slug, data.version, data.url, data.sha256.toLowerCase(), status, new Date().toISOString(), sessionActor(s))
     recordActivity('POST', `/archgate/connector/${data.slug}/upgrade-plan`, sessionActor(s), 'success', undefined, {
+      plan_id: planId,
       version: data.version,
       url: data.url,
       sha256_suffix: data.sha256.slice(-12),
     })
-    return { ok: true, plan }
+    return { ok: true, plan_id: planId, status, plan }
   })
