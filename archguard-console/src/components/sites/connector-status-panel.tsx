@@ -500,10 +500,15 @@ function ConnectorInventoryCard() {
   const q = useQuery({
     queryKey: ['connector-inventory'],
     queryFn: async () => {
-      const res = await fetch('/api/org/v1/connectors/inventory')
-      if (!res.ok) throw new Error(`Inventário indisponível (${res.status})`)
-      return (await res.json()) as {
-        connectors: Array<{
+      const responses = await Promise.all([
+        fetch('/api/org/v1/connectors/inventory'),
+        fetch('/api/org/v1/connectors/diagnostics'),
+        fetch('/api/org/v1/connectors/inventory/history'),
+      ])
+      const failed = responses.find((res) => !res.ok)
+      if (failed) throw new Error(`Diagnóstico indisponível (${failed.status})`)
+      const [inventory, diagnostics, history] = await Promise.all(responses.map((res) => res.json())) as [
+        { connectors: Array<{
           connector_id: string
           status: string
           agent_version: string
@@ -516,8 +521,16 @@ function ConnectorInventoryCard() {
             hostname?: string
             interfaces?: string[]
           }
-        }>
-      }
+        }> },
+        { diagnostics: Array<{
+          connector_id: string
+          state: string
+          age_seconds: number
+          certificates: Array<{ serial_suffix: string; status: string }>
+        }> },
+        { history: Array<{ connector_id: string; observed_at: string }> },
+      ]
+      return { ...inventory, diagnostics: diagnostics.diagnostics, history: history.history }
     },
     staleTime: 15_000,
   })
@@ -538,6 +551,11 @@ function ConnectorInventoryCard() {
         )}
         {q.data?.connectors.map((connector) => (
           <div key={connector.connector_id} className="rounded border p-3 space-y-2 text-sm">
+            {(() => {
+              const diagnostic = q.data?.diagnostics.find((item) => item.connector_id === connector.connector_id)
+              const snapshots = q.data?.history.filter((item) => item.connector_id === connector.connector_id) || []
+              return (
+                <>
             <div className="flex items-center justify-between gap-2">
               <span className="font-medium">{connector.connector_id}</span>
               <Badge variant={connector.status === 'ready' ? 'default' : 'destructive'}>{connector.status}</Badge>
@@ -553,6 +571,21 @@ function ConnectorInventoryCard() {
             <div className="flex flex-wrap gap-1">
               {connector.capabilities.map((capability) => <Badge key={capability} variant="outline">{capability}</Badge>)}
             </div>
+            {diagnostic && (
+              <div className="border-t pt-2 text-xs text-muted-foreground">
+                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                  <span>Diagnóstico: <strong>{diagnostic.state}</strong> ({diagnostic.age_seconds}s)</span>
+                  <span>Snapshots: {snapshots.length}</span>
+                  <span>Certificados: {diagnostic.certificates.filter((certificate) => certificate.status === 'active').length} ativos</span>
+                </div>
+                {diagnostic.certificates.length > 0 && (
+                  <div className="mt-1 font-mono">Serial: {diagnostic.certificates[0]?.serial_suffix} · {diagnostic.certificates[0]?.status}</div>
+                )}
+              </div>
+            )}
+                </>
+              )
+            })()}
           </div>
         ))}
       </CardContent>
