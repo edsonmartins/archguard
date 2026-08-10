@@ -15,6 +15,19 @@ const AGENT_TOKEN =
   process.env.ARCHGATE_CONNECTOR_AGENT_TOKEN ||
   ''
 
+type AgentRoute = { url: string; token: string }
+let ROUTES: Record<string, AgentRoute> = {}
+try {
+  const parsed = JSON.parse(process.env.CONNECTOR_AGENT_ROUTES_JSON || '{}') as Record<string, unknown>
+  ROUTES = Object.fromEntries(Object.entries(parsed).flatMap(([slug, value]) => {
+    if (!value || typeof value !== 'object') return []
+    const route = value as { url?: unknown; token?: unknown }
+    return typeof route.url === 'string' && typeof route.token === 'string'
+      ? [[slug, { url: route.url.replace(/\/$/, ''), token: route.token }]]
+      : []
+  }))
+} catch { /* invalid route map falls back to the default agent */ }
+
 export function connectorAgentConfigured(): boolean {
   return Boolean(AGENT_URL && AGENT_TOKEN)
 }
@@ -27,18 +40,21 @@ async function agentApi<T = unknown>(
   method: string,
   path: string,
   body?: unknown,
+  route?: AgentRoute,
 ): Promise<{ status: number; data: T }> {
-  if (!connectorAgentConfigured()) {
+  const baseUrl = route?.url || AGENT_URL
+  const token = route?.token || AGENT_TOKEN
+  if (!baseUrl || !token) {
     throw new Error(
       'Connector agent não configurado (CONNECTOR_AGENT_URL + CONNECTOR_AGENT_TOKEN)',
     )
   }
-  const res = await integrationFetch(`${AGENT_URL}${path}`, {
+  const res = await integrationFetch(`${baseUrl}${path}`, {
     method,
     integration: 'connector-agent',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${AGENT_TOKEN}`,
+      Authorization: `Bearer ${token}`,
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
@@ -57,6 +73,10 @@ async function agentApi<T = unknown>(
     throw new Error(err)
   }
   return { status: res.status, data }
+}
+
+function routeForSite(slug: string): AgentRoute | undefined {
+  return ROUTES[slug]
 }
 
 export async function agentHealth(): Promise<{
@@ -150,6 +170,15 @@ export async function agentPlanUpgrade(input: {
   return data
 }
 
+export async function agentPlanUpgradeForSite(slug: string, input: {
+  version: string
+  url: string
+  sha256: string
+}): Promise<unknown> {
+  const { data } = await agentApi('POST', '/v1/upgrade/plan', input, routeForSite(slug))
+  return data
+}
+
 export async function agentStageUpgrade(input: {
   version: string
   url: string
@@ -159,13 +188,32 @@ export async function agentStageUpgrade(input: {
   return data
 }
 
+export async function agentStageUpgradeForSite(slug: string, input: {
+  version: string
+  url: string
+  sha256: string
+}): Promise<unknown> {
+  const { data } = await agentApi('POST', '/v1/upgrade/stage', input, routeForSite(slug))
+  return data
+}
+
 export async function agentApplyUpgrade(version: string): Promise<unknown> {
   const { data } = await agentApi('POST', '/v1/upgrade/apply', { version })
   return data
 }
 
+export async function agentApplyUpgradeForSite(slug: string, version: string): Promise<unknown> {
+  const { data } = await agentApi('POST', '/v1/upgrade/apply', { version }, routeForSite(slug))
+  return data
+}
+
 export async function agentRollbackUpgrade(): Promise<unknown> {
   const { data } = await agentApi('POST', '/v1/upgrade/rollback', {})
+  return data
+}
+
+export async function agentRollbackUpgradeForSite(slug: string): Promise<unknown> {
+  const { data } = await agentApi('POST', '/v1/upgrade/rollback', {}, routeForSite(slug))
   return data
 }
 

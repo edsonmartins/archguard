@@ -237,6 +237,33 @@ function migrate(db: Database.Database): void {
     );
     CREATE INDEX IF NOT EXISTS idx_connector_upgrade_plans_site
       ON connector_upgrade_plans (site_slug, created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS connector_upgrade_rollouts (
+      id          TEXT PRIMARY KEY,
+      version     TEXT NOT NULL,
+      artifact_url TEXT NOT NULL,
+      sha256      TEXT NOT NULL,
+      status      TEXT NOT NULL DEFAULT 'planned',
+      batch_size  INTEGER NOT NULL DEFAULT 1,
+      created_at  TEXT NOT NULL,
+      created_by  TEXT NOT NULL,
+      updated_at  TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS connector_upgrade_rollout_targets (
+      id          TEXT PRIMARY KEY,
+      rollout_id  TEXT NOT NULL,
+      site_slug   TEXT NOT NULL,
+      plan_id     TEXT NOT NULL,
+      position    INTEGER NOT NULL,
+      status      TEXT NOT NULL DEFAULT 'pending',
+      error       TEXT,
+      started_at  TEXT,
+      finished_at TEXT,
+      UNIQUE (rollout_id, site_slug),
+      FOREIGN KEY (rollout_id) REFERENCES connector_upgrade_rollouts(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_connector_upgrade_rollout_targets_status
+      ON connector_upgrade_rollout_targets (rollout_id, status, position);
   `)
   for (const statement of [
     'ALTER TABLE connector_upgrade_plans ADD COLUMN decided_at TEXT',
