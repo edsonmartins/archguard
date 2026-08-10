@@ -28,6 +28,7 @@ const routeLabelKeys: Record<string, string> = {
   '/_authed/oauth2': 'nav.oauth2',
   '/_authed/vault': 'nav.vault',
   '/_authed/sites': 'nav.sites',
+  '/_authed/sites/rollouts': 'nav.rollouts',
   '/_authed/gateways': 'nav.gateways',
   '/_authed/secrets': 'nav.secrets',
   '/_authed/org-accounts': 'nav.orgAccounts',

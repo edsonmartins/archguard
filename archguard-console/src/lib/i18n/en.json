@@ -12,6 +12,7 @@
     "oauth2": "OAuth2 / SSO",
     "vault": "Vault",
     "sites": "Clients / Sites",
+    "rollouts": "Connector rollouts",
     "gateways": "Gateways",
     "secrets": "Secrets",
     "orgAccounts": "Org accounts",

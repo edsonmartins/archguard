@@ -665,6 +665,26 @@ export const getConnectorUpgradeRolloutFn = createServerFn({ method: 'GET' })
     return { rollout, targets }
   })
 
+export const listConnectorUpgradeRolloutsFn = createServerFn({ method: 'GET' })
+  .handler(async () => {
+    const s = requireSession()
+    requireAnyPerm(s, ['sites:read', 'sites:update', 'gateways:manage'], 'sites:read')
+    const db = getDb()
+    const rollouts = db.prepare('SELECT * FROM connector_upgrade_rollouts ORDER BY created_at DESC LIMIT 50').all() as Array<Record<string, unknown>>
+    const visible: Array<Record<string, unknown>> = []
+    for (const rollout of rollouts) {
+      const targets = db.prepare('SELECT * FROM connector_upgrade_rollout_targets WHERE rollout_id = ? ORDER BY position').all(String(rollout.id)) as Array<Record<string, unknown>>
+      const allowedTargets: Array<Record<string, unknown>> = []
+      for (const target of targets) {
+        const site = await getSite(String(target.site_slug))
+        if (!site) continue
+        try { assertSiteTenantAccess(site, s); allowedTargets.push(target) } catch { /* another tenant */ }
+      }
+      if (allowedTargets.length) visible.push({ ...rollout, targets: allowedTargets })
+    }
+    return { rollouts: visible }
+  })
+
 export const advanceConnectorUpgradeRolloutFn = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) => {
     const r = z.object({ rollout_id: z.string().uuid() }).safeParse(data)

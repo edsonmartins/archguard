@@ -19,6 +19,7 @@ import {
   Gauge,
   Database,
   Landmark,
+  Rocket,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -107,6 +108,12 @@ const navGroups: NavGroup[] = [
         labelKey: 'nav.sites',
         to: '/sites',
         icon: Building2,
+        permission: 'sites:read',
+      },
+      {
+        labelKey: 'nav.rollouts',
+        to: '/sites/rollouts',
+        icon: Rocket,
         permission: 'sites:read',
       },
       {
