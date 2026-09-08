@@ -21,6 +21,7 @@ import { deleteOpenFgaGrantsForUser } from './openfga'
 import { revokePrincipal } from './principal-revocation'
 import { listBrokerSessionsForPrincipal } from './db'
 import { closeBrokerSessionAndLease } from './broker-session'
+import { offboardingResult } from './offboarding-result'
 
 /** Prefer internal compose service; host.docker.internal for agent-style */
 const ORCH_URL = (
@@ -69,7 +70,7 @@ async function callOrchestrationRevoke(
     if (res.status >= 200 && res.status < 300) {
       return {
         component: 'orchestration',
-        ok: data.status === 'ok' || data.status === 'partial' || !data.status,
+        ok: data.status === 'ok',
         detail: [
           data.status || 'ok',
           ...(data.steps || []),
@@ -193,16 +194,15 @@ export const revokePersonAccessFn = createServerFn({ method: 'POST' })
       steps.push({ component: 'openfga', ok: false, detail: (e as Error).message })
     }
 
-    const archguardOk = steps.find((x) => x.component === 'idp')?.ok
-    const allOk = steps.every((x) => x.ok)
-    const criticalOk = !!archguardOk
+    const result = offboardingResult(steps)
+    const criticalOk = result.ok
 
     recordActivity(
       'POST',
       `/archgate/persons/${encodeURIComponent(username)}/revoke`,
       actor,
       criticalOk ? 'success' : 'error',
-      criticalOk ? undefined : 'archguard expire failed',
+      criticalOk ? undefined : 'revogação incompleta; consultar etapas',
       {
         reason,
         steps: steps.map((x) => `${x.component}:${x.ok ? 'ok' : 'fail'}`).join(','),
@@ -215,13 +215,14 @@ export const revokePersonAccessFn = createServerFn({ method: 'POST' })
     )
 
     return {
-      ok: criticalOk,
-      all_ok: allOk,
+      ...result,
       username,
       reason,
       steps,
       message: criticalOk
-        ? `Acesso revogado para ${username} (login archguard bloqueado)`
-        : `Falha ao revogar ${username} — ver steps`,
+        ? `Revogação concluída para ${username}`
+        : result.login_blocked
+          ? `Login bloqueado para ${username}; revogação incompleta — consulte as etapas e tente novamente`
+          : `Falha ao revogar ${username} — consulte as etapas`,
     }
   })
