@@ -123,12 +123,14 @@ export function assertSiteTenantAccess(site: Site, s: SessionData): void {
 export async function assertPrincipalTenantAccess(
   username: string,
   s: SessionData,
+  options: { allowUnassigned?: boolean } = {},
 ): Promise<void> {
   if (hasAnyPerm(s, ['system:admin'])) return
   const allowed = new Set(deriveTenants(s.groups).map(stripGroupDomain))
   if (allowed.size === 0) throw new Error('Forbidden: operador sem tenant')
   const groups = await getUserGroups(username)
   if (!groups) throw new Error('Forbidden: não foi possível validar o tenant do usuário')
+  if (options.allowUnassigned && groups.length === 0) return
   const targetTenants = new Set(deriveTenants(groups).map(stripGroupDomain))
   if (![...targetTenants].some((tenant) => allowed.has(tenant))) {
     throw new Error('Forbidden: usuário fora do tenant do operador')
