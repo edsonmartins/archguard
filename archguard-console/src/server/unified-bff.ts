@@ -18,7 +18,8 @@ import { deriveTenants } from '@/lib/auth/roles'
 import { logger } from './logger'
 import { issueRustGuacSession, rustGuacConfigured } from './rustguac-proxy'
 import { checkOpenFga, openFgaConnectionObject } from './openfga'
-import { registerBrokerSession } from './db'
+import { admitBrokerSession } from './broker-session'
+import { isPrincipalRevoked } from './principal-revocation'
 
 export type UnifiedConnection = {
   id: string
@@ -153,6 +154,7 @@ export async function createUnifiedSession(
   }
 }> {
   const target = body.target || body.connection_id?.split(':').pop() || ''
+  if (isPrincipalRevoked(session.user?.name)) throw new Error('Unauthorized: principal revoked')
   if (!target) {
     throw new Error('target or connection_id required')
   }
@@ -219,10 +221,10 @@ export async function createUnifiedSession(
     })
     const username = session.user?.name || session.user?.email || 'operator'
     logger.info({ user: username, target: hit.target, protocol: proto, mode: 'rustguac' }, 'unified session RustGuac ticket issued')
-    registerBrokerSession(
+    await admitBrokerSession(
       rust.session_id,
-      leaseId,
       username,
+      leaseId,
       deriveTenants(session.groups || [])[0],
     )
     return { ...rust, embed_mode: 'iframe' as const, launch: { engine: 'rustguac', target: hit.target, protocol: proto } }

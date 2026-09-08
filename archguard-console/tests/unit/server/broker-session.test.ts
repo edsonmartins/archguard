@@ -1,9 +1,10 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-const mocks = vi.hoisted(() => ({ close: vi.fn(), revoke: vi.fn(), get: vi.fn(), mark: vi.fn() }))
+const mocks = vi.hoisted(() => ({ close: vi.fn(), revoke: vi.fn(), get: vi.fn(), mark: vi.fn(), register: vi.fn(), blocked: vi.fn() }))
 vi.mock('@/server/rustguac-proxy', () => ({ closeRustGuacSession: mocks.close }))
 vi.mock('@/server/openbao-proxy', () => ({ revokeLease: mocks.revoke }))
-vi.mock('@/server/db', () => ({ getBrokerSession: mocks.get, closeBrokerSession: mocks.mark }))
-import { closeBrokerSessionAndLease } from '@/server/broker-session'
+vi.mock('@/server/db', () => ({ getBrokerSession: mocks.get, closeBrokerSession: mocks.mark, registerBrokerSession: mocks.register }))
+vi.mock('@/server/principal-revocation', () => ({ isPrincipalRevoked: mocks.blocked }))
+import { closeBrokerSessionAndLease, admitBrokerSession } from '@/server/broker-session'
 import { offboardingResult } from '@/server/offboarding-result'
 beforeEach(() => {
   vi.resetAllMocks()
@@ -32,4 +33,20 @@ it('rejects unknown sessions before external calls', async () => {
 it('reports blocked login separately from incomplete revocation', () => {
   expect(offboardingResult([{ component: 'idp', ok: true }, { component: 'openbao', ok: false }]))
     .toEqual({ ok: false, all_ok: false, login_blocked: true })
+})
+
+it('cleans up a session issued while its principal was being offboarded', async () => {
+  mocks.blocked.mockReturnValue(true)
+  await expect(admitBrokerSession('late-session', 'alice', 'database/creds/a/one', 'tenant_a'))
+    .rejects.toThrow('revoked during session creation')
+  expect(mocks.register).toHaveBeenCalledWith('late-session', 'database/creds/a/one', 'alice', 'tenant_a')
+  expect(mocks.close).toHaveBeenCalledWith('late-session')
+  expect(mocks.revoke).toHaveBeenCalledWith('database/creds/a/one')
+})
+
+it('admits a session for an unblocked principal without revocation', async () => {
+  mocks.blocked.mockReturnValue(false)
+  await admitBrokerSession('session-b', 'bob')
+  expect(mocks.close).not.toHaveBeenCalled()
+  expect(mocks.revoke).not.toHaveBeenCalled()
 })

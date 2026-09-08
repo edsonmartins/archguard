@@ -1,6 +1,18 @@
 import { closeRustGuacSession } from './rustguac-proxy'
-import { closeBrokerSession, getBrokerSession } from './db'
+import { closeBrokerSession, getBrokerSession, registerBrokerSession } from './db'
 import { revokeLease } from './openbao-proxy'
+import { isPrincipalRevoked } from './principal-revocation'
+
+/** Register before checking so an offboarding scan cannot miss this session. */
+export async function admitBrokerSession(
+  sessionId: string, principal: string, leaseId?: string, tenant?: string,
+): Promise<void> {
+  registerBrokerSession(sessionId, leaseId, principal, tenant)
+  if (isPrincipalRevoked(principal)) {
+    await closeBrokerSessionAndLease(sessionId)
+    throw new Error('Unauthorized: principal revoked during session creation')
+  }
+}
 
 /** Close the broker session first, then revoke an actual OpenBao lease if one was attached. */
 export async function closeBrokerSessionAndLease(sessionId: string): Promise<void> {
