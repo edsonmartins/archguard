@@ -219,7 +219,12 @@ export async function createUnifiedSession(
     })
     const username = session.user?.name || session.user?.email || 'operator'
     logger.info({ user: username, target: hit.target, protocol: proto, mode: 'rustguac' }, 'unified session RustGuac ticket issued')
-    registerBrokerSession(rust.session_id, leaseId)
+    registerBrokerSession(
+      rust.session_id,
+      leaseId,
+      username,
+      deriveTenants(session.groups || [])[0],
+    )
     return { ...rust, embed_mode: 'iframe' as const, launch: { engine: 'rustguac', target: hit.target, protocol: proto } }
   }
   const wantsGuac =

@@ -3,7 +3,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { fetchRustGuacRecording } from '@/server/rustguac-proxy'
 import { resolveOperatorSession } from '@/server/operator-session'
-import { requireAnyPerm } from '@/server/session-guard'
+import { requireAnyPerm, hasAnyPerm } from '@/server/session-guard'
 import { getBrokerSession } from '@/server/db'
 import { unifiedCorsHeaders } from '@/server/unified-cors'
 
@@ -21,7 +21,9 @@ export const Route = createFileRoute('/api/unified/v1/recordings/$name')({
           const session = await resolveOperatorSession(request)
           requireAnyPerm(session, ['gateways:read'], 'gateways:read')
           const match = params.name.match(/^([0-9a-f-]{36})\.guac$/i)
-          if (!match || !getBrokerSession(match[1])) {
+          const broker = match ? getBrokerSession(match[1]) : undefined
+          const principal = session.user?.name || session.user?.email || 'unknown'
+          if (!match || !broker || (!hasAnyPerm(session, ['system:admin']) && broker.principal !== principal)) {
             return new Response(JSON.stringify({ error: 'recording not found' }), {
               status: 404,
               headers: { ...headers, 'Content-Type': 'application/json' },

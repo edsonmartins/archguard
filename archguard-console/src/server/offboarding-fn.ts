@@ -7,6 +7,7 @@ import {
   requireAnyPerm,
   requireSession,
   sessionActor,
+  assertPrincipalTenantAccess,
 } from './session-guard'
 import { logger } from './logger'
 import { disableUser } from './idp'
@@ -120,6 +121,7 @@ export const revokePersonAccessFn = createServerFn({ method: 'POST' })
     const actor = sessionActor(s)
     const reason = data.reason || `offboarding by ${actor}`
     const username = data.username.trim()
+    await assertPrincipalTenantAccess(username, s)
     const steps: OffboardStep[] = []
 
     if (!data.direct_only) {
@@ -178,7 +180,7 @@ export const revokePersonAccessFn = createServerFn({ method: 'POST' })
       steps.push({ component: 'openfga', ok: false, detail: (e as Error).message })
     }
 
-    const archguardOk = steps.find((x) => x.component === 'archguard')?.ok
+    const archguardOk = steps.find((x) => x.component === 'idp')?.ok
     const allOk = steps.every((x) => x.ok)
     const criticalOk = !!archguardOk
 

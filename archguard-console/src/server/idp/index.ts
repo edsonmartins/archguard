@@ -40,6 +40,10 @@ export function disableUser(username: string) {
   return identityAdmin().disableUser(username)
 }
 
+export function getUserGroups(username: string) {
+  return identityAdmin().getUserGroups?.(username) ?? Promise.resolve(null)
+}
+
 export function identityAdminConfigured(): boolean {
   return identityAdmin().configured()
 }

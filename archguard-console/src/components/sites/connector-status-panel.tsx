@@ -177,7 +177,7 @@ export function ConnectorStatusPanel({ slug }: { slug: string }) {
     onError: (e) => toast.error((e as Error).message),
   })
 
-  const upgradePlan = useMutation({
+  const upgradePlan = useMutation<Record<string, any>>({
     mutationFn: () => planConnectorUpgradeFn({
       data: {
         slug,
@@ -566,13 +566,17 @@ function UpgradePlanHistory({ slug, canWrite }: { slug: string; canWrite: boolea
   const decide = useMutation({
     mutationFn: (input: { plan_id: string; decision: 'approve' | 'reject' }) =>
       decideConnectorUpgradePlanFn({ data: { slug, ...input } }),
-    onSuccess: (result) => {
+    onSuccess: (result: { status: string }) => {
       toast.success(`Plano ${result.status === 'approved' ? 'aprovado' : 'rejeitado'}`)
       void qc.invalidateQueries({ queryKey: ['connector-upgrade-plans', slug] })
     },
     onError: (e) => toast.error((e as Error).message),
   })
-  const rollout = useMutation({
+  const rollout = useMutation<
+    { status: string },
+    Error,
+    { plan_id: string; action: 'stage' | 'apply' | 'rollback' }
+  >({
     mutationFn: (input: { plan_id: string; action: 'stage' | 'apply' | 'rollback' }) =>
       rolloutConnectorUpgradeFn({ data: { slug, ...input } }),
     onSuccess: (result) => {

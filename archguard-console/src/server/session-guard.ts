@@ -9,6 +9,7 @@ import {
   type Permission,
 } from '@/lib/auth/permissions'
 import { deriveTenants, stripGroupDomain } from '@/lib/auth/roles'
+import { getUserGroups } from './idp'
 import type { Site } from '@/lib/api/types/site'
 
 /**
@@ -116,5 +117,20 @@ export function filterSitesByTenant(sites: Site[], s: SessionData): Site[] {
 export function assertSiteTenantAccess(site: Site, s: SessionData): void {
   if (filterSitesByTenant([site], s).length === 0) {
     throw new Error('Forbidden: site fora do tenant')
+  }
+}
+
+export async function assertPrincipalTenantAccess(
+  username: string,
+  s: SessionData,
+): Promise<void> {
+  if (hasAnyPerm(s, ['system:admin'])) return
+  const allowed = new Set(deriveTenants(s.groups).map(stripGroupDomain))
+  if (allowed.size === 0) throw new Error('Forbidden: operador sem tenant')
+  const groups = await getUserGroups(username)
+  if (!groups) throw new Error('Forbidden: não foi possível validar o tenant do usuário')
+  const targetTenants = new Set(deriveTenants(groups).map(stripGroupDomain))
+  if (![...targetTenants].some((tenant) => allowed.has(tenant))) {
+    throw new Error('Forbidden: usuário fora do tenant do operador')
   }
 }

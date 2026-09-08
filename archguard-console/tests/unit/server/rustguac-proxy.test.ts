@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { buildRustGuacUrls } from '@/server/rustguac-proxy'
 
 describe('RustGuac session contract', () => {
@@ -35,7 +35,7 @@ describe('RustGuac session contract', () => {
   })
 
   it('closes a server-side RustGuac session without exposing the API key', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response('', { status: 204 }))
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }))
     vi.stubGlobal('fetch', fetchMock)
     process.env.RUSTGUAC_ENABLED = '1'
     process.env.RUSTGUAC_URL = 'http://rustguac:8080'

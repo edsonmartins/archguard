@@ -222,6 +222,15 @@ export const archguardAdmin: IdentityAdmin = {
     }
   },
 
+  async getUserGroups(username): Promise<string[] | null> {
+    if (!this.configured()) return null
+    const user = await getUser(username)
+    if (!user) return null
+    return Array.isArray(user.groups)
+      ? user.groups.map((group) => group.includes('/') ? group.split('/').pop()! : group)
+      : []
+  },
+
   async disableUser(username): Promise<AdminStep> {
     if (!this.configured()) {
       return { ok: false, detail: 'archguard SA not configured' }

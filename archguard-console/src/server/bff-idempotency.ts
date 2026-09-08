@@ -5,6 +5,8 @@ export type IdempotencyHit = {
   bodyHash: string
   statusCode: number | null
   response: unknown | null
+  replayStatusCode: number | null
+  replayResponse: unknown | null
   completed: boolean
 }
 
@@ -23,8 +25,8 @@ export function hashBody(body: unknown): string {
 export function claimIdempotency(scopeKey: string, bodyHash: string): IdempotencyHit | null {
   const db = getDb()
   const existing = db.prepare(
-    'SELECT body_hash, status_code, response_json, completed_at FROM bff_idempotency WHERE scope_key = ?',
-  ).get(scopeKey) as { body_hash: string; status_code: number | null; response_json: string | null; completed_at: string | null } | undefined
+    'SELECT body_hash, status_code, response_json, replay_status_code, replay_response_json, completed_at FROM bff_idempotency WHERE scope_key = ?',
+  ).get(scopeKey) as { body_hash: string; status_code: number | null; response_json: string | null; replay_status_code: number | null; replay_response_json: string | null; completed_at: string | null } | undefined
 
   if (existing) {
     if (existing.body_hash !== bodyHash) throw new IdempotencyConflict()
@@ -32,6 +34,8 @@ export function claimIdempotency(scopeKey: string, bodyHash: string): Idempotenc
       bodyHash: existing.body_hash,
       statusCode: existing.status_code,
       response: existing.response_json ? JSON.parse(existing.response_json) : null,
+      replayStatusCode: existing.replay_status_code,
+      replayResponse: existing.replay_response_json ? JSON.parse(existing.replay_response_json) : null,
       completed: Boolean(existing.completed_at),
     }
   }
@@ -52,10 +56,11 @@ export function completeIdempotency(
   scopeKey: string,
   statusCode: number,
   response: unknown,
+  replay?: { statusCode: number; response: unknown },
 ): void {
   getDb().prepare(
     `UPDATE bff_idempotency
-        SET status_code = ?, response_json = ?, completed_at = ?
+        SET status_code = ?, response_json = ?, replay_status_code = ?, replay_response_json = ?, completed_at = ?
       WHERE scope_key = ?`,
-  ).run(statusCode, JSON.stringify(response ?? null), new Date().toISOString(), scopeKey)
+  ).run(statusCode, JSON.stringify(response ?? null), replay?.statusCode ?? statusCode, JSON.stringify(replay?.response ?? response ?? null), new Date().toISOString(), scopeKey)
 }

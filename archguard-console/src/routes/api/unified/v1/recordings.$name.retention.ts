@@ -24,7 +24,7 @@ export const Route = createFileRoute('/api/unified/v1/recordings/$name/retention
         const headers = { 'Content-Type': 'application/json', ...unifiedCorsHeaders(request, { methods: 'POST, OPTIONS' }) }
         try {
           const session = await resolveOperatorSession(request)
-          requireAnyPerm(session, ['gateways:update', 'system:admin'], 'gateways:update')
+          requireAnyPerm(session, ['gateways:manage', 'system:admin'], 'gateways:manage')
           if (!/^[0-9a-f-]{36}\.guac$/i.test(params.name)) {
             return new Response(JSON.stringify({ error: 'recording not found' }), { status: 404, headers })
           }

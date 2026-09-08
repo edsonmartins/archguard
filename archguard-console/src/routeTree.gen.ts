@@ -31,6 +31,7 @@ import { Route as AuthedIdentitiesIndexRouteImport } from './routes/_authed/iden
 import { Route as AuthedGroupsIndexRouteImport } from './routes/_authed/groups/index'
 import { Route as AuthedGatewaysIndexRouteImport } from './routes/_authed/gateways/index'
 import { Route as AuthedSitesWizardRouteImport } from './routes/_authed/sites/wizard'
+import { Route as AuthedSitesRolloutsRouteImport } from './routes/_authed/sites/rollouts'
 import { Route as AuthedSitesCreateRouteImport } from './routes/_authed/sites/create'
 import { Route as AuthedSitesSlugRouteImport } from './routes/_authed/sites/$slug'
 import { Route as AuthedServiceAccountsCreateRouteImport } from './routes/_authed/service-accounts/create'
@@ -44,12 +45,21 @@ import { Route as AuthedIdentitiesPersonIdRouteImport } from './routes/_authed/i
 import { Route as AuthedGroupsCreateRouteImport } from './routes/_authed/groups/create'
 import { Route as AuthedGroupsGroupIdRouteImport } from './routes/_authed/groups/$groupId'
 import { Route as ApiUnifiedV1SessionsRouteImport } from './routes/api/unified/v1/sessions'
+import { Route as ApiUnifiedV1RecordingsRouteImport } from './routes/api/unified/v1/recordings'
 import { Route as ApiUnifiedV1ConnectionsRouteImport } from './routes/api/unified/v1/connections'
 import { Route as ApiOrgV1AccountsRouteImport } from './routes/api/org/v1/accounts'
 import { Route as ApiLabV1GrantTargetRouteImport } from './routes/api/lab/v1/grant-target'
 import { Route as AuthedSitesSlugEditRouteImport } from './routes/_authed/sites/$slug.edit'
+import { Route as ApiUnifiedV1SessionsSessionIdRouteImport } from './routes/api/unified/v1/sessions.$sessionId'
+import { Route as ApiUnifiedV1RecordingsNameRouteImport } from './routes/api/unified/v1/recordings.$name'
 import { Route as ApiUnifiedV1OperatorBootstrapRouteImport } from './routes/api/unified/v1/operator/bootstrap'
 import { Route as ApiUnifiedV1AuthCallbackRouteImport } from './routes/api/unified/v1/auth/callback'
+import { Route as ApiOrgV1ConnectorsInventoryRouteImport } from './routes/api/org/v1/connectors.inventory'
+import { Route as ApiOrgV1ConnectorsHeartbeatRouteImport } from './routes/api/org/v1/connectors.heartbeat'
+import { Route as ApiOrgV1ConnectorsEnrollmentRouteImport } from './routes/api/org/v1/connectors.enrollment'
+import { Route as ApiOrgV1ConnectorsDiagnosticsRouteImport } from './routes/api/org/v1/connectors.diagnostics'
+import { Route as ApiUnifiedV1RecordingsNameRetentionRouteImport } from './routes/api/unified/v1/recordings.$name.retention'
+import { Route as ApiOrgV1ConnectorsInventoryHistoryRouteImport } from './routes/api/org/v1/connectors.inventory.history'
 import { Route as ApiOrgV1CheckoutsIdApproveRouteImport } from './routes/api/org/v1/checkouts.$id.approve'
 import { Route as ApiOrgV1AccountsIdCheckoutRouteImport } from './routes/api/org/v1/accounts.$id.checkout'
 
@@ -163,6 +173,11 @@ const AuthedSitesWizardRoute = AuthedSitesWizardRouteImport.update({
   path: '/sites/wizard',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedSitesRolloutsRoute = AuthedSitesRolloutsRouteImport.update({
+  id: '/sites/rollouts',
+  path: '/sites/rollouts',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedSitesCreateRoute = AuthedSitesCreateRouteImport.update({
   id: '/sites/create',
   path: '/sites/create',
@@ -232,6 +247,11 @@ const ApiUnifiedV1SessionsRoute = ApiUnifiedV1SessionsRouteImport.update({
   path: '/api/unified/v1/sessions',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiUnifiedV1RecordingsRoute = ApiUnifiedV1RecordingsRouteImport.update({
+  id: '/api/unified/v1/recordings',
+  path: '/api/unified/v1/recordings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiUnifiedV1ConnectionsRoute = ApiUnifiedV1ConnectionsRouteImport.update({
   id: '/api/unified/v1/connections',
   path: '/api/unified/v1/connections',
@@ -252,6 +272,18 @@ const AuthedSitesSlugEditRoute = AuthedSitesSlugEditRouteImport.update({
   path: '/edit',
   getParentRoute: () => AuthedSitesSlugRoute,
 } as any)
+const ApiUnifiedV1SessionsSessionIdRoute =
+  ApiUnifiedV1SessionsSessionIdRouteImport.update({
+    id: '/$sessionId',
+    path: '/$sessionId',
+    getParentRoute: () => ApiUnifiedV1SessionsRoute,
+  } as any)
+const ApiUnifiedV1RecordingsNameRoute =
+  ApiUnifiedV1RecordingsNameRouteImport.update({
+    id: '/$name',
+    path: '/$name',
+    getParentRoute: () => ApiUnifiedV1RecordingsRoute,
+  } as any)
 const ApiUnifiedV1OperatorBootstrapRoute =
   ApiUnifiedV1OperatorBootstrapRouteImport.update({
     id: '/api/unified/v1/operator/bootstrap',
@@ -263,6 +295,42 @@ const ApiUnifiedV1AuthCallbackRoute =
     id: '/api/unified/v1/auth/callback',
     path: '/api/unified/v1/auth/callback',
     getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiOrgV1ConnectorsInventoryRoute =
+  ApiOrgV1ConnectorsInventoryRouteImport.update({
+    id: '/api/org/v1/connectors/inventory',
+    path: '/api/org/v1/connectors/inventory',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiOrgV1ConnectorsHeartbeatRoute =
+  ApiOrgV1ConnectorsHeartbeatRouteImport.update({
+    id: '/api/org/v1/connectors/heartbeat',
+    path: '/api/org/v1/connectors/heartbeat',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiOrgV1ConnectorsEnrollmentRoute =
+  ApiOrgV1ConnectorsEnrollmentRouteImport.update({
+    id: '/api/org/v1/connectors/enrollment',
+    path: '/api/org/v1/connectors/enrollment',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiOrgV1ConnectorsDiagnosticsRoute =
+  ApiOrgV1ConnectorsDiagnosticsRouteImport.update({
+    id: '/api/org/v1/connectors/diagnostics',
+    path: '/api/org/v1/connectors/diagnostics',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiUnifiedV1RecordingsNameRetentionRoute =
+  ApiUnifiedV1RecordingsNameRetentionRouteImport.update({
+    id: '/retention',
+    path: '/retention',
+    getParentRoute: () => ApiUnifiedV1RecordingsNameRoute,
+  } as any)
+const ApiOrgV1ConnectorsInventoryHistoryRoute =
+  ApiOrgV1ConnectorsInventoryHistoryRouteImport.update({
+    id: '/history',
+    path: '/history',
+    getParentRoute: () => ApiOrgV1ConnectorsInventoryRoute,
   } as any)
 const ApiOrgV1CheckoutsIdApproveRoute =
   ApiOrgV1CheckoutsIdApproveRouteImport.update({
@@ -299,6 +367,7 @@ export interface FileRoutesByFullPath {
   '/service-accounts/create': typeof AuthedServiceAccountsCreateRoute
   '/sites/$slug': typeof AuthedSitesSlugRouteWithChildren
   '/sites/create': typeof AuthedSitesCreateRoute
+  '/sites/rollouts': typeof AuthedSitesRolloutsRoute
   '/sites/wizard': typeof AuthedSitesWizardRoute
   '/gateways/': typeof AuthedGatewaysIndexRoute
   '/groups/': typeof AuthedGroupsIndexRoute
@@ -315,11 +384,20 @@ export interface FileRoutesByFullPath {
   '/api/lab/v1/grant-target': typeof ApiLabV1GrantTargetRoute
   '/api/org/v1/accounts': typeof ApiOrgV1AccountsRouteWithChildren
   '/api/unified/v1/connections': typeof ApiUnifiedV1ConnectionsRoute
-  '/api/unified/v1/sessions': typeof ApiUnifiedV1SessionsRoute
+  '/api/unified/v1/recordings': typeof ApiUnifiedV1RecordingsRouteWithChildren
+  '/api/unified/v1/sessions': typeof ApiUnifiedV1SessionsRouteWithChildren
+  '/api/org/v1/connectors/diagnostics': typeof ApiOrgV1ConnectorsDiagnosticsRoute
+  '/api/org/v1/connectors/enrollment': typeof ApiOrgV1ConnectorsEnrollmentRoute
+  '/api/org/v1/connectors/heartbeat': typeof ApiOrgV1ConnectorsHeartbeatRoute
+  '/api/org/v1/connectors/inventory': typeof ApiOrgV1ConnectorsInventoryRouteWithChildren
   '/api/unified/v1/auth/callback': typeof ApiUnifiedV1AuthCallbackRoute
   '/api/unified/v1/operator/bootstrap': typeof ApiUnifiedV1OperatorBootstrapRoute
+  '/api/unified/v1/recordings/$name': typeof ApiUnifiedV1RecordingsNameRouteWithChildren
+  '/api/unified/v1/sessions/$sessionId': typeof ApiUnifiedV1SessionsSessionIdRoute
   '/api/org/v1/accounts/$id/checkout': typeof ApiOrgV1AccountsIdCheckoutRoute
   '/api/org/v1/checkouts/$id/approve': typeof ApiOrgV1CheckoutsIdApproveRoute
+  '/api/org/v1/connectors/inventory/history': typeof ApiOrgV1ConnectorsInventoryHistoryRoute
+  '/api/unified/v1/recordings/$name/retention': typeof ApiUnifiedV1RecordingsNameRetentionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -343,6 +421,7 @@ export interface FileRoutesByTo {
   '/service-accounts/create': typeof AuthedServiceAccountsCreateRoute
   '/sites/$slug': typeof AuthedSitesSlugRouteWithChildren
   '/sites/create': typeof AuthedSitesCreateRoute
+  '/sites/rollouts': typeof AuthedSitesRolloutsRoute
   '/sites/wizard': typeof AuthedSitesWizardRoute
   '/gateways': typeof AuthedGatewaysIndexRoute
   '/groups': typeof AuthedGroupsIndexRoute
@@ -359,11 +438,20 @@ export interface FileRoutesByTo {
   '/api/lab/v1/grant-target': typeof ApiLabV1GrantTargetRoute
   '/api/org/v1/accounts': typeof ApiOrgV1AccountsRouteWithChildren
   '/api/unified/v1/connections': typeof ApiUnifiedV1ConnectionsRoute
-  '/api/unified/v1/sessions': typeof ApiUnifiedV1SessionsRoute
+  '/api/unified/v1/recordings': typeof ApiUnifiedV1RecordingsRouteWithChildren
+  '/api/unified/v1/sessions': typeof ApiUnifiedV1SessionsRouteWithChildren
+  '/api/org/v1/connectors/diagnostics': typeof ApiOrgV1ConnectorsDiagnosticsRoute
+  '/api/org/v1/connectors/enrollment': typeof ApiOrgV1ConnectorsEnrollmentRoute
+  '/api/org/v1/connectors/heartbeat': typeof ApiOrgV1ConnectorsHeartbeatRoute
+  '/api/org/v1/connectors/inventory': typeof ApiOrgV1ConnectorsInventoryRouteWithChildren
   '/api/unified/v1/auth/callback': typeof ApiUnifiedV1AuthCallbackRoute
   '/api/unified/v1/operator/bootstrap': typeof ApiUnifiedV1OperatorBootstrapRoute
+  '/api/unified/v1/recordings/$name': typeof ApiUnifiedV1RecordingsNameRouteWithChildren
+  '/api/unified/v1/sessions/$sessionId': typeof ApiUnifiedV1SessionsSessionIdRoute
   '/api/org/v1/accounts/$id/checkout': typeof ApiOrgV1AccountsIdCheckoutRoute
   '/api/org/v1/checkouts/$id/approve': typeof ApiOrgV1CheckoutsIdApproveRoute
+  '/api/org/v1/connectors/inventory/history': typeof ApiOrgV1ConnectorsInventoryHistoryRoute
+  '/api/unified/v1/recordings/$name/retention': typeof ApiUnifiedV1RecordingsNameRetentionRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -389,6 +477,7 @@ export interface FileRoutesById {
   '/_authed/service-accounts/create': typeof AuthedServiceAccountsCreateRoute
   '/_authed/sites/$slug': typeof AuthedSitesSlugRouteWithChildren
   '/_authed/sites/create': typeof AuthedSitesCreateRoute
+  '/_authed/sites/rollouts': typeof AuthedSitesRolloutsRoute
   '/_authed/sites/wizard': typeof AuthedSitesWizardRoute
   '/_authed/gateways/': typeof AuthedGatewaysIndexRoute
   '/_authed/groups/': typeof AuthedGroupsIndexRoute
@@ -405,11 +494,20 @@ export interface FileRoutesById {
   '/api/lab/v1/grant-target': typeof ApiLabV1GrantTargetRoute
   '/api/org/v1/accounts': typeof ApiOrgV1AccountsRouteWithChildren
   '/api/unified/v1/connections': typeof ApiUnifiedV1ConnectionsRoute
-  '/api/unified/v1/sessions': typeof ApiUnifiedV1SessionsRoute
+  '/api/unified/v1/recordings': typeof ApiUnifiedV1RecordingsRouteWithChildren
+  '/api/unified/v1/sessions': typeof ApiUnifiedV1SessionsRouteWithChildren
+  '/api/org/v1/connectors/diagnostics': typeof ApiOrgV1ConnectorsDiagnosticsRoute
+  '/api/org/v1/connectors/enrollment': typeof ApiOrgV1ConnectorsEnrollmentRoute
+  '/api/org/v1/connectors/heartbeat': typeof ApiOrgV1ConnectorsHeartbeatRoute
+  '/api/org/v1/connectors/inventory': typeof ApiOrgV1ConnectorsInventoryRouteWithChildren
   '/api/unified/v1/auth/callback': typeof ApiUnifiedV1AuthCallbackRoute
   '/api/unified/v1/operator/bootstrap': typeof ApiUnifiedV1OperatorBootstrapRoute
+  '/api/unified/v1/recordings/$name': typeof ApiUnifiedV1RecordingsNameRouteWithChildren
+  '/api/unified/v1/sessions/$sessionId': typeof ApiUnifiedV1SessionsSessionIdRoute
   '/api/org/v1/accounts/$id/checkout': typeof ApiOrgV1AccountsIdCheckoutRoute
   '/api/org/v1/checkouts/$id/approve': typeof ApiOrgV1CheckoutsIdApproveRoute
+  '/api/org/v1/connectors/inventory/history': typeof ApiOrgV1ConnectorsInventoryHistoryRoute
+  '/api/unified/v1/recordings/$name/retention': typeof ApiUnifiedV1RecordingsNameRetentionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -435,6 +533,7 @@ export interface FileRouteTypes {
     | '/service-accounts/create'
     | '/sites/$slug'
     | '/sites/create'
+    | '/sites/rollouts'
     | '/sites/wizard'
     | '/gateways/'
     | '/groups/'
@@ -451,11 +550,20 @@ export interface FileRouteTypes {
     | '/api/lab/v1/grant-target'
     | '/api/org/v1/accounts'
     | '/api/unified/v1/connections'
+    | '/api/unified/v1/recordings'
     | '/api/unified/v1/sessions'
+    | '/api/org/v1/connectors/diagnostics'
+    | '/api/org/v1/connectors/enrollment'
+    | '/api/org/v1/connectors/heartbeat'
+    | '/api/org/v1/connectors/inventory'
     | '/api/unified/v1/auth/callback'
     | '/api/unified/v1/operator/bootstrap'
+    | '/api/unified/v1/recordings/$name'
+    | '/api/unified/v1/sessions/$sessionId'
     | '/api/org/v1/accounts/$id/checkout'
     | '/api/org/v1/checkouts/$id/approve'
+    | '/api/org/v1/connectors/inventory/history'
+    | '/api/unified/v1/recordings/$name/retention'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -479,6 +587,7 @@ export interface FileRouteTypes {
     | '/service-accounts/create'
     | '/sites/$slug'
     | '/sites/create'
+    | '/sites/rollouts'
     | '/sites/wizard'
     | '/gateways'
     | '/groups'
@@ -495,11 +604,20 @@ export interface FileRouteTypes {
     | '/api/lab/v1/grant-target'
     | '/api/org/v1/accounts'
     | '/api/unified/v1/connections'
+    | '/api/unified/v1/recordings'
     | '/api/unified/v1/sessions'
+    | '/api/org/v1/connectors/diagnostics'
+    | '/api/org/v1/connectors/enrollment'
+    | '/api/org/v1/connectors/heartbeat'
+    | '/api/org/v1/connectors/inventory'
     | '/api/unified/v1/auth/callback'
     | '/api/unified/v1/operator/bootstrap'
+    | '/api/unified/v1/recordings/$name'
+    | '/api/unified/v1/sessions/$sessionId'
     | '/api/org/v1/accounts/$id/checkout'
     | '/api/org/v1/checkouts/$id/approve'
+    | '/api/org/v1/connectors/inventory/history'
+    | '/api/unified/v1/recordings/$name/retention'
   id:
     | '__root__'
     | '/'
@@ -524,6 +642,7 @@ export interface FileRouteTypes {
     | '/_authed/service-accounts/create'
     | '/_authed/sites/$slug'
     | '/_authed/sites/create'
+    | '/_authed/sites/rollouts'
     | '/_authed/sites/wizard'
     | '/_authed/gateways/'
     | '/_authed/groups/'
@@ -540,11 +659,20 @@ export interface FileRouteTypes {
     | '/api/lab/v1/grant-target'
     | '/api/org/v1/accounts'
     | '/api/unified/v1/connections'
+    | '/api/unified/v1/recordings'
     | '/api/unified/v1/sessions'
+    | '/api/org/v1/connectors/diagnostics'
+    | '/api/org/v1/connectors/enrollment'
+    | '/api/org/v1/connectors/heartbeat'
+    | '/api/org/v1/connectors/inventory'
     | '/api/unified/v1/auth/callback'
     | '/api/unified/v1/operator/bootstrap'
+    | '/api/unified/v1/recordings/$name'
+    | '/api/unified/v1/sessions/$sessionId'
     | '/api/org/v1/accounts/$id/checkout'
     | '/api/org/v1/checkouts/$id/approve'
+    | '/api/org/v1/connectors/inventory/history'
+    | '/api/unified/v1/recordings/$name/retention'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -557,7 +685,12 @@ export interface RootRouteChildren {
   ApiLabV1GrantTargetRoute: typeof ApiLabV1GrantTargetRoute
   ApiOrgV1AccountsRoute: typeof ApiOrgV1AccountsRouteWithChildren
   ApiUnifiedV1ConnectionsRoute: typeof ApiUnifiedV1ConnectionsRoute
-  ApiUnifiedV1SessionsRoute: typeof ApiUnifiedV1SessionsRoute
+  ApiUnifiedV1RecordingsRoute: typeof ApiUnifiedV1RecordingsRouteWithChildren
+  ApiUnifiedV1SessionsRoute: typeof ApiUnifiedV1SessionsRouteWithChildren
+  ApiOrgV1ConnectorsDiagnosticsRoute: typeof ApiOrgV1ConnectorsDiagnosticsRoute
+  ApiOrgV1ConnectorsEnrollmentRoute: typeof ApiOrgV1ConnectorsEnrollmentRoute
+  ApiOrgV1ConnectorsHeartbeatRoute: typeof ApiOrgV1ConnectorsHeartbeatRoute
+  ApiOrgV1ConnectorsInventoryRoute: typeof ApiOrgV1ConnectorsInventoryRouteWithChildren
   ApiUnifiedV1AuthCallbackRoute: typeof ApiUnifiedV1AuthCallbackRoute
   ApiUnifiedV1OperatorBootstrapRoute: typeof ApiUnifiedV1OperatorBootstrapRoute
   ApiOrgV1CheckoutsIdApproveRoute: typeof ApiOrgV1CheckoutsIdApproveRoute
@@ -719,6 +852,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSitesWizardRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/sites/rollouts': {
+      id: '/_authed/sites/rollouts'
+      path: '/sites/rollouts'
+      fullPath: '/sites/rollouts'
+      preLoaderRoute: typeof AuthedSitesRolloutsRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/sites/create': {
       id: '/_authed/sites/create'
       path: '/sites/create'
@@ -810,6 +950,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUnifiedV1SessionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/unified/v1/recordings': {
+      id: '/api/unified/v1/recordings'
+      path: '/api/unified/v1/recordings'
+      fullPath: '/api/unified/v1/recordings'
+      preLoaderRoute: typeof ApiUnifiedV1RecordingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/unified/v1/connections': {
       id: '/api/unified/v1/connections'
       path: '/api/unified/v1/connections'
@@ -838,6 +985,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSitesSlugEditRouteImport
       parentRoute: typeof AuthedSitesSlugRoute
     }
+    '/api/unified/v1/sessions/$sessionId': {
+      id: '/api/unified/v1/sessions/$sessionId'
+      path: '/$sessionId'
+      fullPath: '/api/unified/v1/sessions/$sessionId'
+      preLoaderRoute: typeof ApiUnifiedV1SessionsSessionIdRouteImport
+      parentRoute: typeof ApiUnifiedV1SessionsRoute
+    }
+    '/api/unified/v1/recordings/$name': {
+      id: '/api/unified/v1/recordings/$name'
+      path: '/$name'
+      fullPath: '/api/unified/v1/recordings/$name'
+      preLoaderRoute: typeof ApiUnifiedV1RecordingsNameRouteImport
+      parentRoute: typeof ApiUnifiedV1RecordingsRoute
+    }
     '/api/unified/v1/operator/bootstrap': {
       id: '/api/unified/v1/operator/bootstrap'
       path: '/api/unified/v1/operator/bootstrap'
@@ -851,6 +1012,48 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/unified/v1/auth/callback'
       preLoaderRoute: typeof ApiUnifiedV1AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/org/v1/connectors/inventory': {
+      id: '/api/org/v1/connectors/inventory'
+      path: '/api/org/v1/connectors/inventory'
+      fullPath: '/api/org/v1/connectors/inventory'
+      preLoaderRoute: typeof ApiOrgV1ConnectorsInventoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/org/v1/connectors/heartbeat': {
+      id: '/api/org/v1/connectors/heartbeat'
+      path: '/api/org/v1/connectors/heartbeat'
+      fullPath: '/api/org/v1/connectors/heartbeat'
+      preLoaderRoute: typeof ApiOrgV1ConnectorsHeartbeatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/org/v1/connectors/enrollment': {
+      id: '/api/org/v1/connectors/enrollment'
+      path: '/api/org/v1/connectors/enrollment'
+      fullPath: '/api/org/v1/connectors/enrollment'
+      preLoaderRoute: typeof ApiOrgV1ConnectorsEnrollmentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/org/v1/connectors/diagnostics': {
+      id: '/api/org/v1/connectors/diagnostics'
+      path: '/api/org/v1/connectors/diagnostics'
+      fullPath: '/api/org/v1/connectors/diagnostics'
+      preLoaderRoute: typeof ApiOrgV1ConnectorsDiagnosticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/unified/v1/recordings/$name/retention': {
+      id: '/api/unified/v1/recordings/$name/retention'
+      path: '/retention'
+      fullPath: '/api/unified/v1/recordings/$name/retention'
+      preLoaderRoute: typeof ApiUnifiedV1RecordingsNameRetentionRouteImport
+      parentRoute: typeof ApiUnifiedV1RecordingsNameRoute
+    }
+    '/api/org/v1/connectors/inventory/history': {
+      id: '/api/org/v1/connectors/inventory/history'
+      path: '/history'
+      fullPath: '/api/org/v1/connectors/inventory/history'
+      preLoaderRoute: typeof ApiOrgV1ConnectorsInventoryHistoryRouteImport
+      parentRoute: typeof ApiOrgV1ConnectorsInventoryRoute
     }
     '/api/org/v1/checkouts/$id/approve': {
       id: '/api/org/v1/checkouts/$id/approve'
@@ -898,6 +1101,7 @@ interface AuthedRouteChildren {
   AuthedServiceAccountsCreateRoute: typeof AuthedServiceAccountsCreateRoute
   AuthedSitesSlugRoute: typeof AuthedSitesSlugRouteWithChildren
   AuthedSitesCreateRoute: typeof AuthedSitesCreateRoute
+  AuthedSitesRolloutsRoute: typeof AuthedSitesRolloutsRoute
   AuthedSitesWizardRoute: typeof AuthedSitesWizardRoute
   AuthedGatewaysIndexRoute: typeof AuthedGatewaysIndexRoute
   AuthedGroupsIndexRoute: typeof AuthedGroupsIndexRoute
@@ -929,6 +1133,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedServiceAccountsCreateRoute: AuthedServiceAccountsCreateRoute,
   AuthedSitesSlugRoute: AuthedSitesSlugRouteWithChildren,
   AuthedSitesCreateRoute: AuthedSitesCreateRoute,
+  AuthedSitesRolloutsRoute: AuthedSitesRolloutsRoute,
   AuthedSitesWizardRoute: AuthedSitesWizardRoute,
   AuthedGatewaysIndexRoute: AuthedGatewaysIndexRoute,
   AuthedGroupsIndexRoute: AuthedGroupsIndexRoute,
@@ -957,6 +1162,62 @@ const ApiOrgV1AccountsRouteChildren: ApiOrgV1AccountsRouteChildren = {
 const ApiOrgV1AccountsRouteWithChildren =
   ApiOrgV1AccountsRoute._addFileChildren(ApiOrgV1AccountsRouteChildren)
 
+interface ApiUnifiedV1RecordingsNameRouteChildren {
+  ApiUnifiedV1RecordingsNameRetentionRoute: typeof ApiUnifiedV1RecordingsNameRetentionRoute
+}
+
+const ApiUnifiedV1RecordingsNameRouteChildren: ApiUnifiedV1RecordingsNameRouteChildren =
+  {
+    ApiUnifiedV1RecordingsNameRetentionRoute:
+      ApiUnifiedV1RecordingsNameRetentionRoute,
+  }
+
+const ApiUnifiedV1RecordingsNameRouteWithChildren =
+  ApiUnifiedV1RecordingsNameRoute._addFileChildren(
+    ApiUnifiedV1RecordingsNameRouteChildren,
+  )
+
+interface ApiUnifiedV1RecordingsRouteChildren {
+  ApiUnifiedV1RecordingsNameRoute: typeof ApiUnifiedV1RecordingsNameRouteWithChildren
+}
+
+const ApiUnifiedV1RecordingsRouteChildren: ApiUnifiedV1RecordingsRouteChildren =
+  {
+    ApiUnifiedV1RecordingsNameRoute:
+      ApiUnifiedV1RecordingsNameRouteWithChildren,
+  }
+
+const ApiUnifiedV1RecordingsRouteWithChildren =
+  ApiUnifiedV1RecordingsRoute._addFileChildren(
+    ApiUnifiedV1RecordingsRouteChildren,
+  )
+
+interface ApiUnifiedV1SessionsRouteChildren {
+  ApiUnifiedV1SessionsSessionIdRoute: typeof ApiUnifiedV1SessionsSessionIdRoute
+}
+
+const ApiUnifiedV1SessionsRouteChildren: ApiUnifiedV1SessionsRouteChildren = {
+  ApiUnifiedV1SessionsSessionIdRoute: ApiUnifiedV1SessionsSessionIdRoute,
+}
+
+const ApiUnifiedV1SessionsRouteWithChildren =
+  ApiUnifiedV1SessionsRoute._addFileChildren(ApiUnifiedV1SessionsRouteChildren)
+
+interface ApiOrgV1ConnectorsInventoryRouteChildren {
+  ApiOrgV1ConnectorsInventoryHistoryRoute: typeof ApiOrgV1ConnectorsInventoryHistoryRoute
+}
+
+const ApiOrgV1ConnectorsInventoryRouteChildren: ApiOrgV1ConnectorsInventoryRouteChildren =
+  {
+    ApiOrgV1ConnectorsInventoryHistoryRoute:
+      ApiOrgV1ConnectorsInventoryHistoryRoute,
+  }
+
+const ApiOrgV1ConnectorsInventoryRouteWithChildren =
+  ApiOrgV1ConnectorsInventoryRoute._addFileChildren(
+    ApiOrgV1ConnectorsInventoryRouteChildren,
+  )
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRoute: AuthedRouteWithChildren,
@@ -967,7 +1228,13 @@ const rootRouteChildren: RootRouteChildren = {
   ApiLabV1GrantTargetRoute: ApiLabV1GrantTargetRoute,
   ApiOrgV1AccountsRoute: ApiOrgV1AccountsRouteWithChildren,
   ApiUnifiedV1ConnectionsRoute: ApiUnifiedV1ConnectionsRoute,
-  ApiUnifiedV1SessionsRoute: ApiUnifiedV1SessionsRoute,
+  ApiUnifiedV1RecordingsRoute: ApiUnifiedV1RecordingsRouteWithChildren,
+  ApiUnifiedV1SessionsRoute: ApiUnifiedV1SessionsRouteWithChildren,
+  ApiOrgV1ConnectorsDiagnosticsRoute: ApiOrgV1ConnectorsDiagnosticsRoute,
+  ApiOrgV1ConnectorsEnrollmentRoute: ApiOrgV1ConnectorsEnrollmentRoute,
+  ApiOrgV1ConnectorsHeartbeatRoute: ApiOrgV1ConnectorsHeartbeatRoute,
+  ApiOrgV1ConnectorsInventoryRoute:
+    ApiOrgV1ConnectorsInventoryRouteWithChildren,
   ApiUnifiedV1AuthCallbackRoute: ApiUnifiedV1AuthCallbackRoute,
   ApiUnifiedV1OperatorBootstrapRoute: ApiUnifiedV1OperatorBootstrapRoute,
   ApiOrgV1CheckoutsIdApproveRoute: ApiOrgV1CheckoutsIdApproveRoute,

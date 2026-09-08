@@ -37,10 +37,10 @@ afterEach(() => {
 })
 
 describe('discoveryUrl', () => {
-  it('uses the per-client path on archguard', async () => {
+  it('uses the deployment root on the active ArchGuard adapter', async () => {
     await load('archguard', 'https://id.archgate.com.br')
     expect(mod.discoveryUrl('archgate-connect')).toBe(
-      'https://id.archgate.com.br/oauth2/openid/archgate-connect/.well-known/openid-configuration',
+      'https://id.archgate.com.br/.well-known/openid-configuration',
     )
   })
 
@@ -51,9 +51,11 @@ describe('discoveryUrl', () => {
     )
   })
 
-  it('defaults to archguard so an existing deploy is untouched', async () => {
+  it('defaults to the current ArchGuard deployment shape', async () => {
     await load(undefined, 'https://id.archgate.com.br')
-    expect(mod.discoveryUrl('archguard-console')).toContain('/oauth2/openid/')
+    expect(mod.discoveryUrl('archguard-console')).toBe(
+      'https://id.archgate.com.br/.well-known/openid-configuration',
+    )
   })
 
   it('tolerates a trailing slash on the base', async () => {

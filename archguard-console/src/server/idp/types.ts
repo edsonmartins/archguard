@@ -33,6 +33,8 @@ export interface IdentityAdmin {
   /** Idempotent membership bind. Must not fail when already a member. */
   addUserToGroup(username: string, group: string): Promise<AdminStep>
 
+  getUserGroups?(username: string): Promise<string[] | null>
+
   /**
    * Block sign-in for a principal without deleting it — the audit trail must
    * keep pointing at a real subject after offboarding.

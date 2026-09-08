@@ -79,6 +79,8 @@ function migrate(db: Database.Database): void {
       body_hash       TEXT NOT NULL,
       status_code     INTEGER,
       response_json   TEXT,
+      replay_status_code INTEGER,
+      replay_response_json TEXT,
       created_at      TEXT NOT NULL,
       completed_at    TEXT
     );
@@ -161,6 +163,8 @@ function migrate(db: Database.Database): void {
     CREATE TABLE IF NOT EXISTS broker_sessions (
       session_id  TEXT PRIMARY KEY,
       lease_id    TEXT,
+      principal   TEXT,
+      tenant      TEXT,
       created_at  TEXT NOT NULL,
       closed_at   TEXT
     );
@@ -275,13 +279,21 @@ function migrate(db: Database.Database): void {
   try {
     const cols = db.prepare(`PRAGMA table_info(sites)`).all() as { name: string }[]
     if (cols.length && !cols.some((c) => c.name === 'connectors_json')) {
-      db.exec(
-        `ALTER TABLE sites ADD COLUMN connectors_json TEXT NOT NULL DEFAULT '[]'`,
-      )
+      db.exec(`ALTER TABLE sites ADD COLUMN connectors_json TEXT NOT NULL DEFAULT '[]'`)
     }
   } catch {
     /* ignore race / fresh create */
   }
+  try {
+    const cols = db.prepare('PRAGMA table_info(broker_sessions)').all() as { name: string }[]
+    if (!cols.some((c) => c.name === 'principal')) db.exec('ALTER TABLE broker_sessions ADD COLUMN principal TEXT')
+    if (!cols.some((c) => c.name === 'tenant')) db.exec('ALTER TABLE broker_sessions ADD COLUMN tenant TEXT')
+  } catch { /* existing installations migrate on next startup */ }
+  try {
+    const cols = db.prepare('PRAGMA table_info(bff_idempotency)').all() as { name: string }[]
+    if (!cols.some((c) => c.name === 'replay_status_code')) db.exec('ALTER TABLE bff_idempotency ADD COLUMN replay_status_code INTEGER')
+    if (!cols.some((c) => c.name === 'replay_response_json')) db.exec('ALTER TABLE bff_idempotency ADD COLUMN replay_response_json TEXT')
+  } catch { /* existing installations migrate on next startup */ }
   // org_accounts column migrations (OCB-3/4)
   try {
     const cols = db.prepare(`PRAGMA table_info(org_accounts)`).all() as {
@@ -310,17 +322,23 @@ export function getDb(): Database.Database {
   return _db
 }
 
-export function registerBrokerSession(sessionId: string, leaseId?: string): void {
+export function registerBrokerSession(sessionId: string, leaseId?: string, principal?: string, tenant?: string): void {
   getDb().prepare(
-    `INSERT OR REPLACE INTO broker_sessions (session_id, lease_id, created_at, closed_at)
-     VALUES (?, ?, ?, NULL)`,
-  ).run(sessionId, leaseId || null, new Date().toISOString())
+    `INSERT OR REPLACE INTO broker_sessions (session_id, lease_id, principal, tenant, created_at, closed_at)
+     VALUES (?, ?, ?, ?, ?, NULL)`,
+  ).run(sessionId, leaseId || null, principal || null, tenant || null, new Date().toISOString())
 }
 
-export function getBrokerSession(sessionId: string): { lease_id: string | null; closed_at: string | null } | undefined {
+export function getBrokerSession(sessionId: string): { lease_id: string | null; principal: string | null; tenant: string | null; closed_at: string | null } | undefined {
   return getDb().prepare(
-    'SELECT lease_id, closed_at FROM broker_sessions WHERE session_id = ?',
-  ).get(sessionId) as { lease_id: string | null; closed_at: string | null } | undefined
+    'SELECT lease_id, principal, tenant, closed_at FROM broker_sessions WHERE session_id = ?',
+  ).get(sessionId) as { lease_id: string | null; principal: string | null; tenant: string | null; closed_at: string | null } | undefined
+}
+
+export function listBrokerSessionsForPrincipal(principal: string): string[] {
+  return (getDb().prepare(
+    'SELECT session_id FROM broker_sessions WHERE principal = ? AND closed_at IS NULL',
+  ).all(principal) as { session_id: string }[]).map((row) => row.session_id)
 }
 
 export function closeBrokerSession(sessionId: string): void {

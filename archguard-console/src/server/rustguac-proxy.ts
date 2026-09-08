@@ -3,13 +3,13 @@
 import { integrationFetch } from './http-integration-client'
 import { getDb } from './db'
 
-const RUSTGUAC_URL = (
-  process.env.RUSTGUAC_URL || 'http://archgate-rustguac:8080'
-).replace(/\/$/, '')
-const RUSTGUAC_PUBLIC_URL = (
-  process.env.RUSTGUAC_PUBLIC_URL || RUSTGUAC_URL
-).replace(/\/$/, '')
-const RUSTGUAC_KEY = process.env.RUSTGUAC_API_KEY || ''
+function rustGuacUrl(): string {
+  return (process.env.RUSTGUAC_URL || 'http://archgate-rustguac:8080').replace(/\/$/, '')
+}
+function rustGuacPublicUrl(): string {
+  return (process.env.RUSTGUAC_PUBLIC_URL || rustGuacUrl()).replace(/\/$/, '')
+}
+function rustGuacKey(): string { return process.env.RUSTGUAC_API_KEY || '' }
 
 export type RustGuacSession = {
   session_id: string
@@ -20,16 +20,16 @@ export type RustGuacSession = {
 export function rustGuacConfigured(): boolean {
   return (
     process.env.RUSTGUAC_ENABLED === '1' &&
-    Boolean(RUSTGUAC_URL && RUSTGUAC_KEY)
+    Boolean(rustGuacUrl() && rustGuacKey())
   )
 }
 
 async function api<T>(path: string, body: unknown): Promise<T> {
-  const res = await integrationFetch(`${RUSTGUAC_URL}${path}`, {
+  const res = await integrationFetch(`${rustGuacUrl()}${path}`, {
     method: 'POST',
     integration: 'rustguac',
     headers: {
-      Authorization: `Bearer ${RUSTGUAC_KEY}`,
+      Authorization: `Bearer ${rustGuacKey()}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
@@ -46,10 +46,10 @@ async function api<T>(path: string, body: unknown): Promise<T> {
 }
 
 async function apiGet<T>(path: string): Promise<T> {
-  const res = await integrationFetch(`${RUSTGUAC_URL}${path}`, {
+  const res = await integrationFetch(`${rustGuacUrl()}${path}`, {
     method: 'GET',
     integration: 'rustguac',
-    headers: { Authorization: `Bearer ${RUSTGUAC_KEY}` },
+    headers: { Authorization: `Bearer ${rustGuacKey()}` },
   })
   const text = await res.text()
   if (!res.ok) throw new Error(`RustGuac ${path}: ${res.status} ${text.slice(0, 300)}`)
@@ -125,11 +125,11 @@ export async function fetchRustGuacRecording(name: string): Promise<Response> {
     throw new Error('nome de gravação inválido')
   }
   return integrationFetch(
-    `${RUSTGUAC_URL}/api/recordings/${encodeURIComponent(name)}`,
+    `${rustGuacUrl()}/api/recordings/${encodeURIComponent(name)}`,
     {
       method: 'GET',
       integration: 'rustguac',
-      headers: { Authorization: `Bearer ${RUSTGUAC_KEY}` },
+      headers: { Authorization: `Bearer ${rustGuacKey()}` },
     },
   )
 }
@@ -143,7 +143,7 @@ function sessionType(protocol: string): 'ssh' | 'rdp' | 'vnc' {
 export function buildRustGuacUrls(
   created: Pick<RustGuacSession, 'session_id' | 'client_url' | 'ws_url'>,
   ticket: string,
-  publicBase = RUSTGUAC_PUBLIC_URL,
+  publicBase = rustGuacPublicUrl(),
 ) {
   if (!created.session_id) throw new Error('RustGuac retornou sessão sem id')
   if (!ticket) throw new Error('RustGuac retornou ticket vazio')
@@ -190,10 +190,10 @@ export async function issueRustGuacSession(input: {
 /** Close the broker session; the API key remains server-side. */
 export async function closeRustGuacSession(sessionId: string): Promise<void> {
   if (!rustGuacConfigured()) throw new Error('RustGuac não configurado')
-  const res = await integrationFetch(`${RUSTGUAC_URL}/api/sessions/${encodeURIComponent(sessionId)}`, {
+  const res = await integrationFetch(`${rustGuacUrl()}/api/sessions/${encodeURIComponent(sessionId)}`, {
     method: 'DELETE',
     integration: 'rustguac',
-    headers: { Authorization: `Bearer ${RUSTGUAC_KEY}` },
+    headers: { Authorization: `Bearer ${rustGuacKey()}` },
   })
   if (!res.ok && res.status !== 404) throw new Error(`RustGuac close: ${res.status}`)
 }

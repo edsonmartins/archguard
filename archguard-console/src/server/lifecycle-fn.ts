@@ -11,6 +11,8 @@ import {
   requireSession,
   sessionActor,
 } from './session-guard'
+import { assertPrincipalTenantAccess, assertSiteTenantAccess, hasAnyPerm } from './session-guard'
+import { deriveTenants, stripGroupDomain } from '@/lib/auth/roles'
 import { logger } from './logger'
 import { integrationFetch } from './http-integration-client'
 import { addUserToGroup } from './idp'
@@ -87,6 +89,16 @@ export const provisionPersonAccessFn = createServerFn({ method: 'POST' })
     const tenant = data.tenant_slug.startsWith('tenant_')
       ? data.tenant_slug
       : `tenant_${data.tenant_slug}`
+    if (!hasAnyPerm(s, ['system:admin'])) {
+      const operatorTenants = new Set(deriveTenants(s.groups).map(stripGroupDomain))
+      if (!operatorTenants.has(tenant)) throw new Error('Forbidden: tenant fora do escopo do operador')
+      await assertPrincipalTenantAccess(data.username, s)
+      const unsafe = data.groups.filter((group) => {
+        const normalized = stripGroupDomain(group).toLowerCase()
+        return !['archguard_users', 'archguard_viewers', tenant].includes(normalized)
+      })
+      if (unsafe.length) throw new Error('Forbidden: grupos administrativos só podem ser atribuídos por system:admin')
+    }
     const groups = Array.from(
       new Set([
         ...data.groups,
@@ -135,7 +147,7 @@ export const provisionPersonAccessFn = createServerFn({ method: 'POST' })
     }
 
     const critical = steps.some(
-      (x) => x.component === 'archguard_group' && x.ok,
+      (x) => x.component === 'idp_group' && x.ok,
     )
     recordActivity(
       'POST',
@@ -390,5 +402,19 @@ export const grantPersonTargetFn = createServerFn({ method: 'POST' })
       ['persons:update', 'gateways:manage', 'system:admin'],
       'persons:update',
     )
+    await assertPrincipalTenantAccess(data.username, s)
+    const { listSites } = await import('./sites')
+    const site = (await listSites()).find((candidate) =>
+      candidate.targets?.some((target) => target.nome === data.target),
+    )
+    if (!site) throw new Error(`Target não encontrado no catálogo: ${data.target}`)
+    assertSiteTenantAccess(site, s)
+    if (data.role) {
+      const allowedRoles = new Set([
+        ...(site.warpgate_roles || []),
+        ...(site.targets?.find((target) => target.nome === data.target)?.roles || []),
+      ])
+      if (!allowedRoles.has(data.role)) throw new Error('Forbidden: role fora do catálogo do target')
+    }
     return runGrantPersonTarget(data, sessionActor(s))
   })

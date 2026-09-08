@@ -469,7 +469,7 @@ export const planConnectorUpgradeFn = createServerFn({ method: 'POST' })
       url: data.url,
       sha256_suffix: data.sha256.slice(-12),
     })
-    return { ok: true, plan_id: planId, status, plan }
+    return { ok: true, plan_id: planId, status, plan: plan as Record<string, any> }
   })
 
 export const getConnectorUpgradePlansFn = createServerFn({ method: 'GET' })
@@ -569,17 +569,17 @@ export const rolloutConnectorUpgradeFn = createServerFn({ method: 'POST' })
     if (data.action !== 'rollback' && !['approved', 'staged'].includes(plan.status)) {
       throw new Error(`Plano precisa estar aprovado (status: ${plan.status})`)
     }
-    let result: unknown
+    let result: Record<string, any>
     let status = plan.status
     if (data.action === 'stage') {
-      result = await agentStageUpgradeForSite(data.slug, { version: plan.version, url: plan.artifact_url, sha256: plan.sha256 })
+      result = await agentStageUpgradeForSite(data.slug, { version: plan.version, url: plan.artifact_url, sha256: plan.sha256 }) as Record<string, any>
       status = 'staged'
     } else if (data.action === 'apply') {
       if (plan.status !== 'staged') throw new Error(`Plano precisa estar staged (status: ${plan.status})`)
-      result = await agentApplyUpgradeForSite(data.slug, plan.version)
+      result = await agentApplyUpgradeForSite(data.slug, plan.version) as Record<string, any>
       status = 'applied'
     } else {
-      result = await agentRollbackUpgradeForSite(data.slug)
+      result = await agentRollbackUpgradeForSite(data.slug) as Record<string, any>
       status = 'rolled_back'
     }
     db.prepare('UPDATE connector_upgrade_plans SET status = ?, decided_at = COALESCE(decided_at, ?), decided_by = COALESCE(decided_by, ?) WHERE id = ? AND site_slug = ?')
@@ -654,9 +654,9 @@ export const getConnectorUpgradeRolloutFn = createServerFn({ method: 'GET' })
     const s = requireSession()
     requireAnyPerm(s, ['sites:read', 'sites:update', 'gateways:manage'], 'sites:read')
     const db = getDb()
-    const rollout = db.prepare('SELECT * FROM connector_upgrade_rollouts WHERE id = ?').get(data.rollout_id) as Record<string, unknown> | undefined
+    const rollout = db.prepare('SELECT * FROM connector_upgrade_rollouts WHERE id = ?').get(data.rollout_id) as Record<string, any> | undefined
     if (!rollout) throw new Error('Onda não encontrada')
-    const targets = db.prepare('SELECT * FROM connector_upgrade_rollout_targets WHERE rollout_id = ? ORDER BY position').all(data.rollout_id) as Array<Record<string, unknown>>
+    const targets = db.prepare('SELECT * FROM connector_upgrade_rollout_targets WHERE rollout_id = ? ORDER BY position').all(data.rollout_id) as Array<Record<string, any>>
     for (const target of targets) {
       const site = await getSite(String(target.site_slug))
       if (!site) throw new Error(`Site não encontrado: ${target.site_slug}`)
@@ -670,8 +670,8 @@ export const listConnectorUpgradeRolloutsFn = createServerFn({ method: 'GET' })
     const s = requireSession()
     requireAnyPerm(s, ['sites:read', 'sites:update', 'gateways:manage'], 'sites:read')
     const db = getDb()
-    const rollouts = db.prepare('SELECT * FROM connector_upgrade_rollouts ORDER BY created_at DESC LIMIT 50').all() as Array<Record<string, unknown>>
-    const visible: Array<Record<string, unknown>> = []
+    const rollouts = db.prepare('SELECT * FROM connector_upgrade_rollouts ORDER BY created_at DESC LIMIT 50').all() as Array<Record<string, any>>
+    const visible: Array<Record<string, any>> = []
     for (const rollout of rollouts) {
       const targets = db.prepare('SELECT * FROM connector_upgrade_rollout_targets WHERE rollout_id = ? ORDER BY position').all(String(rollout.id)) as Array<Record<string, unknown>>
       const allowedTargets: Array<Record<string, unknown>> = []
@@ -716,7 +716,11 @@ export const advanceConnectorUpgradeRolloutFn = createServerFn({ method: 'POST' 
         assertSiteTenantAccess(site, s)
         const plan = db.prepare('SELECT version, artifact_url, sha256 FROM connector_upgrade_plans WHERE id = ? AND site_slug = ?').get(target.plan_id, target.site_slug) as { version: string; artifact_url: string; sha256: string } | undefined
         if (!plan) throw new Error('Plano não encontrado')
-        await agentStageUpgradeForSite(target.site_slug, plan)
+        await agentStageUpgradeForSite(target.site_slug, {
+          version: plan.version,
+          url: plan.artifact_url,
+          sha256: plan.sha256,
+        })
         db.prepare('UPDATE connector_upgrade_plans SET status = \'staged\' WHERE id = ?').run(target.plan_id)
         await agentApplyUpgradeForSite(target.site_slug, plan.version)
         db.prepare('UPDATE connector_upgrade_plans SET status = \'applied\' WHERE id = ?').run(target.plan_id)

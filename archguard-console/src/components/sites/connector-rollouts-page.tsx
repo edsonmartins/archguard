@@ -20,8 +20,6 @@ import {
   rollbackConnectorUpgradeRolloutFn,
 } from '@/server/connector-fn'
 
-type ApprovedPlan = { slug: string; plan_id: string; version: string; artifact_url: string; sha256: string }
-
 export function ConnectorRolloutsPage() {
   const { can } = usePermissions()
   const canWrite = can('sites:update') || can('system:admin')

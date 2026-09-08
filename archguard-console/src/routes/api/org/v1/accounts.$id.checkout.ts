@@ -82,8 +82,8 @@ export const Route = createFileRoute('/api/org/v1/accounts/$id/checkout')({
                 headers,
               })
             }
-            return new Response(JSON.stringify(hit.response), {
-              status: hit.statusCode || 200,
+            return new Response(JSON.stringify(hit.replayResponse ?? hit.response), {
+              status: hit.replayStatusCode || hit.statusCode || 200,
               headers,
             })
           }
@@ -205,7 +205,10 @@ export const Route = createFileRoute('/api/org/v1/accounts/$id/checkout')({
                 fields,
               },
             }
-          completeIdempotency(scope, 200, response)
+          completeIdempotency(scope, 200, response, {
+            statusCode: 409,
+            response: { error: 'checkout already completed; secret was single-use', checkout: checkout.id },
+          })
           return new Response(JSON.stringify(response), { status: 200, headers })
         } catch (e) {
           const msg = (e as Error).message || 'error'
