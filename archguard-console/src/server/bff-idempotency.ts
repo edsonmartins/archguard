@@ -62,5 +62,5 @@ export function completeIdempotency(
     `UPDATE bff_idempotency
         SET status_code = ?, response_json = ?, replay_status_code = ?, replay_response_json = ?, completed_at = ?
       WHERE scope_key = ?`,
-  ).run(statusCode, JSON.stringify(response ?? null), replay?.statusCode ?? statusCode, JSON.stringify(replay?.response ?? response ?? null), new Date().toISOString(), scopeKey)
+  ).run(replay?.statusCode ?? statusCode, JSON.stringify(replay ? replay.response : response ?? null), replay?.statusCode ?? statusCode, JSON.stringify(replay ? replay.response : response ?? null), new Date().toISOString(), scopeKey)
 }

@@ -18,6 +18,9 @@ import {
 } from './warpgate-proxy'
 import { forceCloseCheckoutsForPrincipal } from './org-checkouts'
 import { deleteOpenFgaGrantsForUser } from './openfga'
+import { revokePrincipal } from './principal-revocation'
+import { listBrokerSessionsForPrincipal } from './db'
+import { closeBrokerSessionAndLease } from './broker-session'
 
 /** Prefer internal compose service; host.docker.internal for agent-style */
 const ORCH_URL = (
@@ -123,6 +126,16 @@ export const revokePersonAccessFn = createServerFn({ method: 'POST' })
     const username = data.username.trim()
     await assertPrincipalTenantAccess(username, s)
     const steps: OffboardStep[] = []
+    revokePrincipal(username)
+    steps.push({ component: 'console_sessions', ok: true, detail: 'principal blocked locally' })
+    for (const sessionId of listBrokerSessionsForPrincipal(username)) {
+      try {
+        await closeBrokerSessionAndLease(sessionId)
+        steps.push({ component: 'rustguac', ok: true, detail: sessionId })
+      } catch (error) {
+        steps.push({ component: 'rustguac', ok: false, detail: (error as Error).message })
+      }
+    }
 
     if (!data.direct_only) {
       steps.push(await callOrchestrationRevoke(username, reason))

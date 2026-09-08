@@ -10,6 +10,7 @@ import { z } from 'zod'
 import { encryptSession, decryptSession } from './session'
 import { verifyIdToken } from './jwt'
 import { logger } from './logger'
+import { isPrincipalRevoked } from './principal-revocation'
 import { normalizeGroupNames } from './idp/groups'
 import { enforceRateLimit } from './rate-limit'
 import { derivePermissions, type Permission } from '../lib/auth/permissions'
@@ -174,6 +175,7 @@ export async function sessionFromTokens(
   tokens: TokenResponse,
 ): Promise<SessionData | null> {
   const claims = await verifyIdToken(tokens.id_token)
+  if (isPrincipalRevoked(String(claims.preferred_username || claims.name || ''))) return null
   const rawGroups: string[] = (claims.groups as string[]) || []
   const groups = normalizeGroups(rawGroups)
   const { isAdmin, hasAccess } = evaluateAccess(groups)
@@ -236,6 +238,10 @@ export const getSessionFn = createServerFn({ method: 'GET' }).handler(
       return null
     }
 
+    if (isPrincipalRevoked(session.user?.name)) {
+      deleteCookie('archguard_session', { path: '/' })
+      return null
+    }
     const remaining = session.expiresAt - Date.now()
     if (remaining > REFRESH_THRESHOLD_MS) return session
 
