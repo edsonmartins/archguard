@@ -2,6 +2,7 @@
 
 import { archguardApiFn } from '@/server/archguard-proxy'
 import { resetPersonCredentialFn } from '@/server/person-credential-fn'
+import { getPersonFn, listPersonsFn } from '@/server/person-read-fn'
 import {
   normalizePerson,
   normalizeCredentialStatus,
@@ -23,13 +24,13 @@ async function api(
 
 export const personApi = {
   list: async (): Promise<T.Person[]> => {
-    const raw = await api('GET', '/v1/person')
+    const raw = await listPersonsFn()
     if (!raw || !Array.isArray(raw)) return []
     return (raw as T.archguardEntry[]).map(normalizePerson)
   },
 
   get: async (id: string): Promise<T.Person> => {
-    const raw = await api('GET', `/v1/person/${encodeURIComponent(id)}`)
+    const raw = await getPersonFn({ data: { id } })
     return normalizePerson(raw as T.archguardEntry)
   },
 

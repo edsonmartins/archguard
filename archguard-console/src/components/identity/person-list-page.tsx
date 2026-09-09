@@ -277,7 +277,7 @@ export function PersonListPage() {
 
   if (isError) {
     return <div role="alert" className="space-y-3 p-6">
-      <p>Não foi possível consultar as identidades. A listagem global exige administrador de plataforma; a consulta por tenant ainda não está disponível.</p>
+      <p>Não foi possível consultar as identidades autorizadas. Verifique sua permissão e a disponibilidade da integração de identidade. Nenhuma lista parcial será exibida.</p>
       <Button onClick={() => void refetch()}>Tentar novamente</Button>
     </div>
   }

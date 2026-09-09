@@ -133,6 +133,14 @@ export async function assertPrincipalTenantAccess(
   if (allowed.size === 0) throw new Error('Forbidden: operador sem tenant')
   const groups = await getUserGroups(username)
   if (!groups) throw new Error('Forbidden: não foi possível validar o tenant do usuário')
+  assertPrincipalGroupsTenantAccess(groups, s)
+}
+
+/** Only pass memberships obtained from the authoritative identity adapter. */
+export function assertPrincipalGroupsTenantAccess(groups: string[], s: SessionData): void {
+  if (hasAnyPerm(s, ['system:admin'])) return
+  const allowed = new Set(deriveTenants(s.groups).map(stripGroupDomain))
+  if (allowed.size === 0) throw new Error('Forbidden: operador sem tenant')
   const normalized = normalizeGroupNames(groups)
   if (normalized.some((group) => PLATFORM_ADMIN_GROUPS.has(group) || group.startsWith('idm_') && group.endsWith('_admins'))) {
     throw new Error('Forbidden: identidade privilegiada exige administrador de plataforma')

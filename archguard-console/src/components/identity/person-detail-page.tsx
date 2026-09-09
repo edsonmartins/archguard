@@ -163,7 +163,7 @@ export function PersonDetailPage() {
 
   if (isError) {
     return <div role="alert" className="space-y-3 p-6">
-      <p>Não foi possível consultar esta identidade. O detalhe global exige administrador de plataforma; a consulta por tenant ainda não está disponível.</p>
+      <p>Identidade indisponível ou fora do seu escopo. Verifique sua permissão e a disponibilidade da integração de identidade.</p>
       <Button onClick={() => void refetch()}>Tentar novamente</Button>
     </div>
   }
