@@ -1,4 +1,17 @@
+import { z } from 'zod'
 import { integrationFetch } from './http-integration-client'
+
+const identifier = z.string().min(1).refine((value) => value.trim() === value)
+const contextSchema = z.object({
+  subject: identifier,
+  identity_id: identifier,
+  identity_status: identifier,
+  memberships: z.array(z.object({
+    membership_id: identifier,
+    organization_id: identifier,
+    status: identifier,
+  })),
+})
 
 export type ArchGuardMembership = {
   membership_id: string
@@ -17,6 +30,9 @@ export type ArchGuardSessionContext = {
 export async function resolveArchGuardSessionContext(
   subject: string,
 ): Promise<ArchGuardSessionContext> {
+  if (!identifier.safeParse(subject).success) {
+    throw new Error('Invalid authenticated subject')
+  }
   const base = (process.env.ORCHESTRATION_URL || '').replace(/\/$/, '')
   const token = process.env.ORCH_API_TOKEN || ''
   if (!base || !token) throw new Error('ArchGuard session context is not configured')
@@ -31,7 +47,15 @@ export async function resolveArchGuardSessionContext(
   })
   const text = await res.text()
   if (!res.ok) throw new Error(`ArchGuard session context failed: ${res.status}`)
-  const context = JSON.parse(text) as ArchGuardSessionContext
+  let payload: unknown
+  try {
+    payload = JSON.parse(text)
+  } catch {
+    throw new Error('Invalid ArchGuard session context')
+  }
+  const parsed = contextSchema.safeParse(payload)
+  if (!parsed.success) throw new Error('Invalid ArchGuard session context')
+  const context = parsed.data
   if (!context.subject || context.subject !== subject) {
     throw new Error('ArchGuard session context subject mismatch')
   }
@@ -40,6 +64,6 @@ export async function resolveArchGuardSessionContext(
   }
   return {
     ...context,
-    memberships: Array.isArray(context.memberships) ? context.memberships : [],
+    memberships: context.memberships.filter((membership) => membership.status === 'active'),
   }
 }
