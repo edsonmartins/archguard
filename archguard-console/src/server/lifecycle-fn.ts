@@ -92,7 +92,7 @@ export const provisionPersonAccessFn = createServerFn({ method: 'POST' })
     if (!hasAnyPerm(s, ['system:admin'])) {
       const operatorTenants = new Set(deriveTenants(s.groups).map(stripGroupDomain))
       if (!operatorTenants.has(tenant)) throw new Error('Forbidden: tenant fora do escopo do operador')
-      await assertPrincipalTenantAccess(data.username, s, { allowUnassigned: true })
+      await assertPrincipalTenantAccess(data.username, s)
       const unsafe = data.groups.filter((group) => {
         const normalized = stripGroupDomain(group).toLowerCase()
         return !['archguard_users', 'archguard_viewers', tenant].includes(normalized)

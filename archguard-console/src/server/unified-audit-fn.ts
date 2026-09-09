@@ -39,8 +39,8 @@ export const listUnifiedAuditFn = createServerFn({ method: 'GET' })
     const s = requireSession()
     requireAnyPerm(
       s,
-      ['audit:read', 'system:admin', 'persons:read', 'gateways:read'],
-      'audit:read',
+      ['system:admin'],
+      'auditoria global restrita à administração da plataforma',
     )
 
     const events: TimelineEvent[] = []

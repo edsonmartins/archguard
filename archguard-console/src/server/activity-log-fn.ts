@@ -11,7 +11,7 @@ import { requireAnyPerm, requireSession } from './session-guard'
 export const getActivityLogFn = createServerFn({ method: 'GET' }).handler(
   async (): Promise<ActivityLogEntry[]> => {
     const s = requireSession()
-    requireAnyPerm(s, ['audit:read', 'system:admin'], 'audit:read')
+    requireAnyPerm(s, ['system:admin'], 'auditoria global restrita à administração da plataforma')
     return queryActivityLog({ limit: 500 })
   },
 )

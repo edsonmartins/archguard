@@ -185,6 +185,16 @@ export function AuditPage() {
     )
   }
 
+  if (q.isError) {
+    return (
+      <div className="p-6" role="alert">
+        <h1 className="text-xl font-semibold">Auditoria indisponível</h1>
+        <p>A auditoria global exige administrador de plataforma. A consulta por tenant ainda não está disponível.</p>
+        <p className="text-sm text-muted-foreground">{(q.error as Error).message}</p>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6 p-6">
       <PageHeader

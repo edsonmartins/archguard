@@ -21,6 +21,7 @@ import {
   hashBody,
 } from '@/server/bff-idempotency'
 import { logger } from '@/server/logger'
+import { checkoutReplay } from '@/server/checkout-replay'
 import {
   requireAnyPerm,
   requireSession,
@@ -76,14 +77,9 @@ export const Route = createFileRoute('/api/org/v1/accounts/$id/checkout')({
           const scope = `${orgScope}:${actor}:POST:/api/org/v1/accounts/${params.id}/checkout:${idemKey}`
           const hit = claimIdempotency(scope, hashBody(parsed.data))
           if (hit) {
-            if (!hit.completed) {
-              return new Response(JSON.stringify({ error: 'request already in progress' }), {
-                status: 409,
-                headers,
-              })
-            }
-            return new Response(JSON.stringify(hit.replayResponse ?? hit.response), {
-              status: hit.replayStatusCode || hit.statusCode || 200,
+            const replay = checkoutReplay(hit)
+            return new Response(JSON.stringify(replay.body), {
+              status: replay.status,
               headers,
             })
           }

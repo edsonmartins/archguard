@@ -8,7 +8,8 @@ import {
   derivePermissions,
   type Permission,
 } from '@/lib/auth/permissions'
-import { deriveTenants, stripGroupDomain } from '@/lib/auth/roles'
+import { deriveTenants, stripGroupDomain, PLATFORM_ADMIN_GROUPS } from '@/lib/auth/roles'
+import { normalizeGroupNames } from './idp/groups'
 import { getUserGroups } from './idp'
 import { isPrincipalSessionRevoked } from './principal-revocation'
 import type { Site } from '@/lib/api/types/site'
@@ -126,16 +127,20 @@ export function assertSiteTenantAccess(site: Site, s: SessionData): void {
 export async function assertPrincipalTenantAccess(
   username: string,
   s: SessionData,
-  options: { allowUnassigned?: boolean } = {},
 ): Promise<void> {
   if (hasAnyPerm(s, ['system:admin'])) return
   const allowed = new Set(deriveTenants(s.groups).map(stripGroupDomain))
   if (allowed.size === 0) throw new Error('Forbidden: operador sem tenant')
   const groups = await getUserGroups(username)
   if (!groups) throw new Error('Forbidden: não foi possível validar o tenant do usuário')
-  if (options.allowUnassigned && groups.length === 0) return
-  const targetTenants = new Set(deriveTenants(groups).map(stripGroupDomain))
-  if (![...targetTenants].some((tenant) => allowed.has(tenant))) {
+  const normalized = normalizeGroupNames(groups)
+  if (normalized.some((group) => PLATFORM_ADMIN_GROUPS.has(group) || group.startsWith('idm_') && group.endsWith('_admins'))) {
+    throw new Error('Forbidden: identidade privilegiada exige administrador de plataforma')
+  }
+  const targetTenants = new Set(deriveTenants(normalized).map(stripGroupDomain))
+  // A global identity mutation affects every tenant of the target. A shared
+  // tenant alone is insufficient; unassigned identities have no proven owner.
+  if (targetTenants.size === 0 || ![...targetTenants].every((tenant) => allowed.has(tenant))) {
     throw new Error('Forbidden: usuário fora do tenant do operador')
   }
 }
