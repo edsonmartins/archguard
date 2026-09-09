@@ -6,6 +6,7 @@ import viteReact from '@vitejs/plugin-react'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
 import { fileURLToPath, URL } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
+import { clientPersistenceBoundary } from './build/client-boundary'
 
 // SSR-only TanStack modules leak into the client bundle through barrel
 // re-exports (router-core 1.160 imports `node:stream` and async_hooks at
@@ -135,5 +136,6 @@ export default defineConfig({
     tanstackStart(),
     viteReact(),
     stubServerOnlyForClient(),
+    clientPersistenceBoundary(),
   ],
 })

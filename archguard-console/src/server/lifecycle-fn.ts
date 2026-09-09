@@ -3,7 +3,7 @@
 // Warpgate/sites are loaded via dynamic import inside handlers so the client
 // Vite graph never pulls node:https / better-sqlite3 (see docker build).
 
-import { createServerFn } from '@tanstack/react-start'
+import { createServerFn, createServerOnlyFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { recordActivity } from './activity-log'
 import {
@@ -176,7 +176,7 @@ export const provisionPersonAccessFn = createServerFn({ method: 'POST' })
  * Resolve Warpgate role names that should unlock a target for an operator.
  * Priority: explicit role → WG target roles → site SoT target/site roles.
  */
-export async function resolveGrantRoles(
+export const resolveGrantRoles = createServerOnlyFn(async function resolveGrantRoles(
   target: string,
   explicitRole?: string,
 ): Promise<{ roles: string[]; detail: string }> {
@@ -225,7 +225,7 @@ export async function resolveGrantRoles(
     roles: [],
     detail: fromWg.detail || `no roles for target ${target}`,
   }
-}
+})
 
 export type GrantPersonTargetInput = {
   username: string
@@ -247,7 +247,7 @@ export type GrantPersonTargetResult = {
  * Core grant logic (Warpgate live bind + orch best-effort).
  * Used by Manager UI server-fn and lab smoke API.
  */
-export async function runGrantPersonTarget(
+export const runGrantPersonTarget = createServerOnlyFn(async function runGrantPersonTarget(
   data: GrantPersonTargetInput,
   actor: string,
 ): Promise<GrantPersonTargetResult> {
@@ -378,7 +378,7 @@ export async function runGrantPersonTarget(
       ? `Grant ${data.target} → ${data.username} (Warpgate role bound)`
       : `Grant falhou para ${data.username}: confira target aplicado e role WG`,
   }
-}
+})
 
 /** Grant target access: Warpgate user↔role (live) + orch best-effort. */
 export const grantPersonTargetFn = createServerFn({ method: 'POST' })

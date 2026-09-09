@@ -1,6 +1,6 @@
 // src/server/auth.ts
 
-import { createServerFn } from '@tanstack/react-start'
+import { createServerFn, createServerOnlyFn } from '@tanstack/react-start'
 import {
   getCookie,
   setCookie,
@@ -117,7 +117,7 @@ function evaluateAccess(groups: string[]) {
   return { isAdmin, hasAccess }
 }
 
-export async function exchangeCodeForTokens(
+export const exchangeCodeForTokens = createServerOnlyFn(async function exchangeCodeForTokens(
   code: string,
   codeVerifier: string,
   redirectUri: string,
@@ -139,7 +139,7 @@ export async function exchangeCodeForTokens(
   }
 
   return (await response.json()) as TokenResponse
-}
+})
 
 interface TokenResponse {
   access_token: string
@@ -173,7 +173,7 @@ async function exchangeRefreshTokenForTokens(
  * id_token and re-derives groups/permissions, so any group changes upstream
  * propagate on every refresh.
  */
-export async function sessionFromTokens(
+export const sessionFromTokens = createServerOnlyFn(async function sessionFromTokens(
   tokens: TokenResponse,
 ): Promise<SessionData | null> {
   const claims = await verifyIdToken(tokens.id_token)
@@ -211,7 +211,7 @@ export async function sessionFromTokens(
     refreshToken: tokens.refresh_token,
     authTime,
   }
-}
+})
 
 async function tryRefreshSession(
   current: SessionData,
