@@ -63,7 +63,7 @@ export function PersonDetailPage() {
   const { personId } = Route.useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { data: person, isLoading } = usePerson(personId)
+  const { data: person, isLoading, isError, refetch } = usePerson(personId)
   const { data: credentials } = usePersonCredentials(personId)
   const deletePerson = useDeletePerson()
   const [showDelete, setShowDelete] = useState(false)
@@ -160,6 +160,13 @@ export function PersonDetailPage() {
     },
     onError: (e) => toast.error((e as Error).message),
   })
+
+  if (isError) {
+    return <div role="alert" className="space-y-3 p-6">
+      <p>Não foi possível consultar esta identidade. O detalhe global exige administrador de plataforma; a consulta por tenant ainda não está disponível.</p>
+      <Button onClick={() => void refetch()}>Tentar novamente</Button>
+    </div>
+  }
 
   if (isLoading || !person) {
     return <PersonDetailSkeleton />

@@ -56,7 +56,7 @@ import type { Person } from '@/lib/api/types/archguard'
 
 export function PersonListPage() {
   const { t } = useTranslation()
-  const { data: persons, isLoading } = usePersons()
+  const { data: persons, isLoading, isError, refetch } = usePersons()
   const deletePerson = useDeletePerson()
   const { filterPersons } = useTenantFilter()
 
@@ -274,6 +274,13 @@ export function PersonListPage() {
       pagination: { pageSize: 25 },
     },
   })
+
+  if (isError) {
+    return <div role="alert" className="space-y-3 p-6">
+      <p>Não foi possível consultar as identidades. A listagem global exige administrador de plataforma; a consulta por tenant ainda não está disponível.</p>
+      <Button onClick={() => void refetch()}>Tentar novamente</Button>
+    </div>
+  }
 
   if (isLoading) {
     return <PersonListSkeleton />

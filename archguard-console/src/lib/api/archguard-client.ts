@@ -1,6 +1,7 @@
 // src/lib/api/archguard-client.ts
 
 import { archguardApiFn } from '@/server/archguard-proxy'
+import { resetPersonCredentialFn } from '@/server/person-credential-fn'
 import {
   normalizePerson,
   normalizeCredentialStatus,
@@ -78,7 +79,7 @@ export const personApi = {
   },
 
   createResetToken: (id: string, ttl = 3600) =>
-    api('POST', `/v1/person/${encodeURIComponent(id)}/_credential/_update_intent/${ttl}`),
+    resetPersonCredentialFn({ data: { id, ttl } }),
 }
 
 // ── GROUPS ───────────────────────────────────────
