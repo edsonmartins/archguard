@@ -190,6 +190,12 @@ export const archguardApiFn = createServerFn({ method: 'POST' })
 
     const needed = requiredPermsForarchguardProxy(data.method, data.path)
     try {
+      // This legacy transport uses a global service account and has no
+      // authoritative resource-to-tenant mapping. Operation permission alone
+      // must not grant access to global collections or arbitrary identities.
+      if (!(data.method === 'GET' && data.path === '/status')) {
+        requireAnyPerm(session, ['system:admin'], 'proxy global exige administrador de plataforma')
+      }
       requireAnyPerm(session, needed, needed.join(' | '))
     } catch (e) {
       logger.warn(
