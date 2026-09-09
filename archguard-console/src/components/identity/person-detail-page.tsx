@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 // src/components/identity/person-detail-page.tsx
 
 import { useState } from 'react'
+import { reactivatePersonFn } from '@/server/reactivation-fn'
 import { useNavigate } from '@tanstack/react-router'
 import { Route } from '@/routes/_authed/identities/$personId'
 import {
@@ -68,6 +69,17 @@ export function PersonDetailPage() {
   const [showDelete, setShowDelete] = useState(false)
   const [showReset, setShowReset] = useState(false)
   const [showRevoke, setShowRevoke] = useState(false)
+  const [showReactivate, setShowReactivate] = useState(false)
+  const reactivate = useMutation({
+    mutationFn: () => reactivatePersonFn({ data: { username: person!.username } }),
+    onSuccess: (result) => {
+      setShowReactivate(false)
+      toast.success(result.message)
+      void queryClient.invalidateQueries({ queryKey: queryKeys.persons.all })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.persons.detail(personId) })
+    },
+    onError: (error) => toast.error((error as Error).message),
+  })
   const [showProvision, setShowProvision] = useState(false)
   const [showGrant, setShowGrant] = useState(false)
   const [revokeSteps, setRevokeSteps] = useState<OffboardStep[] | null>(null)
@@ -217,6 +229,11 @@ export function PersonDetailPage() {
             </Button>
           </PermissionGate>
           <PermissionGate require="persons:credentials">
+            <PermissionGate require="system:admin">
+              <Button variant="outline" onClick={() => setShowReactivate(true)} disabled={reactivate.isPending}>
+                Reativar login
+              </Button>
+            </PermissionGate>
             <Button variant="outline" onClick={() => setShowReset(true)}>
               <KeySquare className="mr-2 h-4 w-4" />
               Reset Credencial
@@ -489,6 +506,16 @@ export function PersonDetailPage() {
         onConfirm={() => {
           revokeAccess.mutate()
         }}
+      />
+
+      <ConfirmDialog
+        open={showReactivate}
+        onOpenChange={setShowReactivate}
+        title="Reativar login"
+        description="Exige novo login pelo console. Sessões anteriores continuam inválidas. O acesso por token do Connect permanece bloqueado até suportar nova autenticação verificável. Revise as concessões antes de liberar o usuário."
+        confirmText={person.username}
+        isLoading={reactivate.isPending}
+        onConfirm={() => reactivate.mutate()}
       />
 
       <ConfirmDialog

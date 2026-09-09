@@ -10,7 +10,7 @@ import { z } from 'zod'
 import { encryptSession, decryptSession } from './session'
 import { verifyIdToken } from './jwt'
 import { logger } from './logger'
-import { isPrincipalRevoked } from './principal-revocation'
+import { isPrincipalSessionRevoked } from './principal-revocation'
 import { normalizeGroupNames } from './idp/groups'
 import { enforceRateLimit } from './rate-limit'
 import { derivePermissions, type Permission } from '../lib/auth/permissions'
@@ -26,6 +26,8 @@ export interface SessionUser {
 }
 
 export interface SessionData {
+  /** Original authentication time from a verified IdP token (seconds). */
+  authTime?: number
   isAuthenticated: boolean
   isAdmin: boolean
   user: SessionUser
@@ -175,7 +177,8 @@ export async function sessionFromTokens(
   tokens: TokenResponse,
 ): Promise<SessionData | null> {
   const claims = await verifyIdToken(tokens.id_token)
-  if (isPrincipalRevoked(String(claims.preferred_username || claims.name || ''))) return null
+  const authTime = typeof claims.auth_time === 'number' ? claims.auth_time : undefined
+  if (isPrincipalSessionRevoked(String(claims.preferred_username || claims.name || ''), authTime)) return null
   const rawGroups: string[] = (claims.groups as string[]) || []
   const groups = normalizeGroups(rawGroups)
   const { isAdmin, hasAccess } = evaluateAccess(groups)
@@ -206,6 +209,7 @@ export async function sessionFromTokens(
     permissions: derivePermissions(groups),
     expiresAt: Date.now() + tokens.expires_in * 1000,
     refreshToken: tokens.refresh_token,
+    authTime,
   }
 }
 
@@ -238,7 +242,7 @@ export const getSessionFn = createServerFn({ method: 'GET' }).handler(
       return null
     }
 
-    if (isPrincipalRevoked(session.user?.name)) {
+    if (isPrincipalSessionRevoked(session.user?.name, session.authTime)) {
       deleteCookie('archguard_session', { path: '/' })
       return null
     }

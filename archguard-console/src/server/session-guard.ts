@@ -10,7 +10,7 @@ import {
 } from '@/lib/auth/permissions'
 import { deriveTenants, stripGroupDomain } from '@/lib/auth/roles'
 import { getUserGroups } from './idp'
-import { isPrincipalRevoked } from './principal-revocation'
+import { isPrincipalSessionRevoked } from './principal-revocation'
 import type { Site } from '@/lib/api/types/site'
 
 /**
@@ -24,7 +24,7 @@ export function getSessionOrNull(): SessionData | null {
     if (!cookie) return null
     const s = decryptSession<SessionData>(cookie)
     if (!s?.isAuthenticated) return null
-    if (isPrincipalRevoked(s.user?.name)) return null
+    if (isPrincipalSessionRevoked(s.user?.name, s.authTime)) return null
     if (typeof s.expiresAt === 'number' && s.expiresAt <= Date.now()) {
       return null
     }
@@ -37,7 +37,7 @@ export function getSessionOrNull(): SessionData | null {
 /** True when session is present, authenticated, and not past expiresAt. */
 export function isSessionLive(s: SessionData | null | undefined): boolean {
   if (!s?.isAuthenticated) return false
-  if (isPrincipalRevoked(s.user?.name)) return false
+  if (isPrincipalSessionRevoked(s.user?.name, s.authTime)) return false
   if (typeof s.expiresAt === 'number' && s.expiresAt <= Date.now()) return false
   return true
 }

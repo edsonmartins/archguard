@@ -1,14 +1,14 @@
 import { closeRustGuacSession } from './rustguac-proxy'
 import { closeBrokerSession, getBrokerSession, registerBrokerSession } from './db'
 import { revokeLease } from './openbao-proxy'
-import { isPrincipalRevoked } from './principal-revocation'
+import { isPrincipalSessionRevoked } from './principal-revocation'
 
 /** Register before checking so an offboarding scan cannot miss this session. */
 export async function admitBrokerSession(
-  sessionId: string, principal: string, leaseId?: string, tenant?: string,
+  sessionId: string, principal: string, leaseId?: string, tenant?: string, authTime?: number,
 ): Promise<void> {
   registerBrokerSession(sessionId, leaseId, principal, tenant)
-  if (isPrincipalRevoked(principal)) {
+  if (isPrincipalSessionRevoked(principal, authTime)) {
     await closeBrokerSessionAndLease(sessionId)
     throw new Error('Unauthorized: principal revoked during session creation')
   }

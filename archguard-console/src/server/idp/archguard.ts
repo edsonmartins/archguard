@@ -261,3 +261,14 @@ export const archguardAdmin: IdentityAdmin = {
     }
   },
 }
+
+export async function enableArchGuardUser(username: string): Promise<AdminStep> {
+  if (!archguardAdmin.configured()) return { ok: false, detail: 'IdP not configured' }
+  const user = await getUser(username)
+  if (!user) return { ok: false, detail: 'User not found' }
+  const result = await call('POST',
+    `/api/update-user?id=${encodeURIComponent(qualify(username))}&columns=is_forbidden`,
+    { ...user, isForbidden: false },
+  )
+  return { ok: ok(result.env), detail: ok(result.env) ? 'Login enabled' : 'IdP refused reactivation' }
+}

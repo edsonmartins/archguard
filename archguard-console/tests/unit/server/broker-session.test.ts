@@ -3,7 +3,7 @@ const mocks = vi.hoisted(() => ({ close: vi.fn(), revoke: vi.fn(), get: vi.fn(),
 vi.mock('@/server/rustguac-proxy', () => ({ closeRustGuacSession: mocks.close }))
 vi.mock('@/server/openbao-proxy', () => ({ revokeLease: mocks.revoke }))
 vi.mock('@/server/db', () => ({ getBrokerSession: mocks.get, closeBrokerSession: mocks.mark, registerBrokerSession: mocks.register }))
-vi.mock('@/server/principal-revocation', () => ({ isPrincipalRevoked: mocks.blocked }))
+vi.mock('@/server/principal-revocation', () => ({ isPrincipalSessionRevoked: mocks.blocked }))
 import { closeBrokerSessionAndLease, admitBrokerSession } from '@/server/broker-session'
 import { offboardingResult } from '@/server/offboarding-result'
 beforeEach(() => {

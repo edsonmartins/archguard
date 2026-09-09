@@ -4,7 +4,7 @@ import { timingSafeEqual } from 'node:crypto'
 import type { SessionData } from './auth'
 import { requireUnifiedSession } from './unified-bff'
 import { logger } from './logger'
-import { isPrincipalRevoked } from './principal-revocation'
+import { isPrincipalSessionRevoked } from './principal-revocation'
 import { discover } from './idp/discovery'
 import { normalizeGroupNames } from './idp/groups'
 import { resolveArchGuardSessionContext } from './archguard-session-context'
@@ -101,7 +101,7 @@ export async function resolveOperatorSession(
   const token = m[1]
   const lab = labSession(token)
   if (lab) {
-    if (isPrincipalRevoked(lab.user.name)) throw new Error('Unauthorized')
+    if (isPrincipalSessionRevoked(lab.user.name)) throw new Error('Unauthorized')
     return lab
   }
   // A `lab-` bearer never falls through to the IdP — it is not an OIDC token.
@@ -129,7 +129,9 @@ export async function resolveOperatorSession(
     groups?: string[]
   }
   const username = ui.preferred_username || ui.name || ui.email || 'operator'
-  if (isPrincipalRevoked(username)) throw new Error('Unauthorized')
+  // Userinfo does not prove when authentication happened. Reactivated users
+  // must use a verified cookie flow until bearer auth_time is supported.
+  if (isPrincipalSessionRevoked(username)) throw new Error('Unauthorized: fresh verified login required')
   // archguard sends name@domain, ArchGuard sends <org>/name — normalize once here
   // so every consumer downstream compares bare group names.
   const groups = normalizeGroupNames(ui.groups)
