@@ -121,11 +121,15 @@ type CasdoorUser = {
 }
 
 async function getUser(username: string): Promise<CasdoorUser | null> {
-  const { env } = await call<CasdoorUser>(
+  if (!username || username.trim() !== username || /[\\/\x00-\x1f\x7f]/.test(username)) return null
+  const { status, env } = await call<CasdoorUser>(
     'GET',
     `/api/get-user?id=${encodeURIComponent(qualify(username))}`,
   )
-  if (!ok(env) || !env.data) return null
+  if (status < 200 || status >= 300 || !ok(env) || !env.data) return null
+  if (env.data.name !== username || env.data.owner !== org()) return null
+  if (env.data.groups !== undefined && (!Array.isArray(env.data.groups) ||
+    !env.data.groups.every((group) => typeof group === 'string' && group.length > 0 && group.trim() === group))) return null
   return env.data
 }
 
@@ -226,6 +230,10 @@ export const archguardAdmin: IdentityAdmin = {
     if (!this.configured()) return null
     const user = await getUser(username)
     if (!user) return null
+    // Do not strip an arbitrary organization prefix and turn a foreign group
+    // into local tenant authority. Unknown/malformed membership fails closed.
+    if (user.groups?.some((group) => group.includes('/') &&
+      (!group.startsWith(`${org()}/`) || group.split('/').length !== 2 || !group.split('/')[1]))) return null
     return Array.isArray(user.groups)
       ? user.groups.map((group) => group.includes('/') ? group.split('/').pop()! : group)
       : []

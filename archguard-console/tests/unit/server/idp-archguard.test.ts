@@ -175,6 +175,48 @@ describe('addUserToGroup', () => {
   })
 })
 
+describe('authoritative user lookup', () => {
+  it.each([
+    { owner: 'other-org', name: 'op.a', groups: ['tenant_a'] },
+    { owner: 'archgate', name: 'other-user', groups: ['tenant_a'] },
+    { owner: 'archgate', name: 'op.a', groups: 'tenant_a' },
+    { owner: 'archgate', name: 'op.a', groups: [123] },
+    { owner: 'archgate', name: 'op.a', groups: ['other-org/tenant_a'] },
+    { owner: 'archgate', name: 'op.a', groups: ['archgate/other/tenant_a'] },
+    { owner: 'archgate', name: 'op.a', groups: ['archgate/'] },
+  ])('rejects untrusted membership evidence: %j', async (user) => {
+    await load()
+    fetchMock.mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(json({ status: 'ok', data: user }))
+    await expect(archguardAdmin.getUserGroups!('op.a')).resolves.toBeNull()
+    expect(urlsCalled().some((url) => url.includes('update-user'))).toBe(false)
+  })
+
+  it('accepts membership in the configured organization', async () => {
+    await load()
+    fetchMock.mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(json({
+      status: 'ok', data: { owner: 'archgate', name: 'op.a', groups: ['archgate/tenant_a', 'archguard_users'] },
+    }))
+    await expect(archguardAdmin.getUserGroups!('op.a')).resolves.toEqual(['tenant_a', 'archguard_users'])
+  })
+
+  it('rejects HTTP failure even when the envelope says ok', async () => {
+    await load()
+    fetchMock.mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(json({
+      status: 'ok', data: { owner: 'archgate', name: 'op.a', groups: ['tenant_a'] },
+    }, 500))
+    await expect(archguardAdmin.getUserGroups!('op.a')).resolves.toBeNull()
+  })
+
+  it('does not disable a different identity returned by the IdP', async () => {
+    await load()
+    fetchMock.mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(json({
+      status: 'ok', data: { owner: 'archgate', name: 'other-user' },
+    }))
+    await expect(archguardAdmin.disableUser('op.a')).resolves.toMatchObject({ ok: false })
+    expect(urlsCalled().some((url) => url.includes('update-user'))).toBe(false)
+  })
+})
+
 describe('disableUser', () => {
   it('sets isForbidden without deleting the subject', async () => {
     await load()
