@@ -2,9 +2,10 @@
 
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
-import { getRecordingRetention, setRecordingRetention } from '@/server/rustguac-proxy'
+import { getRecordingRetention, listRustGuacRecordings, setRecordingRetention } from '@/server/rustguac-proxy'
 import { resolveOperatorSession } from '@/server/operator-session'
-import { requireAnyPerm, sessionActor } from '@/server/session-guard'
+import { hasAnyPerm, requireAnyPerm, sessionActor } from '@/server/session-guard'
+import { getBrokerSession } from '@/server/db'
 import { recordActivity } from '@/server/activity-log'
 import { unifiedCorsHeaders } from '@/server/unified-cors'
 
@@ -27,6 +28,17 @@ export const Route = createFileRoute('/api/unified/v1/recordings/$name/retention
           requireAnyPerm(session, ['gateways:manage', 'system:admin'], 'gateways:manage')
           if (!/^[0-9a-f-]{36}\.guac$/i.test(params.name)) {
             return new Response(JSON.stringify({ error: 'recording not found' }), { status: 404, headers })
+          }
+          const recording = (await listRustGuacRecordings()).find((item) => item.name === params.name)
+          if (!recording) {
+            return new Response(JSON.stringify({ error: 'recording not found' }), { status: 404, headers })
+          }
+          if (!hasAnyPerm(session, ['system:admin'])) {
+            const broker = getBrokerSession(params.name.replace(/\.guac$/i, ''))
+            const principal = session.user?.name || session.user?.email || 'unknown'
+            if (!broker || broker.principal !== principal) {
+              return new Response(JSON.stringify({ error: 'recording not found' }), { status: 404, headers })
+            }
           }
           const parsed = bodySchema.safeParse(await request.json().catch(() => ({})))
           if (!parsed.success) return new Response(JSON.stringify({ error: parsed.error.message }), { status: 400, headers })
