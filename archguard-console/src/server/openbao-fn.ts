@@ -116,7 +116,9 @@ export const revokeOpenBaoLeaseFn = createServerFn({ method: 'POST' })
   })
   .handler(async ({ data }) => {
     const s = requireSession()
-    requireAnyPerm(s, ['secrets:manage'], 'secrets:manage')
+    // This legacy operation accepts only a lease ID and has no authoritative
+    // principal/tenant inventory. Do not delegate arbitrary lease revocation.
+    requireAnyPerm(s, ['system:admin'], 'revogação global de lease exige administrador de plataforma')
     await revokeLease(data.lease_id)
     return { ok: true }
   })
