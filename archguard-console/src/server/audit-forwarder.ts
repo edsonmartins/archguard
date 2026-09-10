@@ -2,6 +2,7 @@ import { claimAuditOutbox, markAuditFailed, markAuditPublished, recoverStaleAudi
 import { logger } from './logger'
 
 let running = false
+let timer: ReturnType<typeof setInterval> | undefined
 
 /**
  * Best-effort forwarder. Disabled unless an explicit HTTPS endpoint is set;
@@ -50,3 +51,22 @@ export async function forwardAuditBatch(): Promise<number> {
   }
   return published
 }
+
+/** Start the durable retry loop only when a destination is explicitly set. */
+export function startAuditForwarder(): void {
+  if (timer || !process.env.AUDIT_OUTBOX_FORWARDER_URL?.trim()) return
+  const configured = Number(process.env.AUDIT_OUTBOX_FORWARDER_INTERVAL_MS)
+  const intervalMs = Number.isFinite(configured)
+    ? Math.min(Math.max(configured, 5_000), 15 * 60_000)
+    : 30_000
+  timer = setInterval(() => {
+    void forwardAuditBatch().catch((error) => {
+      logger.warn({ err: String(error) }, 'audit forwarder cycle failed')
+    })
+  }, intervalMs)
+  timer.unref?.()
+}
+
+// The module is server-only. Do not create a timer in local/test processes
+// unless an explicit destination is configured.
+startAuditForwarder()
