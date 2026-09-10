@@ -273,6 +273,8 @@ function migrate(db: Database.Database): void {
     'ALTER TABLE activity_log ADD COLUMN principal TEXT',
     'ALTER TABLE activity_log ADD COLUMN tenant_ids TEXT',
     'ALTER TABLE audit_outbox ADD COLUMN claimed_at TEXT',
+    'ALTER TABLE broker_sessions ADD COLUMN target TEXT',
+    'ALTER TABLE broker_sessions ADD COLUMN lease_expires_at TEXT',
   ]) {
     try { db.exec(statement) } catch { /* column already exists */ }
   }
@@ -329,17 +331,43 @@ export function getDb(): Database.Database {
   return _db
 }
 
-export function registerBrokerSession(sessionId: string, leaseId?: string, principal?: string, tenant?: string): void {
+export function registerBrokerSession(sessionId: string, leaseId?: string, principal?: string, tenant?: string, target?: string, leaseExpiresAt?: string): void {
   getDb().prepare(
-    `INSERT OR REPLACE INTO broker_sessions (session_id, lease_id, principal, tenant, created_at, closed_at)
-     VALUES (?, ?, ?, ?, ?, NULL)`,
-  ).run(sessionId, leaseId || null, principal || null, tenant || null, new Date().toISOString())
+    `INSERT OR REPLACE INTO broker_sessions (session_id, lease_id, principal, tenant, target, lease_expires_at, created_at, closed_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, NULL)`,
+  ).run(sessionId, leaseId || null, principal || null, tenant || null, target || null, leaseExpiresAt || null, new Date().toISOString())
 }
 
-export function getBrokerSession(sessionId: string): { lease_id: string | null; principal: string | null; tenant: string | null; closed_at: string | null } | undefined {
+export function getBrokerSession(sessionId: string): { lease_id: string | null; principal: string | null; tenant: string | null; target: string | null; lease_expires_at: string | null; closed_at: string | null } | undefined {
   return getDb().prepare(
-    'SELECT lease_id, principal, tenant, closed_at FROM broker_sessions WHERE session_id = ?',
-  ).get(sessionId) as { lease_id: string | null; principal: string | null; tenant: string | null; closed_at: string | null } | undefined
+    'SELECT lease_id, principal, tenant, target, lease_expires_at, closed_at FROM broker_sessions WHERE session_id = ?',
+  ).get(sessionId) as { lease_id: string | null; principal: string | null; tenant: string | null; target: string | null; lease_expires_at: string | null; closed_at: string | null } | undefined
+}
+
+export type BrokerLeaseInventory = {
+  session_id: string
+  lease_id: string
+  principal: string
+  tenant: string | null
+  target: string | null
+  lease_expires_at: string | null
+  closed_at: string | null
+}
+
+/** Inventory is limited to leases emitted and owned by this console. */
+export function listBrokerLeaseInventory(): BrokerLeaseInventory[] {
+  return getDb().prepare(
+    `SELECT session_id, lease_id, principal, tenant, target, lease_expires_at, closed_at
+       FROM broker_sessions WHERE lease_id IS NOT NULL ORDER BY created_at DESC`,
+  ).all() as BrokerLeaseInventory[]
+}
+
+export function listExpiredBrokerLeases(now = new Date().toISOString()): BrokerLeaseInventory[] {
+  return getDb().prepare(
+    `SELECT session_id, lease_id, principal, tenant, target, lease_expires_at, closed_at
+       FROM broker_sessions WHERE lease_id IS NOT NULL AND closed_at IS NULL
+       AND lease_expires_at IS NOT NULL AND lease_expires_at <= ?`,
+  ).all(now) as BrokerLeaseInventory[]
 }
 
 export function listBrokerSessionsForPrincipal(principal: string): string[] {

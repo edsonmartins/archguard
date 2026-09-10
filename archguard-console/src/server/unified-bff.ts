@@ -194,12 +194,16 @@ export async function createUnifiedSession(
     let password: string | undefined
     let privateKey: string | undefined
     let leaseId: string | undefined
+    let leaseExpiresAt: string | undefined
     let targetUsername = targetConfig.username
     if (targetConfig.openbao_database_role) {
       const { issueDatabaseCredentials } = await import('./openbao-proxy')
       const dynamic = await issueDatabaseCredentials(targetConfig.openbao_database_role)
       password = dynamic.password
       leaseId = dynamic.lease_id
+      if (Number.isFinite(dynamic.lease_duration) && dynamic.lease_duration! > 0) {
+        leaseExpiresAt = new Date(Date.now() + dynamic.lease_duration! * 1000).toISOString()
+      }
       // Dynamic DB credentials carry their own username and must override SoT hints.
       targetUsername = dynamic.username
     }
@@ -209,6 +213,10 @@ export async function createUnifiedSession(
       password = secret?.password || secret?.value || secret?.secret
       privateKey = secret?.private_key || secret?.key
       leaseId = leaseId || secret?.lease_id
+      const secretLeaseDuration = Number(secret?.lease_duration)
+      if (!leaseExpiresAt && Number.isFinite(secretLeaseDuration) && secretLeaseDuration > 0) {
+        leaseExpiresAt = new Date(Date.now() + secretLeaseDuration * 1000).toISOString()
+      }
     }
     const rust = await issueRustGuacSession({
       protocol: proto,
@@ -227,6 +235,8 @@ export async function createUnifiedSession(
       leaseId,
       deriveTenants(session.groups || [])[0],
       session.authTime,
+      hit.target,
+      leaseExpiresAt,
     )
     return { ...rust, embed_mode: 'iframe' as const, launch: { engine: 'rustguac', target: hit.target, protocol: proto } }
   }

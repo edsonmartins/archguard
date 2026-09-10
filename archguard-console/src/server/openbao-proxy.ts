@@ -309,6 +309,7 @@ export async function issueDatabaseCredentials(role: string): Promise<{
   username: string
   password: string
   lease_id: string
+  lease_duration?: number
 }> {
   if (!tokenConfigured()) throw new Error('OPENBAO_APP_TOKEN ausente')
   const safeRole = role.trim()
@@ -320,7 +321,7 @@ export async function issueDatabaseCredentials(role: string): Promise<{
   if (status >= 400 || !data.lease_id || !data.data?.username || !data.data.password) {
     throw new Error(`OpenBao database creds failed: ${status}`)
   }
-  return { username: data.data.username, password: data.data.password, lease_id: data.lease_id }
+  return { username: data.data.username, password: data.data.password, lease_id: data.lease_id, lease_duration: (data as { lease_duration?: number }).lease_duration }
 }
 
 export async function getJwtConfig(): Promise<Record<string, unknown> | null> {

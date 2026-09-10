@@ -1,14 +1,15 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-const mocks = vi.hoisted(() => ({ close: vi.fn(), revoke: vi.fn(), get: vi.fn(), mark: vi.fn(), register: vi.fn(), blocked: vi.fn() }))
+const mocks = vi.hoisted(() => ({ close: vi.fn(), revoke: vi.fn(), get: vi.fn(), mark: vi.fn(), register: vi.fn(), blocked: vi.fn(), expired: vi.fn() }))
 vi.mock('@/server/rustguac-proxy', () => ({ closeRustGuacSession: mocks.close }))
 vi.mock('@/server/openbao-proxy', () => ({ revokeLease: mocks.revoke }))
-vi.mock('@/server/db', () => ({ getBrokerSession: mocks.get, closeBrokerSession: mocks.mark, registerBrokerSession: mocks.register }))
+vi.mock('@/server/db', () => ({ getBrokerSession: mocks.get, closeBrokerSession: mocks.mark, registerBrokerSession: mocks.register, listExpiredBrokerLeases: mocks.expired }))
 vi.mock('@/server/principal-revocation', () => ({ isPrincipalSessionRevoked: mocks.blocked }))
-import { closeBrokerSessionAndLease, admitBrokerSession } from '@/server/broker-session'
+import { closeBrokerSessionAndLease, admitBrokerSession, reconcileExpiredBrokerLeases } from '@/server/broker-session'
 import { offboardingResult } from '@/server/offboarding-result'
 beforeEach(() => {
   vi.resetAllMocks()
   mocks.get.mockReturnValue({ lease_id: 'database/creds/a/one', closed_at: null })
+  mocks.expired.mockReturnValue([])
 })
 it('revokes the exact lease even if gateway cleanup fails and permits retry', async () => {
   mocks.close.mockRejectedValueOnce(new Error('offline'))
@@ -49,4 +50,17 @@ it('admits a session for an unblocked principal without revocation', async () =>
   await admitBrokerSession('session-b', 'bob')
   expect(mocks.close).not.toHaveBeenCalled()
   expect(mocks.revoke).not.toHaveBeenCalled()
+})
+
+it('reconciles only expired sessions and reports partial failures', async () => {
+  mocks.expired.mockReturnValue([
+    { session_id: 'expired-a', lease_id: 'lease-a' },
+    { session_id: 'expired-b', lease_id: 'lease-b' },
+  ])
+  mocks.get.mockImplementation((id: string) => id === 'expired-a'
+    ? { lease_id: 'lease-a', closed_at: null }
+    : undefined)
+  const result = await reconcileExpiredBrokerLeases('2020-01-01T00:00:00.000Z')
+  expect(result).toEqual({ attempted: 2, closed: 1, failed: 1 })
+  expect(mocks.revoke).toHaveBeenCalledWith('lease-a')
 })
