@@ -54,4 +54,29 @@ describe('OpenFGA authorization check', () => {
     expect(fetchMock.mock.calls[2][0]).toBe('http://fga:8080/stores/store-1/write')
     expect(String((fetchMock.mock.calls[2][1] as RequestInit).body)).toContain('deletes')
   })
+
+  it('reads every page and deletes only valid connection tuples in batches', async () => {
+    const tuples = Array.from({ length: 101 }, (_, index) => ({
+      key: { user: 'user:sub-1', relation: 'connect', object: `connection:site/target-${index}` },
+    }))
+    fetchMock
+      .mockResolvedValueOnce(new Response(JSON.stringify({ tuples: tuples.slice(0, 100), continuation_token: 'next-page' }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ tuples: tuples.slice(100) }), { status: 200 }))
+      .mockResolvedValueOnce(new Response('{}', { status: 200 }))
+      .mockResolvedValueOnce(new Response('{}', { status: 200 }))
+    const { deleteOpenFgaGrantsForUser } = await import('@/server/openfga')
+    await expect(deleteOpenFgaGrantsForUser('user:sub-1')).resolves.toBe(101)
+    expect(fetchMock).toHaveBeenCalledTimes(4)
+    expect(String((fetchMock.mock.calls[1][1] as RequestInit).body)).toContain('next-page')
+    expect(String((fetchMock.mock.calls[2][1] as RequestInit).body)).toContain('target-0')
+    expect(String((fetchMock.mock.calls[3][1] as RequestInit).body)).toContain('target-100')
+  })
+
+  it('fails closed on malformed tuples or repeated pagination', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ tuples: [{ key: { user: 'user:other', relation: 'connect', object: 'connection:x' } }] }), { status: 200 }))
+    const { deleteOpenFgaGrantsForUser } = await import('@/server/openfga')
+    await expect(deleteOpenFgaGrantsForUser('user:sub-1')).rejects.toThrow('invalid grant tuple')
+    fetchMock.mockReset().mockImplementation(async () => new Response(JSON.stringify({ tuples: [], continuation_token: 'same' }), { status: 200 }))
+    await expect(deleteOpenFgaGrantsForUser('user:sub-1')).rejects.toThrow('pagination token repeated')
+  })
 })

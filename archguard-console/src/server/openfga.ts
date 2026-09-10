@@ -87,25 +87,53 @@ export async function deleteOpenFgaGrantsForUser(user: string): Promise<number> 
   const c = config()
   if (!c.enabled) return 0
   if (!openFgaConfigured()) throw new Error('OpenFGA is not configured')
-  const read = await integrationFetch(
-    `${c.url}/stores/${encodeURIComponent(c.store)}/read`,
-    {
+  if (!/^user:[^\s]+$/.test(user)) throw new Error('OpenFGA user subject invalid')
+  const tuples: TupleKey[] = []
+  let continuationToken: string | undefined
+  const seenTokens = new Set<string>()
+  for (let page = 0; page < 100; page += 1) {
+    const read = await integrationFetch(
+      `${c.url}/stores/${encodeURIComponent(c.store)}/read`,
+      {
+        method: 'POST',
+        integration: 'openfga',
+        headers: { Authorization: `Bearer ${c.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tuple_key: { user, relation: 'connect' },
+          ...(continuationToken ? { continuation_token: continuationToken } : {}),
+        }),
+      },
+    )
+    if (!read.ok) throw new Error(`OpenFGA read failed: ${read.status}`)
+    const body = (await read.json()) as {
+      tuples?: Array<{ key?: Partial<TupleKey> }>
+      continuation_token?: string
+    }
+    for (const tuple of body.tuples || []) {
+      const key = tuple.key
+      if (!key || key.user !== user || key.relation !== 'connect' ||
+        typeof key.object !== 'string' || !key.object.startsWith('connection:')) {
+        throw new Error('OpenFGA returned an invalid grant tuple')
+      }
+      tuples.push(key as TupleKey)
+    }
+    const next = body.continuation_token?.trim()
+    if (!next) break
+    if (seenTokens.has(next)) throw new Error('OpenFGA pagination token repeated')
+    seenTokens.add(next)
+    continuationToken = next
+    if (page === 99) throw new Error('OpenFGA grant pagination exceeded limit')
+  }
+  let removed = 0
+  for (let i = 0; i < tuples.length; i += 100) {
+    const res = await integrationFetch(`${c.url}/stores/${encodeURIComponent(c.store)}/write`, {
       method: 'POST',
       integration: 'openfga',
       headers: { Authorization: `Bearer ${c.token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tuple_key: { user, relation: 'connect', object: 'connection:' } }),
-    },
-  )
-  if (!read.ok) throw new Error(`OpenFGA read failed: ${read.status}`)
-  const body = (await read.json()) as { tuples?: Array<{ key?: TupleKey }> }
-  const tuples = (body.tuples || []).map((tuple) => tuple.key).filter((key): key is TupleKey => Boolean(key))
-  if (!tuples.length) return 0
-  const res = await integrationFetch(`${c.url}/stores/${encodeURIComponent(c.store)}/write`, {
-    method: 'POST',
-    integration: 'openfga',
-    headers: { Authorization: `Bearer ${c.token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ deletes: { tuple_keys: tuples } }),
-  })
-  if (!res.ok) throw new Error(`OpenFGA delete failed: ${res.status}`)
-  return tuples.length
+      body: JSON.stringify({ deletes: { tuple_keys: tuples.slice(i, i + 100) } }),
+    })
+    if (!res.ok) throw new Error(`OpenFGA delete failed: ${res.status}`)
+    removed += Math.min(100, tuples.length - i)
+  }
+  return removed
 }
