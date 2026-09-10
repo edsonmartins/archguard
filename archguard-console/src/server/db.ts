@@ -341,6 +341,14 @@ export function listBrokerSessionsForPrincipal(principal: string): string[] {
   ).all(principal) as { session_id: string }[]).map((row) => row.session_id)
 }
 
+/** Historical ownership index used for recording access after session close. */
+export function listBrokerRecordingSessionsForPrincipal(principal: string): string[] {
+  return (getDb().prepare(
+    `SELECT session_id FROM broker_sessions
+       WHERE principal = ? AND session_id IS NOT NULL`,
+  ).all(principal) as { session_id: string }[]).map((row) => row.session_id)
+}
+
 export function closeBrokerSession(sessionId: string): void {
   getDb().prepare(
     'UPDATE broker_sessions SET closed_at = ? WHERE session_id = ? AND closed_at IS NULL',
