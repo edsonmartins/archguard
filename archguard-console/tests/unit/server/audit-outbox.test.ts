@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { _resetDbForTests, getDb } from '@/server/db'
 import { recordActivity } from '@/server/activity-log'
-import { claimAuditOutbox, markAuditFailed, markAuditPublished } from '@/server/audit-outbox'
+import { claimAuditOutbox, markAuditFailed, markAuditPublished, recoverStaleAuditClaims } from '@/server/audit-outbox'
 
 describe('audit outbox', () => {
   let dir: string | undefined
@@ -29,5 +29,30 @@ describe('audit outbox', () => {
     markAuditFailed(claimed[0].event_id, 'temporary')
     expect(claimAuditOutbox()).toHaveLength(0)
     markAuditPublished(claimed[0].event_id)
+  })
+
+  it('requeues a publishing claim left by a crashed forwarder', () => {
+    dir = mkdtempSync(join(tmpdir(), 'archgate-audit-recovery-'))
+    process.env.ARCHGUARD_DB_PATH = join(dir, 'console.sqlite')
+    recordActivity('POST', '/archgate/sites/site-a', 'actor-a', 'success')
+    const claimed = claimAuditOutbox()
+    expect(claimed).toHaveLength(1)
+    getDb().prepare("UPDATE audit_outbox SET claimed_at = ?, available_at = ? WHERE event_id = ?")
+      .run(new Date(Date.now() - 120_000).toISOString(), new Date(Date.now() - 120_000).toISOString(), claimed[0].event_id)
+    expect(recoverStaleAuditClaims()).toBe(1)
+    const row = getDb().prepare('SELECT status, available_at, claimed_at, last_error FROM audit_outbox').get() as Record<string, unknown>
+    expect(row.status).toBe('failed')
+    expect(row.claimed_at).toBeNull()
+    expect(row.last_error).toContain('claim expired')
+    expect(claimAuditOutbox()).toHaveLength(1)
+  })
+
+  it('does not reclaim a fresh publishing claim', () => {
+    dir = mkdtempSync(join(tmpdir(), 'archgate-audit-fresh-'))
+    process.env.ARCHGUARD_DB_PATH = join(dir, 'console.sqlite')
+    recordActivity('POST', '/archgate/sites/site-a', 'actor-a', 'success')
+    expect(claimAuditOutbox()).toHaveLength(1)
+    expect(recoverStaleAuditClaims()).toBe(0)
+    expect(claimAuditOutbox()).toHaveLength(0)
   })
 })

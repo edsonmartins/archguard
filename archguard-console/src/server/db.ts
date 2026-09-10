@@ -272,6 +272,7 @@ function migrate(db: Database.Database): void {
   for (const statement of [
     'ALTER TABLE activity_log ADD COLUMN principal TEXT',
     'ALTER TABLE activity_log ADD COLUMN tenant_ids TEXT',
+    'ALTER TABLE audit_outbox ADD COLUMN claimed_at TEXT',
   ]) {
     try { db.exec(statement) } catch { /* column already exists */ }
   }

@@ -1,4 +1,4 @@
-import { claimAuditOutbox, markAuditFailed, markAuditPublished } from './audit-outbox'
+import { claimAuditOutbox, markAuditFailed, markAuditPublished, recoverStaleAuditClaims } from './audit-outbox'
 import { logger } from './logger'
 
 let running = false
@@ -17,6 +17,7 @@ export async function forwardAuditBatch(): Promise<number> {
   running = true
   let published = 0
   try {
+    recoverStaleAuditClaims()
     const rows = claimAuditOutbox(50)
     for (const row of rows) {
       try {
