@@ -270,6 +270,12 @@ function migrate(db: Database.Database): void {
       ON connector_upgrade_rollout_targets (rollout_id, status, position);
   `)
   for (const statement of [
+    'ALTER TABLE activity_log ADD COLUMN principal TEXT',
+    'ALTER TABLE activity_log ADD COLUMN tenant_ids TEXT',
+  ]) {
+    try { db.exec(statement) } catch { /* column already exists */ }
+  }
+  for (const statement of [
     'ALTER TABLE connector_upgrade_plans ADD COLUMN decided_at TEXT',
     'ALTER TABLE connector_upgrade_plans ADD COLUMN decided_by TEXT',
   ]) {

@@ -230,6 +230,9 @@ export interface ActivityLogEntry {
   method: string
   path: string
   target?: string
+  /** Verified context captured at write time; absent on legacy rows. */
+  principal?: string
+  tenantIds?: string[]
   result: 'success' | 'error'
   errorMessage?: string
 }

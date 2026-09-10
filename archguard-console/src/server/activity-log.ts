@@ -10,6 +10,7 @@ import type { ActivityLogEntry } from '@/lib/api/types/archguard'
 import { getSessionOrNull, sessionActor } from './session-guard'
 import { logger } from './logger'
 import { forwardAuditBatch } from './audit-forwarder'
+import { deriveTenants, stripGroupDomain } from '@/lib/auth/roles'
 
 export function getActor(): string {
   const s = getSessionOrNull()
@@ -30,6 +31,11 @@ export function recordActivity(
   body?: unknown,
 ): void {
   const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const session = getSessionOrNull()
+  const principal = session?.user?.name || undefined
+  const tenantIds = session
+    ? [...new Set(deriveTenants(session.groups).map(stripGroupDomain))]
+    : []
   const entry: ActivityLogEntry = {
     id,
     timestamp: new Date().toISOString(),
@@ -41,6 +47,8 @@ export function recordActivity(
     // `attrs.name`, not in the URL — fall back to that so the audit row
     // is searchable by the new entity's identifier.
     target: deriveTarget(path) ?? deriveTargetFromBody(body),
+    principal,
+    tenantIds,
     result,
     errorMessage,
   }
@@ -50,10 +58,10 @@ export function recordActivity(
     const write = db.transaction(() => {
       db.prepare(
         `INSERT INTO activity_log
-           (id, timestamp, actor, action, method, path, target, result, error_message)
+           (id, timestamp, actor, action, method, path, target, principal, tenant_ids, result, error_message)
          VALUES
-           (@id, @timestamp, @actor, @action, @method, @path, @target, @result, @errorMessage)`,
-      ).run(entry)
+           (@id, @timestamp, @actor, @action, @method, @path, @target, @principal, @tenantIds, @result, @errorMessage)`,
+      ).run({ ...entry, tenantIds: JSON.stringify(tenantIds) })
       // Outbox payload is deliberately limited to redacted audit metadata.
       db.prepare(
         `INSERT INTO audit_outbox
@@ -71,6 +79,8 @@ export function recordActivity(
           method: entry.method,
           path: entry.path,
           target: entry.target,
+          principal: entry.principal,
+          tenant_ids: tenantIds,
           result: entry.result,
           error: entry.errorMessage,
         }),
@@ -179,7 +189,8 @@ export function queryActivityLog(filters: ActivityLogFilters = {}): ActivityLogE
 
   const rows = getDb()
     .prepare(
-      `SELECT id, timestamp, actor, action, method, path, target, result,
+      `SELECT id, timestamp, actor, action, method, path, target, principal, tenant_ids,
+              result,
               error_message AS errorMessage
        FROM activity_log
        ${where}
@@ -193,6 +204,16 @@ export function queryActivityLog(filters: ActivityLogFilters = {}): ActivityLogE
   return rows.map((r) => ({
     ...r,
     target: r.target ?? undefined,
+    principal: r.principal ?? undefined,
+    tenantIds: parseTenantIds((r as ActivityLogEntry & { tenant_ids?: string }).tenant_ids),
     errorMessage: r.errorMessage ?? undefined,
   }))
+}
+
+function parseTenantIds(value?: string): string[] | undefined {
+  if (!value) return undefined
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) && parsed.every((item) => typeof item === 'string') ? parsed : undefined
+  } catch { return undefined }
 }
