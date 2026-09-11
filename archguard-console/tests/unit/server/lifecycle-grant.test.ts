@@ -14,7 +14,7 @@ vi.mock('@/server/warpgate-proxy', () => ({
   warpgateConfigured: () => true,
 }))
 
-import { resolveGrantRoles } from '@/server/lifecycle-fn'
+import { assertCanonicalGrantIdentity, resolveGrantRoles } from '@/server/lifecycle-fn'
 
 describe('resolveGrantRoles', () => {
   beforeEach(() => {
@@ -54,5 +54,11 @@ describe('resolveGrantRoles', () => {
     const r = await resolveGrantRoles('rio-aws-api-b')
     expect(r.roles).toEqual(['tenant-rio-quality'])
     expect(r.detail).toMatch(/SoT site rio_quality/)
+  })
+
+  it('requires canonical identity only when OpenFGA is enabled', () => {
+    expect(() => assertCanonicalGrantIdentity(undefined, true)).toThrow('identity_id canônico')
+    expect(() => assertCanonicalGrantIdentity(undefined, false)).not.toThrow()
+    expect(() => assertCanonicalGrantIdentity('identity-1', true)).not.toThrow()
   })
 })

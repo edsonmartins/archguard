@@ -250,6 +250,12 @@ export type GrantPersonTargetResult = {
 const GRANT_TTL_MIN_SECONDS = 60
 const GRANT_TTL_MAX_SECONDS = 24 * 60 * 60
 
+export function assertCanonicalGrantIdentity(identityId?: string, openFga = openFgaEnabled()): void {
+  if (openFga && !identityId) {
+    throw new Error('identity_id canônico é obrigatório quando OpenFGA está habilitado')
+  }
+}
+
 export function grantTtlSeconds(value?: string): number {
   const raw = (value || '8h').trim().toLowerCase()
   const match = /^(\d+)\s*(s|m|h|d)$/.exec(raw)
@@ -452,6 +458,7 @@ export const grantPersonTargetFn = createServerFn({ method: 'POST' })
       ['persons:update', 'gateways:manage', 'system:admin'],
       'persons:update',
     )
+    assertCanonicalGrantIdentity(data.identity_id)
     await assertPrincipalTenantAccess(data.username, s)
     const { listSites } = await import('./sites')
     const site = (await listSites()).find((candidate) =>
