@@ -6,6 +6,7 @@
 // Sites may use PostgreSQL (CONSOLE_DATABASE_URL); activity_log stays on SQLite.
 
 import Database from 'better-sqlite3'
+import { randomUUID } from 'node:crypto'
 import { mkdirSync, statSync, unlinkSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { logger } from './logger'
@@ -183,6 +184,18 @@ function migrate(db: Database.Database): void {
     );
     CREATE INDEX IF NOT EXISTS idx_access_grants_lookup
       ON access_grants (principal, target, expires_at, revoked_at);
+
+    CREATE TABLE IF NOT EXISTS offboarding_operations (
+      operation_id TEXT PRIMARY KEY,
+      principal    TEXT NOT NULL,
+      status       TEXT NOT NULL,
+      started_at   TEXT NOT NULL,
+      updated_at   TEXT NOT NULL,
+      started_by   TEXT NOT NULL,
+      error        TEXT
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_offboarding_running
+      ON offboarding_operations (principal) WHERE status = 'running';
 
     -- Single-use connector enrollment metadata; token material is never stored.
     CREATE TABLE IF NOT EXISTS connector_enrollments (
@@ -470,6 +483,29 @@ export function revokeAccessGrantsForPrincipal(principal: string): number {
   return getDb().prepare(
     'UPDATE access_grants SET revoked_at = ? WHERE principal = ? AND revoked_at IS NULL',
   ).run(new Date().toISOString(), principal).changes
+}
+
+export function beginOffboardingOperation(principal: string, actor: string, staleAfterMs = 15 * 60_000): string {
+  const db = getDb()
+  const now = new Date().toISOString()
+  const staleBefore = new Date(Date.now() - Math.max(60_000, staleAfterMs)).toISOString()
+  db.prepare(`UPDATE offboarding_operations SET status = 'partial', updated_at = ?, error = 'operation stale; retry scheduled'
+    WHERE principal = ? AND status = 'running' AND updated_at <= ?`).run(now, principal, staleBefore)
+  const operationId = randomUUID()
+  try {
+    db.prepare(`INSERT INTO offboarding_operations
+      (operation_id, principal, status, started_at, updated_at, started_by, error)
+      VALUES (?, ?, 'running', ?, ?, ?, NULL)`).run(operationId, principal, now, now, actor)
+    return operationId
+  } catch (error) {
+    if (/UNIQUE/i.test(String(error))) throw new Error('Offboarding já está em execução para este principal')
+    throw error
+  }
+}
+
+export function finishOffboardingOperation(operationId: string, status: 'completed' | 'partial', error?: string): void {
+  getDb().prepare(`UPDATE offboarding_operations SET status = ?, updated_at = ?, error = ? WHERE operation_id = ?`)
+    .run(status, new Date().toISOString(), error?.slice(0, 500) || null, operationId)
 }
 
 /** Historical ownership index used for recording access after session close. */

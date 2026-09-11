@@ -19,7 +19,7 @@ import {
 import { forceCloseCheckoutsForPrincipal } from './org-checkouts'
 import { deleteOpenFgaGrantsForUser } from './openfga'
 import { revokePrincipal } from './principal-revocation'
-import { listBrokerSessionsForPrincipal, revokeAccessGrantsForPrincipal } from './db'
+import { beginOffboardingOperation, finishOffboardingOperation, listBrokerSessionsForPrincipal, revokeAccessGrantsForPrincipal } from './db'
 import { closeBrokerSessionAndLease } from './broker-session'
 import { offboardingResult } from './offboarding-result'
 
@@ -126,6 +126,7 @@ export const revokePersonAccessFn = createServerFn({ method: 'POST' })
     const reason = data.reason || `offboarding by ${actor}`
     const username = data.username.trim()
     await assertPrincipalTenantAccess(username, s)
+    const operationId = beginOffboardingOperation(username, actor)
     const steps: OffboardStep[] = []
     revokePrincipal(username)
     steps.push({ component: 'console_sessions', ok: true, detail: 'principal blocked locally' })
@@ -207,6 +208,7 @@ export const revokePersonAccessFn = createServerFn({ method: 'POST' })
 
     const result = offboardingResult(steps)
     const criticalOk = result.ok
+    finishOffboardingOperation(operationId, criticalOk ? 'completed' : 'partial', criticalOk ? undefined : 'revogação incompleta; retry necessário')
 
     recordActivity(
       'POST',
@@ -228,6 +230,7 @@ export const revokePersonAccessFn = createServerFn({ method: 'POST' })
     return {
       ...result,
       username,
+      operation_id: operationId,
       reason,
       steps,
       message: criticalOk
