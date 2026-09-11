@@ -2,6 +2,9 @@ import { closeRustGuacSession } from './rustguac-proxy'
 import { closeBrokerSession, getBrokerSession, listExpiredBrokerLeases, registerBrokerSession } from './db'
 import { revokeLease } from './openbao-proxy'
 import { isPrincipalSessionRevoked } from './principal-revocation'
+import { logger } from './logger'
+
+let reconcilerTimer: ReturnType<typeof setInterval> | undefined
 
 /** Register before checking so an offboarding scan cannot miss this session. */
 export async function admitBrokerSession(
@@ -50,3 +53,22 @@ export async function reconcileExpiredBrokerLeases(now?: string): Promise<{
   }
   return { attempted: expired.length, closed, failed }
 }
+
+/** Start only when explicitly enabled; one process must own this loop. */
+export function startBrokerLeaseReconciler(): void {
+  if (reconcilerTimer || process.env.BROKER_LEASE_RECONCILER_ENABLED !== '1') return
+  const configured = Number(process.env.BROKER_LEASE_RECONCILER_INTERVAL_MS)
+  const intervalMs = Number.isFinite(configured)
+    ? Math.min(Math.max(configured, 5_000), 15 * 60_000)
+    : 30_000
+  reconcilerTimer = setInterval(() => {
+    void reconcileExpiredBrokerLeases().then((result) => {
+      if (result.attempted || result.failed) logger.info(result, 'broker lease reconciliation cycle')
+    }).catch((error) => {
+      logger.warn({ err: String(error) }, 'broker lease reconciliation failed')
+    })
+  }, intervalMs)
+  reconcilerTimer.unref?.()
+}
+
+startBrokerLeaseReconciler()
