@@ -434,6 +434,13 @@ export function getLatestAccessGrant(principal: string, target: string): AccessG
   ).get(principal, target) as AccessGrant | undefined
 }
 
+export function listAccessGrantsForPrincipal(principal: string): AccessGrant[] {
+  return getDb().prepare(
+    `SELECT grant_id, principal, target, tenant, role, created_at, expires_at, revoked_at, source
+       FROM access_grants WHERE principal = ? ORDER BY created_at DESC`,
+  ).all(principal) as AccessGrant[]
+}
+
 export function revokeAccessGrantsForPrincipal(principal: string): number {
   return getDb().prepare(
     'UPDATE access_grants SET revoked_at = ? WHERE principal = ? AND revoked_at IS NULL',

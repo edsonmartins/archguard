@@ -17,7 +17,7 @@ import { logger } from './logger'
 import { integrationFetch } from './http-integration-client'
 import { addUserToGroup } from './idp'
 import { openFgaConnectionObject, openFgaEnabled, writeOpenFgaGrant } from './openfga'
-import { createAccessGrant } from './db'
+import { createAccessGrant, listAccessGrantsForPrincipal } from './db'
 import { randomUUID } from 'node:crypto'
 
 const ORCH_URL = (
@@ -433,6 +433,7 @@ export const grantPersonTargetFn = createServerFn({ method: 'POST' })
     if (!r.success) throw new Error(r.error.message)
     return r.data
   })
+
   .handler(async ({ data }) => {
     const s = requireSession()
     requireAnyPerm(
@@ -455,4 +456,18 @@ export const grantPersonTargetFn = createServerFn({ method: 'POST' })
       if (!allowedRoles.has(data.role)) throw new Error('Forbidden: role fora do catálogo do target')
     }
     return runGrantPersonTarget(data, sessionActor(s))
+  })
+
+/** Read the console-owned grant inventory for one person, within tenant scope. */
+export const listPersonAccessGrantsFn = createServerFn({ method: 'GET' })
+  .inputValidator((data: unknown) => {
+    const r = z.object({ username: z.string().min(1).max(128) }).safeParse(data)
+    if (!r.success) throw new Error(r.error.message)
+    return r.data
+  })
+  .handler(async ({ data }) => {
+    const s = requireSession()
+    requireAnyPerm(s, ['persons:read', 'persons:update', 'system:admin'], 'persons:read')
+    await assertPrincipalTenantAccess(data.username, s)
+    return listAccessGrantsForPrincipal(data.username)
   })

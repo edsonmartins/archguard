@@ -33,7 +33,7 @@ import { GroupBadge } from '@/components/shared/group-badge'
 import { CredentialStatusCard } from '@/components/identity/credential-status'
 import { CredentialResetDialog } from '@/components/identity/credential-reset-dialog'
 import { PersonGroupAssignment } from '@/components/identity/group-assignment'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { usePerson, useDeletePerson, usePersonCredentials } from '@/lib/hooks/use-persons'
 import { queryKeys } from '@/lib/utils/query-keys'
@@ -44,6 +44,7 @@ import {
 } from '@/server/offboarding-fn'
 import {
   grantPersonTargetFn,
+  listPersonAccessGrantsFn,
   provisionPersonAccessFn,
   type LifecycleStep,
 } from '@/server/lifecycle-fn'
@@ -65,6 +66,11 @@ export function PersonDetailPage() {
   const queryClient = useQueryClient()
   const { data: person, isLoading, isError, refetch } = usePerson(personId)
   const { data: credentials } = usePersonCredentials(personId)
+  const { data: accessGrants, isError: accessGrantsError } = useQuery({
+    queryKey: ['person-access-grants', personId],
+    queryFn: () => listPersonAccessGrantsFn({ data: { username: person!.username } }),
+    enabled: Boolean(person?.username),
+  })
   const deletePerson = useDeletePerson()
   const [showDelete, setShowDelete] = useState(false)
   const [showReset, setShowReset] = useState(false)
@@ -324,6 +330,36 @@ export function PersonDetailPage() {
                 <InfoRow label="ID" value={person.id}>
                   <CopyButton value={person.id} />
                 </InfoRow>
+              </CardContent>
+            </Card>
+
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-base">Grants TTL do console</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {accessGrantsError ? (
+                  <p className="text-sm text-muted-foreground">Inventário de grants indisponível ou fora do escopo.</p>
+                ) : accessGrants?.length ? (
+                  <div className="space-y-2">
+                    {accessGrants.map((grant) => {
+                      const expired = Boolean(grant.revoked_at) || new Date(grant.expires_at).getTime() <= Date.now()
+                      return (
+                        <div key={grant.grant_id} className="flex flex-wrap items-center justify-between gap-2 rounded border p-2 text-sm">
+                          <span className="font-mono">{grant.target}{grant.role ? ` · ${grant.role}` : ''}</span>
+                          <span className={expired ? 'text-amber-700' : 'text-emerald-700'}>
+                            {grant.revoked_at ? 'revogado' : expired ? 'expirado' : `ativo até ${new Date(grant.expires_at).toLocaleString()}`}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Nenhum grant TTL emitido pelo console.</p>
+                )}
+                <p className="mt-3 text-xs text-muted-foreground">
+                  A revogação integral continua disponível acima; a revogação individual nativa depende do vínculo seguro com OpenFGA e Warpgate.
+                </p>
               </CardContent>
             </Card>
 
