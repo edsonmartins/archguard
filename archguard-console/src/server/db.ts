@@ -511,11 +511,24 @@ export function getLatestAccessGrant(principal: string, target: string): AccessG
   ).get(principal, target) as AccessGrant | undefined
 }
 
-export function listAccessGrantsForPrincipal(principal: string): AccessGrant[] {
-  return getDb().prepare(
+export type AccessGrantPage = {
+  items: AccessGrant[]
+  total: number
+  offset: number
+  limit: number
+  has_more: boolean
+}
+
+export function listAccessGrantsForPrincipal(principal: string, limit = 25, offset = 0): AccessGrantPage {
+  const safeLimit = Math.max(1, Math.min(Math.trunc(limit), 100))
+  const safeOffset = Math.max(0, Math.trunc(offset))
+  const db = getDb()
+  const total = (db.prepare('SELECT COUNT(*) AS count FROM access_grants WHERE principal = ?').get(principal) as { count: number }).count
+  const items = db.prepare(
     `SELECT grant_id, principal, target, tenant, role, created_at, expires_at, revoked_at, source, subject, object
-       FROM access_grants WHERE principal = ? ORDER BY created_at DESC`,
-  ).all(principal) as AccessGrant[]
+       FROM access_grants WHERE principal = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+  ).all(principal, safeLimit, safeOffset) as AccessGrant[]
+  return { items, total, offset: safeOffset, limit: safeLimit, has_more: safeOffset + items.length < total }
 }
 
 export function revokeAccessGrant(grantId: string): AccessGrant | undefined {

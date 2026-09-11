@@ -68,9 +68,10 @@ export function PersonDetailPage() {
   const queryClient = useQueryClient()
   const { data: person, isLoading, isError, refetch } = usePerson(personId)
   const { data: credentials } = usePersonCredentials(personId)
+  const [grantPage, setGrantPage] = useState(0)
   const { data: accessGrants, isError: accessGrantsError } = useQuery({
-    queryKey: ['person-access-grants', personId],
-    queryFn: () => listPersonAccessGrantsFn({ data: { username: person!.username } }),
+    queryKey: ['person-access-grants', personId, grantPage],
+    queryFn: () => listPersonAccessGrantsFn({ data: { username: person!.username, limit: 25, offset: grantPage * 25 } }),
     enabled: Boolean(person?.username),
   })
   const { data: offboardingOperations, isError: offboardingOperationsError } = useQuery({
@@ -359,9 +360,9 @@ export function PersonDetailPage() {
               <CardContent>
                 {accessGrantsError ? (
                   <p className="text-sm text-muted-foreground">Inventário de grants indisponível ou fora do escopo.</p>
-                ) : accessGrants?.length ? (
+                ) : accessGrants?.items.length ? (
                   <div className="space-y-2">
-                    {accessGrants.map((grant) => {
+                    {accessGrants.items.map((grant) => {
                       const expired = Boolean(grant.revoked_at) || new Date(grant.expires_at).getTime() <= Date.now()
                       return (
                         <div key={grant.grant_id} className="flex flex-wrap items-center justify-between gap-2 rounded border p-2 text-sm">
@@ -377,6 +378,13 @@ export function PersonDetailPage() {
                         </div>
                       )
                     })}
+                    <div className="flex items-center justify-between pt-2 text-xs text-muted-foreground">
+                      <span>{accessGrants.offset + 1}–{accessGrants.offset + accessGrants.items.length} de {accessGrants.total}</span>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" disabled={grantPage === 0} onClick={() => setGrantPage((page) => Math.max(0, page - 1))}>Anterior</Button>
+                        <Button size="sm" variant="outline" disabled={!accessGrants.has_more} onClick={() => setGrantPage((page) => page + 1)}>Próxima</Button>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">Nenhum grant TTL emitido pelo console.</p>

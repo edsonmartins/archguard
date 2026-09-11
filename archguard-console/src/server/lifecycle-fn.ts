@@ -471,7 +471,7 @@ export const grantPersonTargetFn = createServerFn({ method: 'POST' })
 /** Read the console-owned grant inventory for one person, within tenant scope. */
 export const listPersonAccessGrantsFn = createServerFn({ method: 'GET' })
   .inputValidator((data: unknown) => {
-    const r = z.object({ username: z.string().min(1).max(128) }).safeParse(data)
+    const r = z.object({ username: z.string().min(1).max(128), limit: z.number().int().min(1).max(100).optional(), offset: z.number().int().min(0).optional() }).safeParse(data)
     if (!r.success) throw new Error(r.error.message)
     return r.data
   })
@@ -479,7 +479,7 @@ export const listPersonAccessGrantsFn = createServerFn({ method: 'GET' })
     const s = requireSession()
     requireAnyPerm(s, ['persons:read', 'persons:update', 'system:admin'], 'persons:read')
     await assertPrincipalTenantAccess(data.username, s)
-    return listAccessGrantsForPrincipal(data.username)
+    return listAccessGrantsForPrincipal(data.username, data.limit, data.offset)
   })
 
 export const revokePersonAccessGrantFn = createServerFn({ method: 'POST' })

@@ -7,6 +7,7 @@ import {
   createAccessGrant,
   getLatestAccessGrant,
   hasActiveAccessGrant,
+  listAccessGrantsForPrincipal,
   revokeAccessGrantsForPrincipal,
 } from '../../../src/server/db'
 import { grantTtlSeconds } from '../../../src/server/lifecycle-fn'
@@ -46,5 +47,15 @@ describe('console access grant expiry', () => {
     createAccessGrant({ grant_id: 'g-expired', principal: 'alice', target: 'db', expires_at: '2000-01-01T00:00:00.000Z' })
     createAccessGrant({ grant_id: 'g-valid', principal: 'alice', target: 'db', expires_at: '2099-01-01T00:00:00.000Z' })
     expect(hasActiveAccessGrant('alice', 'db', Date.parse('2026-01-01T00:00:00.000Z'))).toBe(true)
+  })
+
+  it('paginates grant inventory without crossing principals', () => {
+    for (let i = 0; i < 3; i += 1) {
+      createAccessGrant({ grant_id: `g-${i}`, principal: 'alice', target: `db-${i}`, expires_at: '2099-01-01T00:00:00.000Z' })
+    }
+    createAccessGrant({ grant_id: 'g-bob', principal: 'bob', target: 'db-bob', expires_at: '2099-01-01T00:00:00.000Z' })
+
+    expect(listAccessGrantsForPrincipal('alice', 2, 0)).toMatchObject({ total: 3, has_more: true, items: expect.any(Array) })
+    expect(listAccessGrantsForPrincipal('alice', 2, 2)).toMatchObject({ total: 3, has_more: false, items: [expect.objectContaining({ principal: 'alice' })] })
   })
 })
