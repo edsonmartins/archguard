@@ -34,7 +34,7 @@ import { identityAdminConfigured, idpKind } from './idp'
 import { pingDb } from './db'
 import { getAuditOutboxStatus } from './audit-outbox'
 import { forwardAuditBatch } from './audit-forwarder'
-import { getBrokerLeaseReconcilerStatus } from './broker-session'
+import { getBrokerLeaseReconcilerStatus, reconcileExpiredBrokerLeases } from './broker-session'
 
 export type PlatformServiceStatus = 'ok' | 'degraded' | 'error' | 'unreachable' | 'unconfigured'
 
@@ -578,5 +578,14 @@ export const retryAuditOutboxFn = createServerFn({ method: 'POST' }).handler(
     }
     const published = await forwardAuditBatch()
     return { published, status: getAuditOutboxStatus() }
+  },
+)
+
+export const reconcileBrokerLeasesFn = createServerFn({ method: 'POST' }).handler(
+  async () => {
+    const s = requireSession()
+    requireAnyPerm(s, ['settings:update', 'system:admin'], 'settings:update')
+    const result = await reconcileExpiredBrokerLeases()
+    return { result, status: getBrokerLeaseReconcilerStatus() }
   },
 )

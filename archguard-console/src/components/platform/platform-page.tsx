@@ -28,8 +28,10 @@ import {
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/shared/page-header'
+import { PermissionGate } from '@/components/shared/permission-gate'
 import {
   getPlatformOverviewFn,
+  reconcileBrokerLeasesFn,
   retryAuditOutboxFn,
   type PlatformService,
   type PlatformServiceStatus,
@@ -130,6 +132,10 @@ export function PlatformPage() {
   const data = q.data
   const retryOutbox = useMutation({
     mutationFn: () => retryAuditOutboxFn(),
+    onSuccess: () => void q.refetch(),
+  })
+  const reconcileLeases = useMutation({
+    mutationFn: () => reconcileBrokerLeasesFn(),
     onSuccess: () => void q.refetch(),
   })
 
@@ -373,6 +379,12 @@ export function PlatformPage() {
                 {data.broker_reconciler.last_run_at ? <p className="text-xs text-muted-foreground">Último ciclo: {new Date(data.broker_reconciler.last_run_at).toLocaleString()}</p> : <p className="text-xs text-muted-foreground">Nenhum ciclo executado neste processo.</p>}
                 {data.broker_reconciler.last_result && <p className={data.broker_reconciler.last_result.failed ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>Tentativas: {data.broker_reconciler.last_result.attempted} · encerradas: {data.broker_reconciler.last_result.closed} · falhas: {data.broker_reconciler.last_result.failed}</p>}
                 {data.broker_reconciler.last_error && <p className="text-xs text-destructive">Último ciclo falhou; consulte os logs do processo.</p>}
+                <PermissionGate require={['settings:update', 'system:admin']} any>
+                  <Button size="sm" variant="outline" disabled={reconcileLeases.isPending} onClick={() => reconcileLeases.mutate()}>
+                    {reconcileLeases.isPending ? 'Executando…' : 'Executar agora'}
+                  </Button>
+                  {reconcileLeases.isError && <p className="text-xs text-destructive">Reconciliação falhou; consulte os logs do processo.</p>}
+                </PermissionGate>
               </CardContent>
             </Card>
           )}
