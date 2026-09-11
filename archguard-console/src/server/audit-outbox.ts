@@ -13,6 +13,37 @@ export type AuditOutboxRow = {
   claimed_at: string | null
 }
 
+export type AuditOutboxStatus = {
+  pending: number
+  publishing: number
+  failed: number
+  published: number
+  oldest_pending_at: string | null
+  last_published_at: string | null
+}
+
+export function getAuditOutboxStatus(): AuditOutboxStatus {
+  const db = getDb()
+  const counts = db.prepare(
+    `SELECT status, COUNT(*) AS count FROM audit_outbox GROUP BY status`,
+  ).all() as Array<{ status: string; count: number }>
+  const byStatus = new Map(counts.map((row) => [row.status, row.count]))
+  const oldest = db.prepare(
+    `SELECT occurred_at FROM audit_outbox WHERE status IN ('pending', 'failed', 'publishing') ORDER BY occurred_at ASC LIMIT 1`,
+  ).get() as { occurred_at?: string } | undefined
+  const latest = db.prepare(
+    `SELECT published_at FROM audit_outbox WHERE status = 'published' ORDER BY published_at DESC LIMIT 1`,
+  ).get() as { published_at?: string } | undefined
+  return {
+    pending: byStatus.get('pending') || 0,
+    publishing: byStatus.get('publishing') || 0,
+    failed: byStatus.get('failed') || 0,
+    published: byStatus.get('published') || 0,
+    oldest_pending_at: oldest?.occurred_at || null,
+    last_published_at: latest?.published_at || null,
+  }
+}
+
 /** Requeue claims left behind by a crashed forwarder. */
 export function recoverStaleAuditClaims(maxAgeMs = 60_000): number {
   const cutoff = new Date(Date.now() - Math.max(1_000, maxAgeMs)).toISOString()

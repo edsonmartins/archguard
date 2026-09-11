@@ -328,6 +328,25 @@ export function PlatformPage() {
             </CardContent>
           </Card>
 
+          {data && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Activity className="h-4 w-4" />
+                  Fila de auditoria
+                </CardTitle>
+                <CardDescription>Estado da entrega sem expor payloads ou erros sensíveis.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex justify-between"><span>Pendentes</span><strong>{data.audit_outbox.pending}</strong></div>
+                <div className="flex justify-between"><span>Em publicação</span><strong>{data.audit_outbox.publishing}</strong></div>
+                <div className="flex justify-between"><span>Falhas</span><strong className={data.audit_outbox.failed ? 'text-destructive' : ''}>{data.audit_outbox.failed}</strong></div>
+                <div className="flex justify-between"><span>Publicados</span><strong>{data.audit_outbox.published}</strong></div>
+                {data.audit_outbox.oldest_pending_at && <p className="text-xs text-muted-foreground">Mais antigo: {new Date(data.audit_outbox.oldest_pending_at).toLocaleString()}</p>}
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">

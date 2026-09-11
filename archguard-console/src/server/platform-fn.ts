@@ -32,6 +32,7 @@ import {
 import { listSites, sitesBackend } from './sites'
 import { identityAdminConfigured, idpKind } from './idp'
 import { pingDb } from './db'
+import { getAuditOutboxStatus } from './audit-outbox'
 
 export type PlatformServiceStatus = 'ok' | 'degraded' | 'error' | 'unreachable' | 'unconfigured'
 
@@ -551,6 +552,7 @@ export const getPlatformOverviewFn = createServerFn({ method: 'GET' }).handler(
       sites_backend: sitesBackend(),
       sites_count: sitesCount,
       activity_sqlite_ok: activitySqliteOk,
+      audit_outbox: getAuditOutboxStatus(),
       inventory: {
         warpgate_targets: warpgateTargets,
         guacamole_connections: guacamoleConnections,
