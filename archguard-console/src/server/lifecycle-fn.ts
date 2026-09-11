@@ -494,11 +494,20 @@ export const revokePersonAccessGrantFn = createServerFn({ method: 'POST' })
     await assertPrincipalTenantAccess(data.username, s)
     const grant = getAccessGrant(data.grant_id)
     if (!grant || grant.principal !== data.username) throw new Error('Grant não encontrado')
+    if (openFgaEnabled() && (!grant.subject || !grant.object)) {
+      throw new Error('Grant legado sem tupla exata; use o offboarding completo para revogar')
+    }
     if (grant.subject && grant.object) {
       const { deleteOpenFgaGrant } = await import('./openfga')
       await deleteOpenFgaGrant({ user: grant.subject, relation: 'connect', object: grant.object })
     }
     revokeAccessGrant(grant.grant_id)
     recordActivity('POST', `/archgate/persons/${encodeURIComponent(data.username)}/grant/${grant.grant_id}/revoke`, sessionActor(s), 'success', undefined, { target: grant.target })
-    return { ok: true, grant_id: grant.grant_id }
+    return {
+      ok: true,
+      grant_id: grant.grant_id,
+      warning: grant.role
+        ? 'A role Warpgate compartilhada permanece; use offboarding completo para removê-la.'
+        : undefined,
+    }
   })
