@@ -82,6 +82,7 @@ export function PersonDetailPage() {
   const [showDelete, setShowDelete] = useState(false)
   const [showReset, setShowReset] = useState(false)
   const [showRevoke, setShowRevoke] = useState(false)
+  const [showResume, setShowResume] = useState(false)
   const [showReactivate, setShowReactivate] = useState(false)
   const reactivate = useMutation({
     mutationFn: () => reactivatePersonFn({ data: { username: person!.username } }),
@@ -115,10 +116,12 @@ export function PersonDetailPage() {
     onSuccess: (res) => {
       setRevokeSteps(res.steps)
       setShowRevoke(false)
+      setShowResume(false)
       void queryClient.invalidateQueries({
         queryKey: queryKeys.persons.detail(personId),
       })
       void queryClient.invalidateQueries({ queryKey: queryKeys.persons.all })
+      void queryClient.invalidateQueries({ queryKey: ['person-offboarding-operations', personId] })
       if (res.ok) toast.success(res.message)
       else toast.error(res.message)
     },
@@ -403,6 +406,20 @@ export function PersonDetailPage() {
                         <div className="mt-2 flex flex-wrap gap-1">
                           {operation.steps.map((step) => <span key={`${operation.operation_id}-${step.sequence}`} className="rounded bg-muted px-2 py-0.5 text-xs">{step.component}: {step.ok ? 'ok' : 'falhou'}</span>)}
                         </div>
+                        {operation.status === 'partial' ? (
+                          <PermissionGate require={['persons:update', 'persons:delete']} any>
+                            <Button
+                              className="mt-3"
+                              size="sm"
+                              variant="outline"
+                              disabled={revokeAccess.isPending}
+                              onClick={() => setShowResume(true)}
+                            >
+                              {revokeAccess.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                              Retomar operação
+                            </Button>
+                          </PermissionGate>
+                        ) : null}
                       </div>
                     ))}
                   </div>
@@ -598,6 +615,16 @@ export function PersonDetailPage() {
         onConfirm={() => {
           revokeAccess.mutate()
         }}
+      />
+
+      <ConfirmDialog
+        open={showResume}
+        onOpenChange={setShowResume}
+        title="Retomar offboarding"
+        description={`Reexecuta somente as etapas incompletas ou falhas do último offboarding de ${person.displayName} (@${person.username}). As etapas já confirmadas permanecem preservadas no mesmo histórico.`}
+        confirmText={person.username}
+        isLoading={revokeAccess.isPending}
+        onConfirm={() => revokeAccess.mutate()}
       />
 
       <ConfirmDialog
