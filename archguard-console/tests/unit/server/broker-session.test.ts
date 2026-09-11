@@ -1,8 +1,8 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-const mocks = vi.hoisted(() => ({ close: vi.fn(), revoke: vi.fn(), get: vi.fn(), mark: vi.fn(), register: vi.fn(), blocked: vi.fn(), expired: vi.fn() }))
+const mocks = vi.hoisted(() => ({ close: vi.fn(), revoke: vi.fn(), get: vi.fn(), mark: vi.fn(), register: vi.fn(), blocked: vi.fn(), expired: vi.fn(), recordRun: vi.fn(), latestRun: vi.fn() }))
 vi.mock('@/server/rustguac-proxy', () => ({ closeRustGuacSession: mocks.close }))
 vi.mock('@/server/openbao-proxy', () => ({ revokeLease: mocks.revoke }))
-vi.mock('@/server/db', () => ({ getBrokerSession: mocks.get, closeBrokerSession: mocks.mark, registerBrokerSession: mocks.register, listExpiredBrokerLeases: mocks.expired }))
+vi.mock('@/server/db', () => ({ getBrokerSession: mocks.get, closeBrokerSession: mocks.mark, registerBrokerSession: mocks.register, listExpiredBrokerLeases: mocks.expired, recordBrokerReconciliationRun: mocks.recordRun, getLatestBrokerReconciliationRun: mocks.latestRun }))
 vi.mock('@/server/principal-revocation', () => ({ isPrincipalSessionRevoked: mocks.blocked }))
 import { closeBrokerSessionAndLease, admitBrokerSession, getBrokerLeaseReconcilerStatus, reconcileExpiredBrokerLeases } from '@/server/broker-session'
 import { offboardingResult } from '@/server/offboarding-result'
@@ -10,6 +10,7 @@ beforeEach(() => {
   vi.resetAllMocks()
   mocks.get.mockReturnValue({ lease_id: 'database/creds/a/one', closed_at: null })
   mocks.expired.mockReturnValue([])
+  mocks.latestRun.mockReturnValue(null)
 })
 it('revokes the exact lease even if gateway cleanup fails and permits retry', async () => {
   mocks.close.mockRejectedValueOnce(new Error('offline'))

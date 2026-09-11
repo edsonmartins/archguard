@@ -170,6 +170,17 @@ function migrate(db: Database.Database): void {
       closed_at   TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_broker_sessions_open ON broker_sessions (closed_at);
+    CREATE TABLE IF NOT EXISTS broker_reconciliation_runs (
+      run_id       TEXT PRIMARY KEY,
+      started_at   TEXT NOT NULL,
+      finished_at  TEXT NOT NULL,
+      attempted    INTEGER NOT NULL,
+      closed       INTEGER NOT NULL,
+      failed       INTEGER NOT NULL,
+      error        TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_broker_reconciliation_runs_finished
+      ON broker_reconciliation_runs (finished_at DESC);
 
     CREATE TABLE IF NOT EXISTS access_grants (
       grant_id    TEXT PRIMARY KEY,
@@ -407,6 +418,43 @@ export function listExpiredBrokerLeases(now = new Date().toISOString()): BrokerL
        FROM broker_sessions WHERE lease_id IS NOT NULL AND closed_at IS NULL
        AND lease_expires_at IS NOT NULL AND lease_expires_at <= ?`,
   ).all(now) as BrokerLeaseInventory[]
+}
+
+export type BrokerReconciliationRun = {
+  run_id: string
+  started_at: string
+  finished_at: string
+  attempted: number
+  closed: number
+  failed: number
+  error: string | null
+}
+
+export function recordBrokerReconciliationRun(
+  startedAt: string,
+  result: { attempted: number; closed: number; failed: number },
+  error?: string,
+): BrokerReconciliationRun {
+  const run = {
+    run_id: randomUUID(),
+    started_at: startedAt,
+    finished_at: new Date().toISOString(),
+    attempted: result.attempted,
+    closed: result.closed,
+    failed: result.failed,
+    error: error?.slice(0, 500) || null,
+  }
+  getDb().prepare(`INSERT INTO broker_reconciliation_runs
+    (run_id, started_at, finished_at, attempted, closed, failed, error)
+    VALUES (?, ?, ?, ?, ?, ?, ?)`).run(
+    run.run_id, run.started_at, run.finished_at, run.attempted, run.closed, run.failed, run.error,
+  )
+  return run
+}
+
+export function getLatestBrokerReconciliationRun(): BrokerReconciliationRun | null {
+  return (getDb().prepare(`SELECT run_id, started_at, finished_at, attempted, closed, failed, error
+    FROM broker_reconciliation_runs ORDER BY finished_at DESC LIMIT 1`).get() as BrokerReconciliationRun | undefined) || null
 }
 
 export function listBrokerSessionsForPrincipal(principal: string): string[] {

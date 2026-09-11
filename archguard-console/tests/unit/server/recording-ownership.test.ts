@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { _resetDbForTests, closeBrokerSession, listBrokerLeaseInventory, listExpiredBrokerLeases, listBrokerRecordingSessionsForPrincipal, listBrokerSessionsForPrincipal, registerBrokerSession } from '@/server/db'
+import { _resetDbForTests, closeBrokerSession, getLatestBrokerReconciliationRun, listBrokerLeaseInventory, listExpiredBrokerLeases, listBrokerRecordingSessionsForPrincipal, listBrokerSessionsForPrincipal, recordBrokerReconciliationRun, registerBrokerSession } from '@/server/db'
 
 describe('recording ownership index', () => {
   it('keeps closed sessions eligible for their historical recording', () => {
@@ -26,5 +26,11 @@ describe('recording ownership index', () => {
     expect(inventory).toContainEqual(expect.objectContaining({ session_id: 'session-a', lease_id: 'database/creds/role/lease-a', principal: 'alice', tenant: 'tenant_a', target: 'db-a' }))
     expect(inventory).toContainEqual(expect.objectContaining({ session_id: 'session-b', lease_id: 'database/creds/role/lease-b', principal: 'bob', tenant: 'tenant_b', target: 'db-b' }))
     expect(listExpiredBrokerLeases('2021-01-01T00:00:00.000Z').map((row) => row.lease_id)).toEqual(['database/creds/role/lease-a'])
+  })
+
+  it('persists the latest reconciliation cycle for restart-safe diagnostics', () => {
+    _resetDbForTests(`/tmp/archguard-recording-ownership-${process.pid}-reconciliation.sqlite`)
+    recordBrokerReconciliationRun('2026-09-11T13:00:00.000Z', { attempted: 3, closed: 2, failed: 1 }, 'one cleanup failed')
+    expect(getLatestBrokerReconciliationRun()).toMatchObject({ attempted: 3, closed: 2, failed: 1, error: 'one cleanup failed' })
   })
 })

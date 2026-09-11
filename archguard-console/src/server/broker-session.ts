@@ -1,5 +1,5 @@
 import { closeRustGuacSession } from './rustguac-proxy'
-import { closeBrokerSession, getBrokerSession, listExpiredBrokerLeases, registerBrokerSession } from './db'
+import { closeBrokerSession, getBrokerSession, getLatestBrokerReconciliationRun, listExpiredBrokerLeases, recordBrokerReconciliationRun, registerBrokerSession } from './db'
 import { revokeLease } from './openbao-proxy'
 import { isPrincipalSessionRevoked } from './principal-revocation'
 import { logger } from './logger'
@@ -44,6 +44,7 @@ export async function reconcileExpiredBrokerLeases(now?: string): Promise<{
   closed: number
   failed: number
 }> {
+  const startedAt = new Date().toISOString()
   try {
     const expired = listExpiredBrokerLeases(now)
     let closed = 0
@@ -60,11 +61,17 @@ export async function reconcileExpiredBrokerLeases(now?: string): Promise<{
     lastReconciliationAt = new Date().toISOString()
     lastReconciliationResult = result
     lastReconciliationError = null
+    recordBrokerReconciliationRun(startedAt, result)
     return result
   } catch (error) {
     lastReconciliationAt = new Date().toISOString()
     lastReconciliationResult = null
     lastReconciliationError = (error as Error).message.slice(0, 200)
+    try {
+      recordBrokerReconciliationRun(startedAt, { attempted: 0, closed: 0, failed: 0 }, lastReconciliationError)
+    } catch {
+      /* preserve the original reconciliation error if the audit DB is unavailable */
+    }
     throw error
   }
 }
@@ -76,12 +83,18 @@ export function getBrokerLeaseReconcilerStatus(): {
   last_result: { attempted: number; closed: number; failed: number } | null
   last_error: string | null
 } {
+  let persisted = null
+  try {
+    persisted = getLatestBrokerReconciliationRun()
+  } catch {
+    /* test doubles or an unavailable local database must not break the probe */
+  }
   return {
     enabled: process.env.BROKER_LEASE_RECONCILER_ENABLED === '1',
     interval_ms: reconcilerIntervalMs,
-    last_run_at: lastReconciliationAt,
-    last_result: lastReconciliationResult,
-    last_error: lastReconciliationError,
+    last_run_at: lastReconciliationAt || persisted?.finished_at || null,
+    last_result: lastReconciliationResult || (persisted ? { attempted: persisted.attempted, closed: persisted.closed, failed: persisted.failed } : null),
+    last_error: lastReconciliationError || persisted?.error || null,
   }
 }
 
