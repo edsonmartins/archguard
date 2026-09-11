@@ -8,8 +8,10 @@ import {
   getLatestAccessGrant,
   hasActiveAccessGrant,
   getLegacyAccessGrantStatus,
+  getLatestLegacyGrantMigrationRun,
   migrateLegacyAccessGrants,
   listAccessGrantsForPrincipal,
+  recordLegacyGrantMigrationRun,
   revokeAccessGrantsForPrincipal,
 } from '../../../src/server/db'
 import { grantTtlSeconds } from '../../../src/server/lifecycle-fn'
@@ -83,5 +85,10 @@ describe('console access grant expiry', () => {
     expect(getLatestAccessGrant('alice', 'db')?.identity_id).toBe('identity-1')
     expect(getLatestAccessGrant('alice', 'db-2')?.identity_id).toBe('old-id')
     expect(getLatestAccessGrant('bob', 'db')?.identity_id).toBeNull()
+  })
+
+  it('persists the latest migration outcome for operator recovery', () => {
+    recordLegacyGrantMigrationRun({ run_id: 'run-1', principal: 'alice', identity_id: 'identity-1', status: 'failed', started_at: '2026-01-01T00:00:00.000Z', finished_at: '2026-01-01T00:01:00.000Z', affected: 0, error: 'OpenFGA offline' })
+    expect(getLatestLegacyGrantMigrationRun()).toMatchObject({ run_id: 'run-1', status: 'failed', error: 'OpenFGA offline' })
   })
 })

@@ -388,6 +388,7 @@ export function PlatformPage() {
                 <div className="flex justify-between"><span>Grants</span><strong>{data.legacy_grants.total}</strong></div>
                 <div className="flex justify-between"><span>Principais afetados</span><strong>{data.legacy_grants.principals}</strong></div>
                 {data.legacy_grants.oldest_created_at && <p className="text-xs text-muted-foreground">Mais antigo: {new Date(data.legacy_grants.oldest_created_at).toLocaleString()}</p>}
+                {data.legacy_grant_migration && <p className={data.legacy_grant_migration.status === 'failed' ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>Última tentativa: {data.legacy_grant_migration.status} · {data.legacy_grant_migration.affected} grant(s) · {new Date(data.legacy_grant_migration.finished_at).toLocaleString()}</p>}
                 <p className="text-xs text-amber-700">Não atribua identidade automaticamente: confirme o vínculo no control plane antes de migrar.</p>
                 <PermissionGate require={['settings:update', 'system:admin']} any>
                   <div className="grid gap-2 border-t pt-3">

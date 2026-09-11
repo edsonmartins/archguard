@@ -182,6 +182,19 @@ function migrate(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_broker_reconciliation_runs_finished
       ON broker_reconciliation_runs (finished_at DESC);
 
+    CREATE TABLE IF NOT EXISTS legacy_grant_migration_runs (
+      run_id       TEXT PRIMARY KEY,
+      principal    TEXT NOT NULL,
+      identity_id  TEXT NOT NULL,
+      status       TEXT NOT NULL,
+      started_at   TEXT NOT NULL,
+      finished_at  TEXT NOT NULL,
+      affected     INTEGER NOT NULL DEFAULT 0,
+      error        TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_legacy_grant_migration_finished
+      ON legacy_grant_migration_runs (finished_at DESC);
+
     CREATE TABLE IF NOT EXISTS access_grants (
       grant_id    TEXT PRIMARY KEY,
       principal   TEXT NOT NULL,
@@ -457,6 +470,31 @@ export function recordBrokerReconciliationRun(
 export function getLatestBrokerReconciliationRun(): BrokerReconciliationRun | null {
   return (getDb().prepare(`SELECT run_id, started_at, finished_at, attempted, closed, failed, error
     FROM broker_reconciliation_runs ORDER BY finished_at DESC LIMIT 1`).get() as BrokerReconciliationRun | undefined) || null
+}
+
+export type LegacyGrantMigrationRun = {
+  run_id: string
+  principal: string
+  identity_id: string
+  status: 'success' | 'failed'
+  started_at: string
+  finished_at: string
+  affected: number
+  error: string | null
+}
+
+export function recordLegacyGrantMigrationRun(run: LegacyGrantMigrationRun): void {
+  getDb().prepare(`INSERT INTO legacy_grant_migration_runs
+    (run_id, principal, identity_id, status, started_at, finished_at, affected, error)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(
+    run.run_id, run.principal, run.identity_id, run.status, run.started_at,
+    run.finished_at, run.affected, run.error,
+  )
+}
+
+export function getLatestLegacyGrantMigrationRun(): LegacyGrantMigrationRun | null {
+  return (getDb().prepare(`SELECT run_id, principal, identity_id, status, started_at, finished_at, affected, error
+    FROM legacy_grant_migration_runs ORDER BY finished_at DESC LIMIT 1`).get() as LegacyGrantMigrationRun | undefined) || null
 }
 
 export function listBrokerSessionsForPrincipal(principal: string): string[] {

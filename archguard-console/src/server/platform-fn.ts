@@ -3,6 +3,7 @@
 
 import { createServerFn } from '@tanstack/react-start'
 import { lookup } from 'node:dns/promises'
+import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { requireAnyPerm, requireSession, sessionActor } from './session-guard'
 import { recordActivity } from './activity-log'
@@ -33,7 +34,7 @@ import {
 } from './mentors-axis-proxy'
 import { listSites, sitesBackend } from './sites'
 import { identityAdminConfigured, idpKind } from './idp'
-import { countLegacyAccessGrantsForPrincipal, getLegacyAccessGrantStatus, listLegacyAccessGrantsForPrincipal, migrateLegacyAccessGrants, pingDb } from './db'
+import { countLegacyAccessGrantsForPrincipal, getLatestLegacyGrantMigrationRun, getLegacyAccessGrantStatus, listLegacyAccessGrantsForPrincipal, migrateLegacyAccessGrants, pingDb, recordLegacyGrantMigrationRun } from './db'
 import { getAuditOutboxStatus } from './audit-outbox'
 import { forwardAuditBatch } from './audit-forwarder'
 import { getBrokerLeaseReconcilerStatus, reconcileExpiredBrokerLeases } from './broker-session'
@@ -559,6 +560,7 @@ export const getPlatformOverviewFn = createServerFn({ method: 'GET' }).handler(
       activity_sqlite_ok: activitySqliteOk,
       audit_outbox: getAuditOutboxStatus(),
       legacy_grants: getLegacyAccessGrantStatus(),
+      legacy_grant_migration: getLatestLegacyGrantMigrationRun(),
       broker_reconciler: getBrokerLeaseReconcilerStatus(),
       inventory: {
         warpgate_targets: warpgateTargets,
@@ -624,7 +626,10 @@ export const migrateLegacyAccessGrantsFn = createServerFn({ method: 'POST' })
     if (data.dry_run) {
       return { dry_run: true, principal: data.principal, identity_id: data.identity_id, affected }
     }
-    if (openFgaEnabled()) {
+    const runId = randomUUID()
+    const startedAt = new Date().toISOString()
+    try {
+      if (openFgaEnabled()) {
       if (!openFgaConfigured()) throw new Error('OpenFGA não está configurado para migrar as tuplas')
       try {
         const grants = listLegacyAccessGrantsForPrincipal(data.principal)
@@ -642,8 +647,13 @@ export const migrateLegacyAccessGrantsFn = createServerFn({ method: 'POST' })
         recordActivity('POST', '/platform/access-grants/migrate-legacy', actor, 'error', 'legacy grant tuple migration failed')
         throw error
       }
+      }
+      const result = migrateLegacyAccessGrants(data.principal, data.identity_id)
+      recordLegacyGrantMigrationRun({ run_id: runId, principal: result.principal, identity_id: result.identity_id, status: 'success', started_at: startedAt, finished_at: new Date().toISOString(), affected: result.affected, error: null })
+      recordActivity('POST', '/platform/access-grants/migrate-legacy', actor, 'success', undefined, result)
+      return { dry_run: false, ...result, run_id: runId }
+    } catch (error) {
+      recordLegacyGrantMigrationRun({ run_id: runId, principal: data.principal, identity_id: data.identity_id, status: 'failed', started_at: startedAt, finished_at: new Date().toISOString(), affected: 0, error: (error as Error).message.slice(0, 200) })
+      throw error
     }
-    const result = migrateLegacyAccessGrants(data.principal, data.identity_id)
-    recordActivity('POST', '/platform/access-grants/migrate-legacy', actor, 'success', undefined, result)
-    return { dry_run: false, ...result }
   })
