@@ -389,22 +389,24 @@ export function PlatformPage() {
                 <div className="flex justify-between"><span>Principais afetados</span><strong>{data.legacy_grants.principals}</strong></div>
                 {data.legacy_grants.oldest_created_at && <p className="text-xs text-muted-foreground">Mais antigo: {new Date(data.legacy_grants.oldest_created_at).toLocaleString()}</p>}
                 <p className="text-xs text-amber-700">Não atribua identidade automaticamente: confirme o vínculo no control plane antes de migrar.</p>
-                <div className="grid gap-2 border-t pt-3">
-                  <Input placeholder="Principal legado" value={legacyPrincipal} onChange={(e) => setLegacyPrincipal(e.target.value)} />
-                  <Input placeholder="identity_id canônico confirmado" value={legacyIdentityId} onChange={(e) => setLegacyIdentityId(e.target.value)} />
-                  <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" disabled={migrateLegacy.isPending || !legacyPrincipal || !legacyIdentityId} onClick={() => migrateLegacy.mutate(true)}>
-                      Prévia
-                    </Button>
-                    <Button size="sm" disabled={migrateLegacy.isPending || !legacyPrincipal || !legacyIdentityId} onClick={() => {
-                      if (window.confirm('Confirma vincular todos os grants legados deste principal à identidade informada?')) migrateLegacy.mutate(false)
-                    }}>
-                      {migrateLegacy.isPending ? 'Processando…' : 'Aplicar vínculo'}
-                    </Button>
+                <PermissionGate require={['settings:update', 'system:admin']} any>
+                  <div className="grid gap-2 border-t pt-3">
+                    <Input placeholder="Principal legado" value={legacyPrincipal} onChange={(e) => setLegacyPrincipal(e.target.value)} />
+                    <Input placeholder="identity_id canônico confirmado" value={legacyIdentityId} onChange={(e) => setLegacyIdentityId(e.target.value)} />
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" disabled={migrateLegacy.isPending || !legacyPrincipal || !legacyIdentityId} onClick={() => migrateLegacy.mutate(true)}>
+                        Prévia
+                      </Button>
+                      <Button size="sm" disabled={migrateLegacy.isPending || !legacyPrincipal || !legacyIdentityId} onClick={() => {
+                        if (window.confirm('Confirma vincular todos os grants legados deste principal à identidade informada?')) migrateLegacy.mutate(false)
+                      }}>
+                        {migrateLegacy.isPending ? 'Processando…' : 'Aplicar vínculo'}
+                      </Button>
+                    </div>
+                    {migrateLegacy.data && <p className="text-xs text-muted-foreground">{migrateLegacy.data.dry_run ? `Prévia: ${migrateLegacy.data.affected} grant(s) serão atualizados.` : `${migrateLegacy.data.affected} grant(s) atualizados.`}</p>}
+                    {migrateLegacy.isError && <p className="text-xs text-destructive">{(migrateLegacy.error as Error).message}</p>}
                   </div>
-                  {migrateLegacy.data && <p className="text-xs text-muted-foreground">{migrateLegacy.data.dry_run ? `Prévia: ${migrateLegacy.data.affected} grant(s) serão atualizados.` : `${migrateLegacy.data.affected} grant(s) atualizados.`}</p>}
-                  {migrateLegacy.isError && <p className="text-xs text-destructive">{(migrateLegacy.error as Error).message}</p>}
-                </div>
+                </PermissionGate>
               </CardContent>
             </Card>
           )}
