@@ -4,7 +4,7 @@ vi.mock('@/server/rustguac-proxy', () => ({ closeRustGuacSession: mocks.close })
 vi.mock('@/server/openbao-proxy', () => ({ revokeLease: mocks.revoke }))
 vi.mock('@/server/db', () => ({ getBrokerSession: mocks.get, closeBrokerSession: mocks.mark, registerBrokerSession: mocks.register, listExpiredBrokerLeases: mocks.expired }))
 vi.mock('@/server/principal-revocation', () => ({ isPrincipalSessionRevoked: mocks.blocked }))
-import { closeBrokerSessionAndLease, admitBrokerSession, reconcileExpiredBrokerLeases } from '@/server/broker-session'
+import { closeBrokerSessionAndLease, admitBrokerSession, getBrokerLeaseReconcilerStatus, reconcileExpiredBrokerLeases } from '@/server/broker-session'
 import { offboardingResult } from '@/server/offboarding-result'
 beforeEach(() => {
   vi.resetAllMocks()
@@ -63,4 +63,5 @@ it('reconciles only expired sessions and reports partial failures', async () => 
   const result = await reconcileExpiredBrokerLeases('2020-01-01T00:00:00.000Z')
   expect(result).toEqual({ attempted: 2, closed: 1, failed: 1 })
   expect(mocks.revoke).toHaveBeenCalledWith('lease-a')
+  expect(getBrokerLeaseReconcilerStatus().last_result).toEqual({ attempted: 2, closed: 1, failed: 1 })
 })

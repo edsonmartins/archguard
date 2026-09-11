@@ -358,6 +358,25 @@ export function PlatformPage() {
             </Card>
           )}
 
+          {data && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Shield className="h-4 w-4" />
+                  Reconciliação de leases
+                </CardTitle>
+                <CardDescription>Somente sessões e leases emitidos pelo console.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex items-center justify-between"><span>Agendador</span><Badge variant={data.broker_reconciler.enabled ? 'default' : 'outline'}>{data.broker_reconciler.enabled ? 'habilitado' : 'desabilitado'}</Badge></div>
+                {data.broker_reconciler.interval_ms && <div className="flex justify-between"><span>Intervalo</span><strong>{Math.round(data.broker_reconciler.interval_ms / 1000)}s</strong></div>}
+                {data.broker_reconciler.last_run_at ? <p className="text-xs text-muted-foreground">Último ciclo: {new Date(data.broker_reconciler.last_run_at).toLocaleString()}</p> : <p className="text-xs text-muted-foreground">Nenhum ciclo executado neste processo.</p>}
+                {data.broker_reconciler.last_result && <p className={data.broker_reconciler.last_result.failed ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'}>Tentativas: {data.broker_reconciler.last_result.attempted} · encerradas: {data.broker_reconciler.last_result.closed} · falhas: {data.broker_reconciler.last_result.failed}</p>}
+                {data.broker_reconciler.last_error && <p className="text-xs text-destructive">Último ciclo falhou; consulte os logs do processo.</p>}
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">

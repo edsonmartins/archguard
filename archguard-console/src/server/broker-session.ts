@@ -5,6 +5,10 @@ import { isPrincipalSessionRevoked } from './principal-revocation'
 import { logger } from './logger'
 
 let reconcilerTimer: ReturnType<typeof setInterval> | undefined
+let lastReconciliationAt: string | null = null
+let lastReconciliationResult: { attempted: number; closed: number; failed: number } | null = null
+let lastReconciliationError: string | null = null
+let reconcilerIntervalMs: number | null = null
 
 /** Register before checking so an offboarding scan cannot miss this session. */
 export async function admitBrokerSession(
@@ -40,18 +44,45 @@ export async function reconcileExpiredBrokerLeases(now?: string): Promise<{
   closed: number
   failed: number
 }> {
-  const expired = listExpiredBrokerLeases(now)
-  let closed = 0
-  let failed = 0
-  for (const row of expired) {
-    try {
-      await closeBrokerSessionAndLease(row.session_id)
-      closed += 1
-    } catch {
-      failed += 1
+  try {
+    const expired = listExpiredBrokerLeases(now)
+    let closed = 0
+    let failed = 0
+    for (const row of expired) {
+      try {
+        await closeBrokerSessionAndLease(row.session_id)
+        closed += 1
+      } catch {
+        failed += 1
+      }
     }
+    const result = { attempted: expired.length, closed, failed }
+    lastReconciliationAt = new Date().toISOString()
+    lastReconciliationResult = result
+    lastReconciliationError = null
+    return result
+  } catch (error) {
+    lastReconciliationAt = new Date().toISOString()
+    lastReconciliationResult = null
+    lastReconciliationError = (error as Error).message.slice(0, 200)
+    throw error
   }
-  return { attempted: expired.length, closed, failed }
+}
+
+export function getBrokerLeaseReconcilerStatus(): {
+  enabled: boolean
+  interval_ms: number | null
+  last_run_at: string | null
+  last_result: { attempted: number; closed: number; failed: number } | null
+  last_error: string | null
+} {
+  return {
+    enabled: process.env.BROKER_LEASE_RECONCILER_ENABLED === '1',
+    interval_ms: reconcilerIntervalMs,
+    last_run_at: lastReconciliationAt,
+    last_result: lastReconciliationResult,
+    last_error: lastReconciliationError,
+  }
 }
 
 /** Start only when explicitly enabled; one process must own this loop. */
@@ -61,6 +92,7 @@ export function startBrokerLeaseReconciler(): void {
   const intervalMs = Number.isFinite(configured)
     ? Math.min(Math.max(configured, 5_000), 15 * 60_000)
     : 30_000
+  reconcilerIntervalMs = intervalMs
   reconcilerTimer = setInterval(() => {
     void reconcileExpiredBrokerLeases().then((result) => {
       if (result.attempted || result.failed) logger.info(result, 'broker lease reconciliation cycle')

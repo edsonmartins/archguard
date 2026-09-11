@@ -34,6 +34,7 @@ import { identityAdminConfigured, idpKind } from './idp'
 import { pingDb } from './db'
 import { getAuditOutboxStatus } from './audit-outbox'
 import { forwardAuditBatch } from './audit-forwarder'
+import { getBrokerLeaseReconcilerStatus } from './broker-session'
 
 export type PlatformServiceStatus = 'ok' | 'degraded' | 'error' | 'unreachable' | 'unconfigured'
 
@@ -554,6 +555,7 @@ export const getPlatformOverviewFn = createServerFn({ method: 'GET' }).handler(
       sites_count: sitesCount,
       activity_sqlite_ok: activitySqliteOk,
       audit_outbox: getAuditOutboxStatus(),
+      broker_reconciler: getBrokerLeaseReconcilerStatus(),
       inventory: {
         warpgate_targets: warpgateTargets,
         guacamole_connections: guacamoleConnections,
