@@ -19,7 +19,7 @@ import {
 import { forceCloseCheckoutsForPrincipal } from './org-checkouts'
 import { deleteOpenFgaGrantsForUser } from './openfga'
 import { revokePrincipal } from './principal-revocation'
-import { listBrokerSessionsForPrincipal } from './db'
+import { listBrokerSessionsForPrincipal, revokeAccessGrantsForPrincipal } from './db'
 import { closeBrokerSessionAndLease } from './broker-session'
 import { offboardingResult } from './offboarding-result'
 
@@ -192,6 +192,12 @@ export const revokePersonAccessFn = createServerFn({ method: 'POST' })
       steps.push({ component: 'openfga', ok: true, detail: `${removed} grant(s) removed` })
     } catch (e) {
       steps.push({ component: 'openfga', ok: false, detail: (e as Error).message })
+    }
+    try {
+      const localRemoved = revokeAccessGrantsForPrincipal(username)
+      steps.push({ component: 'grant_expiry', ok: true, detail: `${localRemoved} grant(s) revoked locally` })
+    } catch (e) {
+      steps.push({ component: 'grant_expiry', ok: false, detail: (e as Error).message })
     }
 
     const result = offboardingResult(steps)

@@ -20,6 +20,7 @@ import { issueRustGuacSession, rustGuacConfigured } from './rustguac-proxy'
 import { checkOpenFga, openFgaConnectionObject } from './openfga'
 import { admitBrokerSession } from './broker-session'
 import { isPrincipalSessionRevoked } from './principal-revocation'
+import { getLatestAccessGrant } from './db'
 
 export type UnifiedConnection = {
   id: string
@@ -170,6 +171,14 @@ export async function createUnifiedSession(
     throw new Error('Forbidden: connection not in catalog')
   }
 
+  // Enforce the expiry of grants created through this console. Older grants
+  // without a local record retain the existing catalog/group authorization.
+  const principal = session.user?.name || session.user?.email || ''
+  const grant = getLatestAccessGrant(principal, hit.target)
+  if (grant && (grant.revoked_at || new Date(grant.expires_at).getTime() <= Date.now())) {
+    throw new Error('Forbidden: grant expirado ou revogado')
+  }
+
   const expiresIn = 120
   const guacPublic =
     process.env.GUACAMOLE_PUBLIC_URL ||
@@ -227,7 +236,7 @@ export async function createUnifiedSession(
       private_key: privateKey,
       session_policy: targetConfig.session_policy,
     })
-    const username = session.user?.name || session.user?.email || 'operator'
+    const username = principal || 'operator'
     logger.info({ user: username, target: hit.target, protocol: proto, mode: 'rustguac' }, 'unified session RustGuac ticket issued')
     await admitBrokerSession(
       rust.session_id,

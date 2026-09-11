@@ -17,6 +17,8 @@ import { logger } from './logger'
 import { integrationFetch } from './http-integration-client'
 import { addUserToGroup } from './idp'
 import { openFgaConnectionObject, openFgaEnabled, writeOpenFgaGrant } from './openfga'
+import { createAccessGrant } from './db'
+import { randomUUID } from 'node:crypto'
 
 const ORCH_URL = (
   process.env.ORCHESTRATION_URL ||
@@ -243,6 +245,22 @@ export type GrantPersonTargetResult = {
   message: string
 }
 
+const GRANT_TTL_MIN_SECONDS = 60
+const GRANT_TTL_MAX_SECONDS = 24 * 60 * 60
+
+export function grantTtlSeconds(value?: string): number {
+  const raw = (value || '8h').trim().toLowerCase()
+  const match = /^(\d+)\s*(s|m|h|d)$/.exec(raw)
+  if (!match) throw new Error('TTL inválido; use, por exemplo, 30m, 8h ou 1d')
+  const amount = Number(match[1])
+  const factor = match[2] === 's' ? 1 : match[2] === 'm' ? 60 : match[2] === 'h' ? 3600 : 86400
+  const seconds = amount * factor
+  if (!Number.isSafeInteger(seconds) || seconds < GRANT_TTL_MIN_SECONDS || seconds > GRANT_TTL_MAX_SECONDS) {
+    throw new Error('TTL fora do intervalo permitido (1 minuto a 24 horas)')
+  }
+  return seconds
+}
+
 /**
  * Core grant logic (Warpgate live bind + orch best-effort).
  * Used by Manager UI server-fn and lab smoke API.
@@ -252,6 +270,8 @@ export const runGrantPersonTarget = createServerOnlyFn(async function runGrantPe
   actor: string,
 ): Promise<GrantPersonTargetResult> {
   const steps: LifecycleStep[] = []
+  const ttlSeconds = grantTtlSeconds(data.ttl)
+  const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString()
 
   // 1) Live Warpgate path (real grant even when orch is mock)
   const { warpgateConfigured, bindWarpgateUserRole } = await import(
@@ -349,9 +369,26 @@ export const runGrantPersonTarget = createServerOnlyFn(async function runGrantPe
     steps.push({ component: 'openfga', ok: false, detail: (e as Error).message })
   }
 
+  const warpgateOk = steps.some((x) => x.component === 'warpgate' && x.ok)
+  const openFgaOk = steps.every((x) => x.component !== 'openfga' || x.ok)
+  if (warpgateOk && openFgaOk) {
+    try {
+      createAccessGrant({
+        grant_id: randomUUID(),
+        principal: data.username,
+        target: data.target,
+        role: data.role,
+        expires_at: expiresAt,
+      })
+      steps.push({ component: 'grant_expiry', ok: true, detail: `expires ${expiresAt}` })
+    } catch (e) {
+      steps.push({ component: 'grant_expiry', ok: false, detail: (e as Error).message })
+    }
+  }
+
   // Success = Warpgate bind OK (critical path). Orch alone is not enough.
   const ok = steps.some((x) => x.component === 'warpgate' && x.ok) &&
-    steps.every((x) => x.component !== 'openfga' || x.ok)
+    steps.every((x) => !['openfga', 'grant_expiry'].includes(x.component) || x.ok)
   recordActivity(
     'POST',
     `/archgate/persons/${encodeURIComponent(data.username)}/grant`,
@@ -361,6 +398,7 @@ export const runGrantPersonTarget = createServerOnlyFn(async function runGrantPe
     {
       target: data.target,
       ttl: data.ttl || '8h',
+      expires_at: expiresAt,
       steps: steps.map((x) => `${x.component}:${x.ok ? 'ok' : 'fail'}`).join(','),
     },
   )

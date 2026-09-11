@@ -170,6 +170,20 @@ function migrate(db: Database.Database): void {
     );
     CREATE INDEX IF NOT EXISTS idx_broker_sessions_open ON broker_sessions (closed_at);
 
+    CREATE TABLE IF NOT EXISTS access_grants (
+      grant_id    TEXT PRIMARY KEY,
+      principal   TEXT NOT NULL,
+      target      TEXT NOT NULL,
+      tenant      TEXT,
+      role        TEXT,
+      created_at  TEXT NOT NULL,
+      expires_at  TEXT NOT NULL,
+      revoked_at  TEXT,
+      source      TEXT NOT NULL DEFAULT 'console'
+    );
+    CREATE INDEX IF NOT EXISTS idx_access_grants_lookup
+      ON access_grants (principal, target, expires_at, revoked_at);
+
     -- Single-use connector enrollment metadata; token material is never stored.
     CREATE TABLE IF NOT EXISTS connector_enrollments (
       id            TEXT PRIMARY KEY,
@@ -374,6 +388,56 @@ export function listBrokerSessionsForPrincipal(principal: string): string[] {
   return (getDb().prepare(
     'SELECT session_id FROM broker_sessions WHERE principal = ? AND closed_at IS NULL',
   ).all(principal) as { session_id: string }[]).map((row) => row.session_id)
+}
+
+export type AccessGrant = {
+  grant_id: string
+  principal: string
+  target: string
+  tenant: string | null
+  role: string | null
+  created_at: string
+  expires_at: string
+  revoked_at: string | null
+  source: string
+}
+
+export function createAccessGrant(input: {
+  grant_id: string
+  principal: string
+  target: string
+  tenant?: string
+  role?: string
+  expires_at: string
+  source?: string
+}): AccessGrant {
+  const created_at = new Date().toISOString()
+  getDb().prepare(
+    `INSERT INTO access_grants
+      (grant_id, principal, target, tenant, role, created_at, expires_at, revoked_at, source)
+     VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?)`,
+  ).run(input.grant_id, input.principal, input.target, input.tenant || null,
+    input.role || null, created_at, input.expires_at, input.source || 'console')
+  return getAccessGrant(input.grant_id)!
+}
+
+export function getAccessGrant(grantId: string): AccessGrant | undefined {
+  return getDb().prepare(
+    'SELECT grant_id, principal, target, tenant, role, created_at, expires_at, revoked_at, source FROM access_grants WHERE grant_id = ?',
+  ).get(grantId) as AccessGrant | undefined
+}
+
+export function getLatestAccessGrant(principal: string, target: string): AccessGrant | undefined {
+  return getDb().prepare(
+    `SELECT grant_id, principal, target, tenant, role, created_at, expires_at, revoked_at, source
+       FROM access_grants WHERE principal = ? AND target = ? ORDER BY created_at DESC LIMIT 1`,
+  ).get(principal, target) as AccessGrant | undefined
+}
+
+export function revokeAccessGrantsForPrincipal(principal: string): number {
+  return getDb().prepare(
+    'UPDATE access_grants SET revoked_at = ? WHERE principal = ? AND revoked_at IS NULL',
+  ).run(new Date().toISOString(), principal).changes
 }
 
 /** Historical ownership index used for recording access after session close. */
