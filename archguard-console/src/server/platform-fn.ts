@@ -32,7 +32,7 @@ import {
 } from './mentors-axis-proxy'
 import { listSites, sitesBackend } from './sites'
 import { identityAdminConfigured, idpKind } from './idp'
-import { pingDb } from './db'
+import { getLegacyAccessGrantStatus, pingDb } from './db'
 import { getAuditOutboxStatus } from './audit-outbox'
 import { forwardAuditBatch } from './audit-forwarder'
 import { getBrokerLeaseReconcilerStatus, reconcileExpiredBrokerLeases } from './broker-session'
@@ -556,6 +556,7 @@ export const getPlatformOverviewFn = createServerFn({ method: 'GET' }).handler(
       sites_count: sitesCount,
       activity_sqlite_ok: activitySqliteOk,
       audit_outbox: getAuditOutboxStatus(),
+      legacy_grants: getLegacyAccessGrantStatus(),
       broker_reconciler: getBrokerLeaseReconcilerStatus(),
       inventory: {
         warpgate_targets: warpgateTargets,

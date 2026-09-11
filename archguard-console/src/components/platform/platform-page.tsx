@@ -364,6 +364,24 @@ export function PlatformPage() {
             </Card>
           )}
 
+          {data && data.legacy_grants.total > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  Grants legados
+                </CardTitle>
+                <CardDescription>Concessões sem identidade canônica aguardando migração controlada.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex justify-between"><span>Grants</span><strong>{data.legacy_grants.total}</strong></div>
+                <div className="flex justify-between"><span>Principais afetados</span><strong>{data.legacy_grants.principals}</strong></div>
+                {data.legacy_grants.oldest_created_at && <p className="text-xs text-muted-foreground">Mais antigo: {new Date(data.legacy_grants.oldest_created_at).toLocaleString()}</p>}
+                <p className="text-xs text-amber-700">Não atribua identidade automaticamente: confirme o vínculo no control plane antes de migrar.</p>
+              </CardContent>
+            </Card>
+          )}
+
           {data && (
             <Card>
               <CardHeader>

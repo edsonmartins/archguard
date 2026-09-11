@@ -569,6 +569,20 @@ export function revokeAccessGrantsForPrincipal(principal: string): number {
   ).run(new Date().toISOString(), principal).changes
 }
 
+export type LegacyAccessGrantStatus = {
+  total: number
+  principals: number
+  oldest_created_at: string | null
+}
+
+export function getLegacyAccessGrantStatus(): LegacyAccessGrantStatus {
+  const row = getDb().prepare(`SELECT COUNT(*) AS total,
+    COUNT(DISTINCT principal) AS principals,
+    MIN(created_at) AS oldest_created_at
+    FROM access_grants WHERE identity_id IS NULL`).get() as { total: number; principals: number; oldest_created_at: string | null }
+  return row
+}
+
 export function beginOffboardingOperation(principal: string, actor: string, staleAfterMs = 15 * 60_000): string {
   const db = getDb()
   const now = new Date().toISOString()
