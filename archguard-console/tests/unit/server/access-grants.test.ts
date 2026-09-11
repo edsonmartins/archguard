@@ -58,4 +58,11 @@ describe('console access grant expiry', () => {
     expect(listAccessGrantsForPrincipal('alice', 2, 0)).toMatchObject({ total: 3, has_more: true, items: expect.any(Array) })
     expect(listAccessGrantsForPrincipal('alice', 2, 2)).toMatchObject({ total: 3, has_more: false, items: [expect.objectContaining({ principal: 'alice' })] })
   })
+
+  it('persists canonical identity id and matches grants during migration', () => {
+    createAccessGrant({ grant_id: 'g-canonical', principal: 'alice', identity_id: 'identity-1', target: 'db', expires_at: '2099-01-01T00:00:00.000Z' })
+    expect(getLatestAccessGrant('alice', 'db')).toMatchObject({ identity_id: 'identity-1' })
+    expect(hasActiveAccessGrant('alice', 'db', 'identity-1', Date.parse('2026-01-01T00:00:00.000Z'))).toBe(true)
+    expect(hasActiveAccessGrant('alice', 'db', 'other-identity', Date.parse('2026-01-01T00:00:00.000Z'))).toBe(false)
+  })
 })

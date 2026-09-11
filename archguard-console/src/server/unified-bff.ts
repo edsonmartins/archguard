@@ -174,7 +174,7 @@ export async function createUnifiedSession(
   // Enforce the expiry of grants created through this console. Older grants
   // without a local record retain the existing catalog/group authorization.
   const principal = session.user?.name || session.user?.email || ''
-  const grantActive = hasActiveAccessGrant(principal, hit.target)
+  const grantActive = hasActiveAccessGrant(principal, hit.target, session.identityId)
   if (grantActive === false) {
     throw new Error('Forbidden: grant expirado ou revogado')
   }

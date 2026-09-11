@@ -185,6 +185,7 @@ function migrate(db: Database.Database): void {
     CREATE TABLE IF NOT EXISTS access_grants (
       grant_id    TEXT PRIMARY KEY,
       principal   TEXT NOT NULL,
+      identity_id TEXT,
       target      TEXT NOT NULL,
       tenant      TEXT,
       role        TEXT,
@@ -325,6 +326,7 @@ function migrate(db: Database.Database): void {
     'ALTER TABLE broker_sessions ADD COLUMN lease_expires_at TEXT',
     'ALTER TABLE access_grants ADD COLUMN subject TEXT',
     'ALTER TABLE access_grants ADD COLUMN object TEXT',
+    'ALTER TABLE access_grants ADD COLUMN identity_id TEXT',
   ]) {
     try { db.exec(statement) } catch { /* column already exists */ }
   }
@@ -473,6 +475,7 @@ export type AccessGrant = {
   expires_at: string
   revoked_at: string | null
   source: string
+  identity_id: string | null
   subject: string | null
   object: string | null
 }
@@ -480,6 +483,7 @@ export type AccessGrant = {
 export function createAccessGrant(input: {
   grant_id: string
   principal: string
+  identity_id?: string
   target: string
   tenant?: string
   role?: string
@@ -491,22 +495,22 @@ export function createAccessGrant(input: {
   const created_at = new Date().toISOString()
   getDb().prepare(
     `INSERT INTO access_grants
-      (grant_id, principal, target, tenant, role, created_at, expires_at, revoked_at, source, subject, object)
-     VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)`,
-  ).run(input.grant_id, input.principal, input.target, input.tenant || null,
+      (grant_id, principal, identity_id, target, tenant, role, created_at, expires_at, revoked_at, source, subject, object)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)`,
+  ).run(input.grant_id, input.principal, input.identity_id || null, input.target, input.tenant || null,
     input.role || null, created_at, input.expires_at, input.source || 'console', input.subject || null, input.object || null)
   return getAccessGrant(input.grant_id)!
 }
 
 export function getAccessGrant(grantId: string): AccessGrant | undefined {
   return getDb().prepare(
-    'SELECT grant_id, principal, target, tenant, role, created_at, expires_at, revoked_at, source, subject, object FROM access_grants WHERE grant_id = ?',
+    'SELECT grant_id, principal, identity_id, target, tenant, role, created_at, expires_at, revoked_at, source, subject, object FROM access_grants WHERE grant_id = ?',
   ).get(grantId) as AccessGrant | undefined
 }
 
 export function getLatestAccessGrant(principal: string, target: string): AccessGrant | undefined {
   return getDb().prepare(
-    `SELECT grant_id, principal, target, tenant, role, created_at, expires_at, revoked_at, source, subject, object
+    `SELECT grant_id, principal, identity_id, target, tenant, role, created_at, expires_at, revoked_at, source, subject, object
        FROM access_grants WHERE principal = ? AND target = ? ORDER BY created_at DESC LIMIT 1`,
   ).get(principal, target) as AccessGrant | undefined
 }
@@ -525,7 +529,7 @@ export function listAccessGrantsForPrincipal(principal: string, limit = 25, offs
   const db = getDb()
   const total = (db.prepare('SELECT COUNT(*) AS count FROM access_grants WHERE principal = ?').get(principal) as { count: number }).count
   const items = db.prepare(
-    `SELECT grant_id, principal, target, tenant, role, created_at, expires_at, revoked_at, source, subject, object
+    `SELECT grant_id, principal, identity_id, target, tenant, role, created_at, expires_at, revoked_at, source, subject, object
        FROM access_grants WHERE principal = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`,
   ).all(principal, safeLimit, safeOffset) as AccessGrant[]
   return { items, total, offset: safeOffset, limit: safeLimit, has_more: safeOffset + items.length < total }
@@ -542,12 +546,21 @@ export function revokeAccessGrant(grantId: string): AccessGrant | undefined {
  * Returns undefined when no console grant exists, otherwise whether at least
  * one non-revoked grant is still valid. This preserves overlapping grants.
  */
-export function hasActiveAccessGrant(principal: string, target: string, now = Date.now()): boolean | undefined {
+export function hasActiveAccessGrant(principal: string, target: string, now?: number): boolean | undefined
+export function hasActiveAccessGrant(principal: string, target: string, identityId?: string, now?: number): boolean | undefined
+export function hasActiveAccessGrant(principal: string, target: string, identityIdOrNow?: string | number, now = Date.now()): boolean | undefined {
+  const identityId = typeof identityIdOrNow === 'string' ? identityIdOrNow : undefined
+  const effectiveNow = typeof identityIdOrNow === 'number' ? identityIdOrNow : now
   const rows = getDb().prepare(
-    `SELECT expires_at, revoked_at FROM access_grants WHERE principal = ? AND target = ?`,
-  ).all(principal, target) as Array<{ expires_at: string; revoked_at: string | null }>
+    `SELECT expires_at, revoked_at, identity_id FROM access_grants
+       WHERE principal = ? AND target = ?`,
+  ).all(principal, target) as Array<{ expires_at: string; revoked_at: string | null; identity_id: string | null }>
   if (rows.length === 0) return undefined
-  return rows.some((row) => !row.revoked_at && new Date(row.expires_at).getTime() > now)
+  const scopedRows = identityId && rows.some((row) => row.identity_id)
+    ? rows.filter((row) => row.identity_id === identityId)
+    : rows
+  if (scopedRows.length === 0) return false
+  return scopedRows.some((row) => !row.revoked_at && new Date(row.expires_at).getTime() > effectiveNow)
 }
 
 export function revokeAccessGrantsForPrincipal(principal: string): number {

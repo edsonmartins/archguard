@@ -383,6 +383,7 @@ export const runGrantPersonTarget = createServerOnlyFn(async function runGrantPe
       createAccessGrant({
         grant_id: randomUUID(),
         principal: data.username,
+        identity_id: data.identity_id,
         target: data.target,
         role: data.role,
         expires_at: expiresAt,
