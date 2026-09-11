@@ -82,6 +82,22 @@ export async function writeOpenFgaGrant(input: {
   if (!res.ok) throw new Error(`OpenFGA write failed: ${res.status}`)
 }
 
+export async function deleteOpenFgaGrant(input: TupleKey): Promise<void> {
+  const c = config()
+  if (!c.enabled) return
+  if (!openFgaConfigured()) throw new Error('OpenFGA is not configured')
+  if (!/^user:[^\s]+$/.test(input.user) || input.relation !== 'connect' || !input.object.startsWith('connection:')) {
+    throw new Error('OpenFGA grant tuple invalid')
+  }
+  const res = await integrationFetch(`${c.url}/stores/${encodeURIComponent(c.store)}/write`, {
+    method: 'POST',
+    integration: 'openfga',
+    headers: { Authorization: `Bearer ${c.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deletes: { tuple_keys: [input] } }),
+  })
+  if (!res.ok) throw new Error(`OpenFGA delete failed: ${res.status}`)
+}
+
 /** Remove all direct grants currently materialized for a principal. */
 export async function deleteOpenFgaGrantsForUser(user: string): Promise<number> {
   const c = config()

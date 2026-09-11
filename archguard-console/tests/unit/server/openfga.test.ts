@@ -79,4 +79,12 @@ describe('OpenFGA authorization check', () => {
     fetchMock.mockReset().mockImplementation(async () => new Response(JSON.stringify({ tuples: [], continuation_token: 'same' }), { status: 200 }))
     await expect(deleteOpenFgaGrantsForUser('user:sub-1')).rejects.toThrow('pagination token repeated')
   })
+
+  it('deletes one exact grant tuple and rejects unsafe tuples', async () => {
+    fetchMock.mockResolvedValue(new Response('{}', { status: 200 }))
+    const { deleteOpenFgaGrant } = await import('@/server/openfga')
+    await expect(deleteOpenFgaGrant({ user: 'user:sub-1', relation: 'connect', object: 'connection:site/target' })).resolves.toBeUndefined()
+    expect(String((fetchMock.mock.calls[0][1] as RequestInit).body)).toContain('connection:site/target')
+    await expect(deleteOpenFgaGrant({ user: 'user:sub-1', relation: 'admin', object: 'connection:site/target' })).rejects.toThrow('invalid')
+  })
 })

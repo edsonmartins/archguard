@@ -45,6 +45,7 @@ import {
 import {
   grantPersonTargetFn,
   listPersonAccessGrantsFn,
+  revokePersonAccessGrantFn,
   provisionPersonAccessFn,
   type LifecycleStep,
 } from '@/server/lifecycle-fn'
@@ -164,6 +165,14 @@ export function PersonDetailPage() {
       setShowGrant(false)
       if (res.ok) toast.success(res.message)
       else toast.error(res.message)
+    },
+    onError: (e) => toast.error((e as Error).message),
+  })
+  const revokeGrant = useMutation({
+    mutationFn: (grantId: string) => revokePersonAccessGrantFn({ data: { grant_id: grantId, username: person!.username } }),
+    onSuccess: () => {
+      toast.success('Grant revogado')
+      void queryClient.invalidateQueries({ queryKey: ['person-access-grants', personId] })
     },
     onError: (e) => toast.error((e as Error).message),
   })
@@ -351,6 +360,11 @@ export function PersonDetailPage() {
                           <span className={expired ? 'text-amber-700' : 'text-emerald-700'}>
                             {grant.revoked_at ? 'revogado' : expired ? 'expirado' : `ativo até ${new Date(grant.expires_at).toLocaleString()}`}
                           </span>
+                          {!grant.revoked_at && !expired ? (
+                            <Button size="sm" variant="outline" disabled={revokeGrant.isPending} onClick={() => revokeGrant.mutate(grant.grant_id)}>
+                              Revogar grant
+                            </Button>
+                          ) : null}
                         </div>
                       )
                     })}

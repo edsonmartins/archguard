@@ -17,7 +17,7 @@ import { logger } from './logger'
 import { integrationFetch } from './http-integration-client'
 import { addUserToGroup } from './idp'
 import { openFgaConnectionObject, openFgaEnabled, writeOpenFgaGrant } from './openfga'
-import { createAccessGrant, listAccessGrantsForPrincipal } from './db'
+import { createAccessGrant, getAccessGrant, listAccessGrantsForPrincipal, revokeAccessGrant } from './db'
 import { randomUUID } from 'node:crypto'
 
 const ORCH_URL = (
@@ -274,6 +274,8 @@ export const runGrantPersonTarget = createServerOnlyFn(async function runGrantPe
   const steps: LifecycleStep[] = []
   const ttlSeconds = grantTtlSeconds(data.ttl)
   const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString()
+  let grantSubject: string | undefined
+  let grantObject: string | undefined
 
   // 1) Live Warpgate path (real grant even when orch is mock)
   const { warpgateConfigured, bindWarpgateUserRole } = await import(
@@ -361,8 +363,11 @@ export const runGrantPersonTarget = createServerOnlyFn(async function runGrantPe
       if (!site) throw new Error(`Target não encontrado no catálogo: ${data.target}`)
       object = openFgaConnectionObject(site.slug, data.target)
     }
+    const subject = `user:${data.identity_id || data.username}`
+    grantSubject = subject
+    grantObject = object
     await writeOpenFgaGrant({
-      user: `user:${data.identity_id || data.username}`,
+      user: subject,
       relation: 'connect',
       object,
     })
@@ -381,6 +386,8 @@ export const runGrantPersonTarget = createServerOnlyFn(async function runGrantPe
         target: data.target,
         role: data.role,
         expires_at: expiresAt,
+        subject: grantSubject,
+        object: grantObject,
       })
       steps.push({ component: 'grant_expiry', ok: true, detail: `expires ${expiresAt}` })
     } catch (e) {
@@ -473,4 +480,25 @@ export const listPersonAccessGrantsFn = createServerFn({ method: 'GET' })
     requireAnyPerm(s, ['persons:read', 'persons:update', 'system:admin'], 'persons:read')
     await assertPrincipalTenantAccess(data.username, s)
     return listAccessGrantsForPrincipal(data.username)
+  })
+
+export const revokePersonAccessGrantFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: unknown) => {
+    const r = z.object({ grant_id: z.string().min(1).max(128), username: z.string().min(1).max(128) }).safeParse(data)
+    if (!r.success) throw new Error(r.error.message)
+    return r.data
+  })
+  .handler(async ({ data }) => {
+    const s = requireSession()
+    requireAnyPerm(s, ['persons:update', 'gateways:manage', 'system:admin'], 'persons:update')
+    await assertPrincipalTenantAccess(data.username, s)
+    const grant = getAccessGrant(data.grant_id)
+    if (!grant || grant.principal !== data.username) throw new Error('Grant não encontrado')
+    if (grant.subject && grant.object) {
+      const { deleteOpenFgaGrant } = await import('./openfga')
+      await deleteOpenFgaGrant({ user: grant.subject, relation: 'connect', object: grant.object })
+    }
+    revokeAccessGrant(grant.grant_id)
+    recordActivity('POST', `/archgate/persons/${encodeURIComponent(data.username)}/grant/${grant.grant_id}/revoke`, sessionActor(s), 'success', undefined, { target: grant.target })
+    return { ok: true, grant_id: grant.grant_id }
   })
