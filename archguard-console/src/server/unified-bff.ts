@@ -20,7 +20,7 @@ import { issueRustGuacSession, rustGuacConfigured } from './rustguac-proxy'
 import { checkOpenFga, openFgaConnectionObject } from './openfga'
 import { admitBrokerSession } from './broker-session'
 import { isPrincipalSessionRevoked } from './principal-revocation'
-import { getLatestAccessGrant } from './db'
+import { hasActiveAccessGrant } from './db'
 
 export type UnifiedConnection = {
   id: string
@@ -174,8 +174,8 @@ export async function createUnifiedSession(
   // Enforce the expiry of grants created through this console. Older grants
   // without a local record retain the existing catalog/group authorization.
   const principal = session.user?.name || session.user?.email || ''
-  const grant = getLatestAccessGrant(principal, hit.target)
-  if (grant && (grant.revoked_at || new Date(grant.expires_at).getTime() <= Date.now())) {
+  const grantActive = hasActiveAccessGrant(principal, hit.target)
+  if (grantActive === false) {
     throw new Error('Forbidden: grant expirado ou revogado')
   }
 

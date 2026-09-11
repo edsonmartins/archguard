@@ -6,6 +6,7 @@ import {
   _resetDbForTests,
   createAccessGrant,
   getLatestAccessGrant,
+  hasActiveAccessGrant,
   revokeAccessGrantsForPrincipal,
 } from '../../../src/server/db'
 import { grantTtlSeconds } from '../../../src/server/lifecycle-fn'
@@ -39,5 +40,11 @@ describe('console access grant expiry', () => {
     expect(latest?.grant_id).toBe('g-new')
     expect(revokeAccessGrantsForPrincipal('alice')).toBe(2)
     expect(getLatestAccessGrant('alice', 'db')?.revoked_at).toBeTruthy()
+  })
+
+  it('keeps an overlapping grant active when another one expires', () => {
+    createAccessGrant({ grant_id: 'g-expired', principal: 'alice', target: 'db', expires_at: '2000-01-01T00:00:00.000Z' })
+    createAccessGrant({ grant_id: 'g-valid', principal: 'alice', target: 'db', expires_at: '2099-01-01T00:00:00.000Z' })
+    expect(hasActiveAccessGrant('alice', 'db', Date.parse('2026-01-01T00:00:00.000Z'))).toBe(true)
   })
 })

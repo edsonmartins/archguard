@@ -441,6 +441,18 @@ export function listAccessGrantsForPrincipal(principal: string): AccessGrant[] {
   ).all(principal) as AccessGrant[]
 }
 
+/**
+ * Returns undefined when no console grant exists, otherwise whether at least
+ * one non-revoked grant is still valid. This preserves overlapping grants.
+ */
+export function hasActiveAccessGrant(principal: string, target: string, now = Date.now()): boolean | undefined {
+  const rows = getDb().prepare(
+    `SELECT expires_at, revoked_at FROM access_grants WHERE principal = ? AND target = ?`,
+  ).all(principal, target) as Array<{ expires_at: string; revoked_at: string | null }>
+  if (rows.length === 0) return undefined
+  return rows.some((row) => !row.revoked_at && new Date(row.expires_at).getTime() > now)
+}
+
 export function revokeAccessGrantsForPrincipal(principal: string): number {
   return getDb().prepare(
     'UPDATE access_grants SET revoked_at = ? WHERE principal = ? AND revoked_at IS NULL',
