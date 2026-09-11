@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { _resetDbForTests, getDb } from '@/server/db'
 import { recordActivity } from '@/server/activity-log'
-import { claimAuditOutbox, markAuditFailed, markAuditPublished, recoverStaleAuditClaims } from '@/server/audit-outbox'
+import { claimAuditOutbox, getAuditOutboxStatus, markAuditFailed, markAuditPublished, recoverStaleAuditClaims } from '@/server/audit-outbox'
 
 describe('audit outbox', () => {
   let dir: string | undefined
@@ -54,5 +54,18 @@ describe('audit outbox', () => {
     expect(claimAuditOutbox()).toHaveLength(1)
     expect(recoverStaleAuditClaims()).toBe(0)
     expect(claimAuditOutbox()).toHaveLength(0)
+  })
+
+  it('reports blocked health and stale claims without exposing payloads', () => {
+    dir = mkdtempSync(join(tmpdir(), 'archgate-audit-status-'))
+    process.env.ARCHGUARD_DB_PATH = join(dir, 'console.sqlite')
+    recordActivity('POST', '/archgate/sites/site-a', 'actor-a', 'success')
+    const claimed = claimAuditOutbox()
+    getDb().prepare('UPDATE audit_outbox SET claimed_at = ? WHERE event_id = ?')
+      .run(new Date(Date.now() - 120_000).toISOString(), claimed[0].event_id)
+    const status = getAuditOutboxStatus()
+    expect(status.health).toBe('blocked')
+    expect(status.stale_claims).toBe(1)
+    expect(status).not.toHaveProperty('payload_json')
   })
 })

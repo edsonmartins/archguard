@@ -14,11 +14,14 @@ export type AuditOutboxRow = {
 }
 
 export type AuditOutboxStatus = {
+  health: 'healthy' | 'degraded' | 'blocked'
   pending: number
   publishing: number
   failed: number
+  stale_claims: number
   published: number
   oldest_pending_at: string | null
+  oldest_pending_age_seconds: number | null
   last_published_at: string | null
 }
 
@@ -34,12 +37,26 @@ export function getAuditOutboxStatus(): AuditOutboxStatus {
   const latest = db.prepare(
     `SELECT published_at FROM audit_outbox WHERE status = 'published' ORDER BY published_at DESC LIMIT 1`,
   ).get() as { published_at?: string } | undefined
+  const staleCutoff = new Date(Date.now() - 60_000).toISOString()
+  const stale = db.prepare(
+    `SELECT COUNT(*) AS count FROM audit_outbox
+       WHERE status = 'publishing' AND (claimed_at IS NULL OR claimed_at <= ?)`,
+  ).get(staleCutoff) as { count: number }
+  const oldestPendingAt = oldest?.occurred_at || null
+  const oldestAge = oldestPendingAt
+    ? Math.max(0, Math.floor((Date.now() - new Date(oldestPendingAt).getTime()) / 1000))
+    : null
+  const staleClaims = stale.count || 0
+  const failed = byStatus.get('failed') || 0
   return {
+    health: staleClaims > 0 || failed > 0 ? 'blocked' : byStatus.get('pending') || byStatus.get('publishing') ? 'degraded' : 'healthy',
     pending: byStatus.get('pending') || 0,
     publishing: byStatus.get('publishing') || 0,
-    failed: byStatus.get('failed') || 0,
+    failed,
+    stale_claims: staleClaims,
     published: byStatus.get('published') || 0,
-    oldest_pending_at: oldest?.occurred_at || null,
+    oldest_pending_at: oldestPendingAt,
+    oldest_pending_age_seconds: oldestAge,
     last_published_at: latest?.published_at || null,
   }
 }
