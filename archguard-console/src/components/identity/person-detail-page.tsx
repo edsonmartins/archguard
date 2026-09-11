@@ -40,6 +40,7 @@ import { queryKeys } from '@/lib/utils/query-keys'
 import { initials } from '@/lib/utils/formatters'
 import {
   revokePersonAccessFn,
+  listPersonOffboardingOperationsFn,
   type OffboardStep,
 } from '@/server/offboarding-fn'
 import {
@@ -70,6 +71,11 @@ export function PersonDetailPage() {
   const { data: accessGrants, isError: accessGrantsError } = useQuery({
     queryKey: ['person-access-grants', personId],
     queryFn: () => listPersonAccessGrantsFn({ data: { username: person!.username } }),
+    enabled: Boolean(person?.username),
+  })
+  const { data: offboardingOperations, isError: offboardingOperationsError } = useQuery({
+    queryKey: ['person-offboarding-operations', personId],
+    queryFn: () => listPersonOffboardingOperationsFn({ data: { username: person!.username } }),
     enabled: Boolean(person?.username),
   })
   const deletePerson = useDeletePerson()
@@ -375,6 +381,34 @@ export function PersonDetailPage() {
                 <p className="mt-3 text-xs text-muted-foreground">
                   A revogação integral continua disponível acima; a revogação individual nativa depende do vínculo seguro com OpenFGA e Warpgate.
                 </p>
+              </CardContent>
+            </Card>
+
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-base">Operações de offboarding</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {offboardingOperationsError ? (
+                  <p className="text-sm text-muted-foreground">Histórico indisponível ou fora do escopo.</p>
+                ) : offboardingOperations?.length ? (
+                  <div className="space-y-3">
+                    {offboardingOperations.map((operation) => (
+                      <div key={operation.operation_id} className="rounded border p-3 text-sm">
+                        <div className="flex flex-wrap justify-between gap-2">
+                          <span className="font-mono text-xs">{operation.operation_id}</span>
+                          <span className={operation.status === 'completed' ? 'text-emerald-700' : 'text-amber-700'}>{operation.status}</span>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">Início: {new Date(operation.started_at).toLocaleString()} · etapas: {operation.steps.length}</p>
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {operation.steps.map((step) => <span key={`${operation.operation_id}-${step.sequence}`} className="rounded bg-muted px-2 py-0.5 text-xs">{step.component}: {step.ok ? 'ok' : 'falhou'}</span>)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Nenhuma operação registrada.</p>
+                )}
               </CardContent>
             </Card>
 

@@ -19,7 +19,7 @@ import {
 import { forceCloseCheckoutsForPrincipal } from './org-checkouts'
 import { deleteOpenFgaGrantsForUser } from './openfga'
 import { revokePrincipal } from './principal-revocation'
-import { beginOffboardingOperation, finishOffboardingOperation, listBrokerSessionsForPrincipal, recordOffboardingStep, revokeAccessGrantsForPrincipal } from './db'
+import { beginOffboardingOperation, finishOffboardingOperation, listBrokerSessionsForPrincipal, listOffboardingOperationsForPrincipal, recordOffboardingStep, revokeAccessGrantsForPrincipal } from './db'
 import { closeBrokerSessionAndLease } from './broker-session'
 import { offboardingResult } from './offboarding-result'
 
@@ -115,6 +115,7 @@ export const revokePersonAccessFn = createServerFn({ method: 'POST' })
     if (!r.success) throw new Error(r.error.message)
     return r.data
   })
+
   .handler(async ({ data }) => {
     const s = requireSession()
     requireAnyPerm(
@@ -243,4 +244,17 @@ export const revokePersonAccessFn = createServerFn({ method: 'POST' })
           ? `Login bloqueado para ${username}; revogação incompleta — consulte as etapas e tente novamente`
           : `Falha ao revogar ${username} — consulte as etapas`,
     }
+  })
+
+export const listPersonOffboardingOperationsFn = createServerFn({ method: 'GET' })
+  .inputValidator((data: unknown) => {
+    const r = z.object({ username: z.string().min(1).max(128) }).safeParse(data)
+    if (!r.success) throw new Error(r.error.message)
+    return r.data
+  })
+  .handler(async ({ data }) => {
+    const s = requireSession()
+    requireAnyPerm(s, ['persons:read', 'persons:update', 'system:admin'], 'persons:read')
+    await assertPrincipalTenantAccess(data.username, s)
+    return listOffboardingOperationsForPrincipal(data.username)
   })

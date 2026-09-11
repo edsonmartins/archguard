@@ -524,6 +524,34 @@ export function recordOffboardingStep(operationId: string, sequence: number, ste
     .run(operationId, sequence, step.component, step.ok ? 1 : 0, step.detail?.slice(0, 500) || null, new Date().toISOString())
 }
 
+export type OffboardingOperation = {
+  operation_id: string
+  principal: string
+  status: 'running' | 'completed' | 'partial'
+  started_at: string
+  updated_at: string
+  started_by: string
+  error: string | null
+  steps: Array<{ sequence: number; component: string; ok: boolean; detail: string | null; recorded_at: string }>
+}
+
+export function listOffboardingOperationsForPrincipal(principal: string, limit = 10): OffboardingOperation[] {
+  const operations = getDb().prepare(
+    `SELECT operation_id, principal, status, started_at, updated_at, started_by, error
+       FROM offboarding_operations WHERE principal = ? ORDER BY started_at DESC LIMIT ?`,
+  ).all(principal, Math.max(1, Math.min(limit, 50))) as Array<Omit<OffboardingOperation, 'steps'>>
+  const stepQuery = getDb().prepare(
+    `SELECT sequence, component, ok, detail, recorded_at FROM offboarding_operation_steps
+       WHERE operation_id = ? ORDER BY sequence ASC`,
+  )
+  return operations.map((operation) => ({
+    ...operation,
+    status: operation.status as OffboardingOperation['status'],
+    steps: (stepQuery.all(operation.operation_id) as Array<{ sequence: number; component: string; ok: number; detail: string | null; recorded_at: string }>)
+      .map((step) => ({ ...step, ok: step.ok === 1 })),
+  }))
+}
+
 /** Historical ownership index used for recording access after session close. */
 export function listBrokerRecordingSessionsForPrincipal(principal: string): string[] {
   return (getDb().prepare(
