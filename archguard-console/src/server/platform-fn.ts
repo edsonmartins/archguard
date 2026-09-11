@@ -33,10 +33,11 @@ import {
 } from './mentors-axis-proxy'
 import { listSites, sitesBackend } from './sites'
 import { identityAdminConfigured, idpKind } from './idp'
-import { countLegacyAccessGrantsForPrincipal, getLegacyAccessGrantStatus, migrateLegacyAccessGrants, pingDb } from './db'
+import { countLegacyAccessGrantsForPrincipal, getLegacyAccessGrantStatus, listLegacyAccessGrantsForPrincipal, migrateLegacyAccessGrants, pingDb } from './db'
 import { getAuditOutboxStatus } from './audit-outbox'
 import { forwardAuditBatch } from './audit-forwarder'
 import { getBrokerLeaseReconcilerStatus, reconcileExpiredBrokerLeases } from './broker-session'
+import { deleteOpenFgaGrant, openFgaConfigured, openFgaEnabled, writeOpenFgaGrant } from './openfga'
 
 export type PlatformServiceStatus = 'ok' | 'degraded' | 'error' | 'unreachable' | 'unconfigured'
 
@@ -622,6 +623,25 @@ export const migrateLegacyAccessGrantsFn = createServerFn({ method: 'POST' })
     const affected = countLegacyAccessGrantsForPrincipal(data.principal)
     if (data.dry_run) {
       return { dry_run: true, principal: data.principal, identity_id: data.identity_id, affected }
+    }
+    if (openFgaEnabled()) {
+      if (!openFgaConfigured()) throw new Error('OpenFGA não está configurado para migrar as tuplas')
+      try {
+        const grants = listLegacyAccessGrantsForPrincipal(data.principal)
+        for (const grant of grants) {
+          if (!grant.subject || !/^user:[^\s]+$/.test(grant.subject) || !grant.object || !grant.object.startsWith('connection:')) {
+            throw new Error(`Grant ${grant.grant_id} não possui subject/object OpenFGA íntegros`)
+          }
+          const canonicalSubject = `user:${data.identity_id}`
+          await writeOpenFgaGrant({ user: canonicalSubject, relation: 'connect', object: grant.object })
+          if (grant.subject !== canonicalSubject) {
+            await deleteOpenFgaGrant({ user: grant.subject, relation: 'connect', object: grant.object })
+          }
+        }
+      } catch (error) {
+        recordActivity('POST', '/platform/access-grants/migrate-legacy', actor, 'error', 'legacy grant tuple migration failed')
+        throw error
+      }
     }
     const result = migrateLegacyAccessGrants(data.principal, data.identity_id)
     recordActivity('POST', '/platform/access-grants/migrate-legacy', actor, 'success', undefined, result)

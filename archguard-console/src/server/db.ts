@@ -612,6 +612,13 @@ export function countLegacyAccessGrantsForPrincipal(principal: string): number {
   ).get(principal.trim()) as { count: number }).count
 }
 
+export function listLegacyAccessGrantsForPrincipal(principal: string): AccessGrant[] {
+  return getDb().prepare(
+    `SELECT grant_id, principal, identity_id, target, tenant, role, created_at, expires_at, revoked_at, source, subject, object
+       FROM access_grants WHERE principal = ? AND identity_id IS NULL ORDER BY created_at ASC`,
+  ).all(principal.trim()) as AccessGrant[]
+}
+
 export function beginOffboardingOperation(principal: string, actor: string, staleAfterMs = 15 * 60_000): string {
   const db = getDb()
   const now = new Date().toISOString()
