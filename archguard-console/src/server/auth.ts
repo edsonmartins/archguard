@@ -14,6 +14,7 @@ import { isPrincipalSessionRevoked } from './principal-revocation'
 import { normalizeGroupNames } from './idp/groups'
 import { enforceRateLimit } from './rate-limit'
 import { derivePermissions, type Permission } from '../lib/auth/permissions'
+import { resolveArchGuardSessionContext } from './archguard-session-context'
 
 const LOGIN_LIMIT = 10
 const LOGIN_WINDOW_MS = 60 * 1000
@@ -26,6 +27,8 @@ export interface SessionUser {
 }
 
 export interface SessionData {
+  /** Stable identity key resolved by the control plane; username is not a key. */
+  identityId?: string
   /** Original authentication time from a verified IdP token (seconds). */
   authTime?: number
   isAuthenticated: boolean
@@ -183,12 +186,18 @@ export const sessionFromTokens = createServerOnlyFn(async function sessionFromTo
   const groups = normalizeGroups(rawGroups)
   const { isAdmin, hasAccess } = evaluateAccess(groups)
   if (!hasAccess) return null
+  const subject = typeof claims.sub === 'string' ? claims.sub : ''
+  if (!subject) return null
+  // Claims establish authentication; the control-plane context establishes the
+  // stable identity and active memberships used by authorization consumers.
+  const context = await resolveArchGuardSessionContext(subject)
 
   return {
+    identityId: context.identity_id,
     isAuthenticated: true,
     isAdmin,
     user: {
-      id: (claims.sub as string) || 'unknown',
+      id: subject,
       name:
         (claims.preferred_username as string) ||
         (claims.name as string) ||

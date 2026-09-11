@@ -137,6 +137,7 @@ export async function resolveOperatorSession(
   const groups = normalizeGroupNames(ui.groups)
   const context = await resolveArchGuardSessionContext(ui.sub || username)
   return {
+    identityId: context.identity_id,
     isAuthenticated: true,
     isAdmin: groups.includes('archguard_super_admins'),
     user: {
