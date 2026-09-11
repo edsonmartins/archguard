@@ -231,6 +231,8 @@ export const resolveGrantRoles = createServerOnlyFn(async function resolveGrantR
 
 export type GrantPersonTargetInput = {
   username: string
+  /** Stable identity key when the caller has resolved the person record. */
+  identity_id?: string
   target: string
   /** Optional Warpgate role name (skip auto-resolve). */
   role?: string
@@ -360,7 +362,7 @@ export const runGrantPersonTarget = createServerOnlyFn(async function runGrantPe
       object = openFgaConnectionObject(site.slug, data.target)
     }
     await writeOpenFgaGrant({
-      user: `user:${data.username}`,
+      user: `user:${data.identity_id || data.username}`,
       relation: 'connect',
       object,
     })
@@ -424,6 +426,7 @@ export const grantPersonTargetFn = createServerFn({ method: 'POST' })
     const r = z
       .object({
         username: z.string().min(1).max(128),
+        identity_id: z.string().min(1).max(256).optional(),
         target: z.string().min(1).max(128),
         /** Optional Warpgate role name (skip auto-resolve). */
         role: z.string().max(128).optional(),
@@ -455,7 +458,7 @@ export const grantPersonTargetFn = createServerFn({ method: 'POST' })
       ])
       if (!allowedRoles.has(data.role)) throw new Error('Forbidden: role fora do catálogo do target')
     }
-    return runGrantPersonTarget(data, sessionActor(s))
+    return runGrantPersonTarget({ ...data, identity_id: data.identity_id || undefined }, sessionActor(s))
   })
 
 /** Read the console-owned grant inventory for one person, within tenant scope. */

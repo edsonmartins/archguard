@@ -188,8 +188,13 @@ export const revokePersonAccessFn = createServerFn({ method: 'POST' })
     }
 
     try {
-      const removed = await deleteOpenFgaGrantsForUser(`user:${username}`)
-      steps.push({ component: 'openfga', ok: true, detail: `${removed} grant(s) removed` })
+      const subjects = Array.from(new Set([
+        `user:${username}`,
+        data.person_id ? `user:${data.person_id}` : '',
+      ].filter(Boolean)))
+      let removed = 0
+      for (const subject of subjects) removed += await deleteOpenFgaGrantsForUser(subject)
+      steps.push({ component: 'openfga', ok: true, detail: `${removed} grant(s) removed (${subjects.length} subject(s))` })
     } catch (e) {
       steps.push({ component: 'openfga', ok: false, detail: (e as Error).message })
     }

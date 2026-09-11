@@ -18,6 +18,7 @@ function labEnabled(): boolean {
 
 const bodySchema = z.object({
   username: z.string().min(1).max(128),
+  identity_id: z.string().min(1).max(256).optional(),
   target: z.string().min(1).max(128),
   role: z.string().max(128).optional(),
   ttl: z.string().max(32).optional(),

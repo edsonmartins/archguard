@@ -154,6 +154,7 @@ export function PersonDetailPage() {
       grantPersonTargetFn({
         data: {
           username: person!.username,
+          identity_id: person!.id,
           target: grantTarget.trim(),
           ttl: grantTtl.trim() || '8h',
         },

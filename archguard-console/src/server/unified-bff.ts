@@ -195,7 +195,7 @@ export async function createUnifiedSession(
     const targetConfig = site?.targets?.find((t) => t.nome === hit.target)
     if (!targetConfig) throw new Error('Target não encontrado na configuração do site')
     const allowed = await checkOpenFga({
-      user: `user:${session.user?.id || session.user?.name || 'unknown'}`,
+      user: `user:${session.identityId || session.user?.id || session.user?.name || 'unknown'}`,
       relation: 'connect',
       object: openFgaConnectionObject(hit.id.slice(0, hit.id.indexOf(':')), hit.target),
     })
