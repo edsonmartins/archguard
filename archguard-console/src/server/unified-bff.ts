@@ -203,6 +203,7 @@ export async function createUnifiedSession(
     let password: string | undefined
     let privateKey: string | undefined
     let leaseId: string | undefined
+    let leaseOwnedByConsole = false
     let leaseExpiresAt: string | undefined
     let targetUsername = targetConfig.username
     if (targetConfig.openbao_database_role) {
@@ -210,6 +211,7 @@ export async function createUnifiedSession(
       const dynamic = await issueDatabaseCredentials(targetConfig.openbao_database_role)
       password = dynamic.password
       leaseId = dynamic.lease_id
+      leaseOwnedByConsole = Boolean(leaseId)
       if (Number.isFinite(dynamic.lease_duration) && dynamic.lease_duration! > 0) {
         leaseExpiresAt = new Date(Date.now() + dynamic.lease_duration! * 1000).toISOString()
       }
@@ -227,15 +229,28 @@ export async function createUnifiedSession(
         leaseExpiresAt = new Date(Date.now() + secretLeaseDuration * 1000).toISOString()
       }
     }
-    const rust = await issueRustGuacSession({
-      protocol: proto,
-      hostname: targetConfig.host,
-      port: targetConfig.port,
-      username: targetUsername,
-      password,
-      private_key: privateKey,
-      session_policy: targetConfig.session_policy,
-    })
+    let rust
+    try {
+      rust = await issueRustGuacSession({
+        protocol: proto,
+        hostname: targetConfig.host,
+        port: targetConfig.port,
+        username: targetUsername,
+        password,
+        private_key: privateKey,
+        session_policy: targetConfig.session_policy,
+      })
+    } catch (error) {
+      if (leaseOwnedByConsole && leaseId) {
+        try {
+          const { revokeLease } = await import('./openbao-proxy')
+          await revokeLease(leaseId)
+        } catch (cleanupError) {
+          logger.error({ leaseId, err: String(cleanupError) }, 'failed to compensate orphaned dynamic credential lease')
+        }
+      }
+      throw error
+    }
     const username = principal || 'operator'
     logger.info({ user: username, target: hit.target, protocol: proto, mode: 'rustguac' }, 'unified session RustGuac ticket issued')
     await admitBrokerSession(

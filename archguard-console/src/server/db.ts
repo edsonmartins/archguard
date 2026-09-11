@@ -372,7 +372,7 @@ export type BrokerLeaseInventory = {
 export function listBrokerLeaseInventory(): BrokerLeaseInventory[] {
   return getDb().prepare(
     `SELECT session_id, lease_id, principal, tenant, target, lease_expires_at, closed_at
-       FROM broker_sessions WHERE lease_id IS NOT NULL ORDER BY created_at DESC`,
+       FROM broker_sessions WHERE lease_id IS NOT NULL ORDER BY created_at DESC, session_id ASC`,
   ).all() as BrokerLeaseInventory[]
 }
 
