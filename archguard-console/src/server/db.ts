@@ -583,6 +583,35 @@ export function getLegacyAccessGrantStatus(): LegacyAccessGrantStatus {
   return row
 }
 
+export type LegacyAccessGrantMigration = {
+  principal: string
+  identity_id: string
+  affected: number
+}
+
+/**
+ * Attach an explicitly verified canonical identity to legacy grants.
+ * This deliberately never overwrites an existing identity or infers one.
+ */
+export function migrateLegacyAccessGrants(principal: string, identityId: string): LegacyAccessGrantMigration {
+  const normalizedPrincipal = principal.trim()
+  const normalizedIdentityId = identityId.trim()
+  if (!normalizedPrincipal || !normalizedIdentityId) {
+    throw new Error('principal e identity_id são obrigatórios')
+  }
+  const db = getDb()
+  const affected = db.prepare(
+    'UPDATE access_grants SET identity_id = ? WHERE principal = ? AND identity_id IS NULL',
+  ).run(normalizedIdentityId, normalizedPrincipal).changes
+  return { principal: normalizedPrincipal, identity_id: normalizedIdentityId, affected }
+}
+
+export function countLegacyAccessGrantsForPrincipal(principal: string): number {
+  return (getDb().prepare(
+    'SELECT COUNT(*) AS count FROM access_grants WHERE principal = ? AND identity_id IS NULL',
+  ).get(principal.trim()) as { count: number }).count
+}
+
 export function beginOffboardingOperation(principal: string, actor: string, staleAfterMs = 15 * 60_000): string {
   const db = getDb()
   const now = new Date().toISOString()

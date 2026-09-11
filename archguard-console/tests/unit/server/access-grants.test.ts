@@ -8,6 +8,7 @@ import {
   getLatestAccessGrant,
   hasActiveAccessGrant,
   getLegacyAccessGrantStatus,
+  migrateLegacyAccessGrants,
   listAccessGrantsForPrincipal,
   revokeAccessGrantsForPrincipal,
 } from '../../../src/server/db'
@@ -72,5 +73,15 @@ describe('console access grant expiry', () => {
     createAccessGrant({ grant_id: 'g-legacy-b', principal: 'bob', target: 'db', expires_at: '2099-01-01T00:00:00.000Z' })
     createAccessGrant({ grant_id: 'g-canonical', principal: 'carol', identity_id: 'identity-3', target: 'db', expires_at: '2099-01-01T00:00:00.000Z' })
     expect(getLegacyAccessGrantStatus()).toMatchObject({ total: 2, principals: 2 })
+  })
+
+  it('migrates only legacy grants for an explicitly mapped principal', () => {
+    createAccessGrant({ grant_id: 'g-legacy-a', principal: 'alice', target: 'db', expires_at: '2099-01-01T00:00:00.000Z' })
+    createAccessGrant({ grant_id: 'g-canonical-a', principal: 'alice', identity_id: 'old-id', target: 'db-2', expires_at: '2099-01-01T00:00:00.000Z' })
+    createAccessGrant({ grant_id: 'g-legacy-b', principal: 'bob', target: 'db', expires_at: '2099-01-01T00:00:00.000Z' })
+    expect(migrateLegacyAccessGrants(' alice ', ' identity-1 ')).toMatchObject({ principal: 'alice', identity_id: 'identity-1', affected: 1 })
+    expect(getLatestAccessGrant('alice', 'db')?.identity_id).toBe('identity-1')
+    expect(getLatestAccessGrant('alice', 'db-2')?.identity_id).toBe('old-id')
+    expect(getLatestAccessGrant('bob', 'db')?.identity_id).toBeNull()
   })
 })

@@ -3,6 +3,7 @@
 
 import { createServerFn } from '@tanstack/react-start'
 import { lookup } from 'node:dns/promises'
+import { z } from 'zod'
 import { requireAnyPerm, requireSession, sessionActor } from './session-guard'
 import { recordActivity } from './activity-log'
 import { integrationFetch } from './http-integration-client'
@@ -32,7 +33,7 @@ import {
 } from './mentors-axis-proxy'
 import { listSites, sitesBackend } from './sites'
 import { identityAdminConfigured, idpKind } from './idp'
-import { getLegacyAccessGrantStatus, pingDb } from './db'
+import { countLegacyAccessGrantsForPrincipal, getLegacyAccessGrantStatus, migrateLegacyAccessGrants, pingDb } from './db'
 import { getAuditOutboxStatus } from './audit-outbox'
 import { forwardAuditBatch } from './audit-forwarder'
 import { getBrokerLeaseReconcilerStatus, reconcileExpiredBrokerLeases } from './broker-session'
@@ -605,3 +606,24 @@ export const reconcileBrokerLeasesFn = createServerFn({ method: 'POST' }).handle
     }
   },
 )
+
+const legacyGrantMigrationSchema = z.object({
+  principal: z.string().trim().min(1).max(256),
+  identity_id: z.string().trim().min(1).max(256),
+  dry_run: z.boolean().default(true),
+})
+
+export const migrateLegacyAccessGrantsFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: unknown) => legacyGrantMigrationSchema.parse(data))
+  .handler(async ({ data }) => {
+    const s = requireSession()
+    requireAnyPerm(s, ['settings:update', 'system:admin'], 'settings:update')
+    const actor = sessionActor(s)
+    const affected = countLegacyAccessGrantsForPrincipal(data.principal)
+    if (data.dry_run) {
+      return { dry_run: true, principal: data.principal, identity_id: data.identity_id, affected }
+    }
+    const result = migrateLegacyAccessGrants(data.principal, data.identity_id)
+    recordActivity('POST', '/platform/access-grants/migrate-legacy', actor, 'success', undefined, result)
+    return { dry_run: false, ...result }
+  })
