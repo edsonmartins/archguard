@@ -33,6 +33,7 @@ import { listSites, sitesBackend } from './sites'
 import { identityAdminConfigured, idpKind } from './idp'
 import { pingDb } from './db'
 import { getAuditOutboxStatus } from './audit-outbox'
+import { forwardAuditBatch } from './audit-forwarder'
 
 export type PlatformServiceStatus = 'ok' | 'degraded' | 'error' | 'unreachable' | 'unconfigured'
 
@@ -563,5 +564,17 @@ export const getPlatformOverviewFn = createServerFn({ method: 'GET' }).handler(
       endpoints,
       runbooks: RUNBOOKS,
     }
+  },
+)
+
+export const retryAuditOutboxFn = createServerFn({ method: 'POST' }).handler(
+  async () => {
+    const s = requireSession()
+    requireAnyPerm(s, ['settings:update', 'system:admin'], 'settings:update')
+    if (!process.env.AUDIT_OUTBOX_FORWARDER_URL?.trim()) {
+      throw new Error('Destino da outbox não configurado no servidor')
+    }
+    const published = await forwardAuditBatch()
+    return { published, status: getAuditOutboxStatus() }
   },
 )

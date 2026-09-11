@@ -1,7 +1,7 @@
 // Módulo Plataforma — saúde stack ArchGate + endpoints + runbooks (ADR-009)
 
 import { useTranslation } from 'react-i18next'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
   Activity,
@@ -30,6 +30,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { PageHeader } from '@/components/shared/page-header'
 import {
   getPlatformOverviewFn,
+  retryAuditOutboxFn,
   type PlatformService,
   type PlatformServiceStatus,
 } from '@/server/platform-fn'
@@ -127,6 +128,10 @@ export function PlatformPage() {
   })
 
   const data = q.data
+  const retryOutbox = useMutation({
+    mutationFn: () => retryAuditOutboxFn(),
+    onSuccess: () => void q.refetch(),
+  })
 
   return (
     <div className="space-y-6 p-6">
@@ -343,6 +348,10 @@ export function PlatformPage() {
                 <div className="flex justify-between"><span>Falhas</span><strong className={data.audit_outbox.failed ? 'text-destructive' : ''}>{data.audit_outbox.failed}</strong></div>
                 <div className="flex justify-between"><span>Publicados</span><strong>{data.audit_outbox.published}</strong></div>
                 {data.audit_outbox.oldest_pending_at && <p className="text-xs text-muted-foreground">Mais antigo: {new Date(data.audit_outbox.oldest_pending_at).toLocaleString()}</p>}
+                <Button size="sm" variant="outline" disabled={retryOutbox.isPending} onClick={() => retryOutbox.mutate()}>
+                  {retryOutbox.isPending ? 'Tentando…' : 'Tentar entrega agora'}
+                </Button>
+                {retryOutbox.isError && <p className="text-xs text-destructive">{(retryOutbox.error as Error).message}</p>}
               </CardContent>
             </Card>
           )}
