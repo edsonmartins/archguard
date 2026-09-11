@@ -501,6 +501,13 @@ export function beginOffboardingOperation(principal: string, actor: string, stal
   const staleBefore = new Date(Date.now() - Math.max(60_000, staleAfterMs)).toISOString()
   db.prepare(`UPDATE offboarding_operations SET status = 'partial', updated_at = ?, error = 'operation stale; retry scheduled'
     WHERE principal = ? AND status = 'running' AND updated_at <= ?`).run(now, principal, staleBefore)
+  const resumable = db.prepare(`SELECT operation_id FROM offboarding_operations
+    WHERE principal = ? AND status = 'partial' ORDER BY updated_at DESC LIMIT 1`).get(principal) as { operation_id: string } | undefined
+  if (resumable) {
+    db.prepare(`UPDATE offboarding_operations SET status = 'running', updated_at = ?, started_by = ?, error = NULL
+      WHERE operation_id = ?`).run(now, actor, resumable.operation_id)
+    return resumable.operation_id
+  }
   const operationId = randomUUID()
   try {
     db.prepare(`INSERT INTO offboarding_operations
@@ -524,6 +531,14 @@ export function recordOffboardingStep(operationId: string, sequence: number, ste
     .run(operationId, sequence, step.component, step.ok ? 1 : 0, step.detail?.slice(0, 500) || null, new Date().toISOString())
 }
 
+export function listOffboardingSteps(operationId: string): OffboardingOperation['steps'] {
+  return (getDb().prepare(
+    `SELECT sequence, component, ok, detail, recorded_at FROM offboarding_operation_steps
+       WHERE operation_id = ? ORDER BY sequence ASC`,
+  ).all(operationId) as Array<{ sequence: number; component: string; ok: number; detail: string | null; recorded_at: string }>)
+    .map((step) => ({ ...step, ok: step.ok === 1 }))
+}
+
 export type OffboardingOperation = {
   operation_id: string
   principal: string
@@ -540,15 +555,10 @@ export function listOffboardingOperationsForPrincipal(principal: string, limit =
     `SELECT operation_id, principal, status, started_at, updated_at, started_by, error
        FROM offboarding_operations WHERE principal = ? ORDER BY started_at DESC LIMIT ?`,
   ).all(principal, Math.max(1, Math.min(limit, 50))) as Array<Omit<OffboardingOperation, 'steps'>>
-  const stepQuery = getDb().prepare(
-    `SELECT sequence, component, ok, detail, recorded_at FROM offboarding_operation_steps
-       WHERE operation_id = ? ORDER BY sequence ASC`,
-  )
   return operations.map((operation) => ({
     ...operation,
     status: operation.status as OffboardingOperation['status'],
-    steps: (stepQuery.all(operation.operation_id) as Array<{ sequence: number; component: string; ok: number; detail: string | null; recorded_at: string }>)
-      .map((step) => ({ ...step, ok: step.ok === 1 })),
+    steps: listOffboardingSteps(operation.operation_id),
   }))
 }
 
