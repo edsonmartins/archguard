@@ -19,7 +19,7 @@ import {
 import { forceCloseCheckoutsForPrincipal } from './org-checkouts'
 import { deleteOpenFgaGrantsForUser } from './openfga'
 import { revokePrincipal } from './principal-revocation'
-import { beginOffboardingOperation, finishOffboardingOperation, listBrokerSessionsForPrincipal, revokeAccessGrantsForPrincipal } from './db'
+import { beginOffboardingOperation, finishOffboardingOperation, listBrokerSessionsForPrincipal, recordOffboardingStep, revokeAccessGrantsForPrincipal } from './db'
 import { closeBrokerSessionAndLease } from './broker-session'
 import { offboardingResult } from './offboarding-result'
 
@@ -128,28 +128,32 @@ export const revokePersonAccessFn = createServerFn({ method: 'POST' })
     await assertPrincipalTenantAccess(username, s)
     const operationId = beginOffboardingOperation(username, actor)
     const steps: OffboardStep[] = []
+    const addStep = (step: OffboardStep): void => {
+      steps.push(step)
+      recordOffboardingStep(operationId, steps.length, step)
+    }
     revokePrincipal(username)
-    steps.push({ component: 'console_sessions', ok: true, detail: 'principal blocked locally' })
+    addStep({ component: 'console_sessions', ok: true, detail: 'principal blocked locally' })
     for (const sessionId of listBrokerSessionsForPrincipal(username)) {
       try {
         await closeBrokerSessionAndLease(sessionId)
-        steps.push({ component: 'rustguac', ok: true, detail: sessionId })
+        addStep({ component: 'rustguac', ok: true, detail: sessionId })
       } catch (error) {
-        steps.push({ component: 'rustguac', ok: false, detail: (error as Error).message })
+        addStep({ component: 'rustguac', ok: false, detail: (error as Error).message })
       }
     }
 
     if (!data.direct_only) {
-      steps.push(await callOrchestrationRevoke(username, reason))
+      addStep(await callOrchestrationRevoke(username, reason))
     }
 
     // Always enforce IdP block even if orch is mock-only
-    steps.push(await disableIdpPrincipal(username))
+    addStep(await disableIdpPrincipal(username))
 
     // ADR-013 A1: close any open org-account checkouts for this principal
     try {
       const closed = forceCloseCheckoutsForPrincipal(username)
-      steps.push({
+      addStep({
         component: 'org_checkouts',
         ok: true,
         detail:
@@ -158,7 +162,7 @@ export const revokePersonAccessFn = createServerFn({ method: 'POST' })
             : 'no open org checkouts',
       })
     } catch (e) {
-      steps.push({
+      addStep({
         component: 'org_checkouts',
         ok: false,
         detail: (e as Error).message,
@@ -168,20 +172,20 @@ export const revokePersonAccessFn = createServerFn({ method: 'POST' })
     if (warpgateConfigured()) {
       try {
         const r = await deleteWarpgateUserByName(username)
-        steps.push({
+        addStep({
           component: 'warpgate',
           ok: r.ok,
           detail: r.detail,
         })
       } catch (e) {
-        steps.push({
+        addStep({
           component: 'warpgate',
           ok: false,
           detail: (e as Error).message,
         })
       }
     } else {
-      steps.push({
+      addStep({
         component: 'warpgate',
         ok: true,
         detail: 'skipped (not configured)',
@@ -195,15 +199,15 @@ export const revokePersonAccessFn = createServerFn({ method: 'POST' })
       ].filter(Boolean)))
       let removed = 0
       for (const subject of subjects) removed += await deleteOpenFgaGrantsForUser(subject)
-      steps.push({ component: 'openfga', ok: true, detail: `${removed} grant(s) removed (${subjects.length} subject(s))` })
+      addStep({ component: 'openfga', ok: true, detail: `${removed} grant(s) removed (${subjects.length} subject(s))` })
     } catch (e) {
-      steps.push({ component: 'openfga', ok: false, detail: (e as Error).message })
+      addStep({ component: 'openfga', ok: false, detail: (e as Error).message })
     }
     try {
       const localRemoved = revokeAccessGrantsForPrincipal(username)
-      steps.push({ component: 'grant_expiry', ok: true, detail: `${localRemoved} grant(s) revoked locally` })
+      addStep({ component: 'grant_expiry', ok: true, detail: `${localRemoved} grant(s) revoked locally` })
     } catch (e) {
-      steps.push({ component: 'grant_expiry', ok: false, detail: (e as Error).message })
+      addStep({ component: 'grant_expiry', ok: false, detail: (e as Error).message })
     }
 
     const result = offboardingResult(steps)

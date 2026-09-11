@@ -196,6 +196,16 @@ function migrate(db: Database.Database): void {
     );
     CREATE UNIQUE INDEX IF NOT EXISTS idx_offboarding_running
       ON offboarding_operations (principal) WHERE status = 'running';
+    CREATE TABLE IF NOT EXISTS offboarding_operation_steps (
+      operation_id TEXT NOT NULL,
+      sequence     INTEGER NOT NULL,
+      component    TEXT NOT NULL,
+      ok           INTEGER NOT NULL,
+      detail       TEXT,
+      recorded_at  TEXT NOT NULL,
+      PRIMARY KEY (operation_id, sequence),
+      FOREIGN KEY (operation_id) REFERENCES offboarding_operations(operation_id)
+    );
 
     -- Single-use connector enrollment metadata; token material is never stored.
     CREATE TABLE IF NOT EXISTS connector_enrollments (
@@ -506,6 +516,12 @@ export function beginOffboardingOperation(principal: string, actor: string, stal
 export function finishOffboardingOperation(operationId: string, status: 'completed' | 'partial', error?: string): void {
   getDb().prepare(`UPDATE offboarding_operations SET status = ?, updated_at = ?, error = ? WHERE operation_id = ?`)
     .run(status, new Date().toISOString(), error?.slice(0, 500) || null, operationId)
+}
+
+export function recordOffboardingStep(operationId: string, sequence: number, step: { component: string; ok: boolean; detail?: string }): void {
+  getDb().prepare(`INSERT OR REPLACE INTO offboarding_operation_steps
+    (operation_id, sequence, component, ok, detail, recorded_at) VALUES (?, ?, ?, ?, ?, ?)`)
+    .run(operationId, sequence, step.component, step.ok ? 1 : 0, step.detail?.slice(0, 500) || null, new Date().toISOString())
 }
 
 /** Historical ownership index used for recording access after session close. */
