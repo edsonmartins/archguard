@@ -3,7 +3,8 @@
 
 import { createServerFn } from '@tanstack/react-start'
 import { lookup } from 'node:dns/promises'
-import { requireAnyPerm, requireSession } from './session-guard'
+import { requireAnyPerm, requireSession, sessionActor } from './session-guard'
+import { recordActivity } from './activity-log'
 import { integrationFetch } from './http-integration-client'
 import {
   getHealth as openbaoHealth,
@@ -573,11 +574,18 @@ export const retryAuditOutboxFn = createServerFn({ method: 'POST' }).handler(
   async () => {
     const s = requireSession()
     requireAnyPerm(s, ['settings:update', 'system:admin'], 'settings:update')
+    const actor = sessionActor(s)
     if (!process.env.AUDIT_OUTBOX_FORWARDER_URL?.trim()) {
       throw new Error('Destino da outbox não configurado no servidor')
     }
-    const published = await forwardAuditBatch()
-    return { published, status: getAuditOutboxStatus() }
+    try {
+      const published = await forwardAuditBatch()
+      recordActivity('POST', '/platform/audit-outbox/retry', actor, 'success', undefined, { published })
+      return { published, status: getAuditOutboxStatus() }
+    } catch (error) {
+      recordActivity('POST', '/platform/audit-outbox/retry', actor, 'error', 'audit outbox retry failed')
+      throw error
+    }
   },
 )
 
@@ -585,7 +593,14 @@ export const reconcileBrokerLeasesFn = createServerFn({ method: 'POST' }).handle
   async () => {
     const s = requireSession()
     requireAnyPerm(s, ['settings:update', 'system:admin'], 'settings:update')
-    const result = await reconcileExpiredBrokerLeases()
-    return { result, status: getBrokerLeaseReconcilerStatus() }
+    const actor = sessionActor(s)
+    try {
+      const result = await reconcileExpiredBrokerLeases()
+      recordActivity('POST', '/platform/broker-leases/reconcile', actor, result.failed ? 'error' : 'success', result.failed ? 'lease reconciliation partially failed' : undefined, result)
+      return { result, status: getBrokerLeaseReconcilerStatus() }
+    } catch (error) {
+      recordActivity('POST', '/platform/broker-leases/reconcile', actor, 'error', 'lease reconciliation failed')
+      throw error
+    }
   },
 )
