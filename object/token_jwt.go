@@ -64,6 +64,8 @@ type UserStandard struct {
 }
 
 type UserWithoutThirdIdp struct {
+	// Fields tagged json:"-" are never emitted as claims: credentials and MFA secrets (INV-7)
+	// and personal data not needed by relying parties (I-3.2). See token_claims_guard.go.
 	Owner       string `xorm:"varchar(100) notnull pk" json:"owner"`
 	Name        string `xorm:"varchar(100) notnull pk" json:"name"`
 	CreatedTime string `xorm:"varchar(100) index" json:"createdTime"`
@@ -72,8 +74,8 @@ type UserWithoutThirdIdp struct {
 
 	Id                string   `xorm:"varchar(100) index" json:"id"`
 	Type              string   `xorm:"varchar(100)" json:"type"`
-	Password          string   `xorm:"varchar(150)" json:"password"`
-	PasswordSalt      string   `xorm:"varchar(100)" json:"passwordSalt"`
+	Password          string   `xorm:"varchar(150)" json:"-"`
+	PasswordSalt      string   `xorm:"varchar(100)" json:"-"`
 	PasswordType      string   `xorm:"varchar(100)" json:"passwordType"`
 	DisplayName       string   `xorm:"varchar(100)" json:"displayName"`
 	FirstName         string   `xorm:"varchar(100)" json:"firstName"`
@@ -91,7 +93,7 @@ type UserWithoutThirdIdp struct {
 	Affiliation       string   `xorm:"varchar(100)" json:"affiliation"`
 	Title             string   `xorm:"varchar(100)" json:"title"`
 	IdCardType        string   `xorm:"varchar(100)" json:"idCardType"`
-	IdCard            string   `xorm:"varchar(100) index" json:"idCard"`
+	IdCard            string   `xorm:"varchar(100) index" json:"-"`
 	Homepage          string   `xorm:"varchar(100)" json:"homepage"`
 	Bio               string   `xorm:"varchar(100)" json:"bio"`
 	Tag               string   `xorm:"varchar(100)" json:"tag"`
@@ -126,14 +128,14 @@ type UserWithoutThirdIdp struct {
 	Lark     string `xorm:"lark varchar(100)" json:"lark"`
 	Gitlab   string `xorm:"gitlab varchar(100)" json:"gitlab"`
 
-	CreatedIp      string `xorm:"varchar(100)" json:"createdIp"`
+	CreatedIp      string `xorm:"varchar(100)" json:"-"`
 	LastSigninTime string `xorm:"varchar(100)" json:"lastSigninTime"`
-	LastSigninIp   string `xorm:"varchar(100)" json:"lastSigninIp"`
+	LastSigninIp   string `xorm:"varchar(100)" json:"-"`
 
 	// WebauthnCredentials []webauthn.Credential `xorm:"webauthnCredentials blob" json:"webauthnCredentials"`
 	PreferredMfaType string   `xorm:"varchar(100)" json:"preferredMfaType"`
-	RecoveryCodes    []string `xorm:"varchar(1000)" json:"recoveryCodes"`
-	TotpSecret       string   `xorm:"varchar(100)" json:"totpSecret"`
+	RecoveryCodes    []string `xorm:"varchar(1000)" json:"-"`
+	TotpSecret       string   `xorm:"varchar(100)" json:"-"`
 	MfaPhoneEnabled  bool     `json:"mfaPhoneEnabled"`
 	MfaEmailEnabled  bool     `json:"mfaEmailEnabled"`
 	// MultiFactorAuths    []*MfaProps           `xorm:"-" json:"multiFactorAuths,omitempty"`
@@ -145,10 +147,10 @@ type UserWithoutThirdIdp struct {
 	Permissions []*Permission `json:"permissions"`
 	Groups      []string      `xorm:"groups varchar(1000)" json:"groups"`
 
-	LastSigninWrongTime string `xorm:"varchar(100)" json:"lastSigninWrongTime"`
-	SigninWrongTimes    int    `json:"signinWrongTimes"`
+	LastSigninWrongTime string `xorm:"varchar(100)" json:"-"`
+	SigninWrongTimes    int    `json:"-"`
 
-	ManagedAccounts []ManagedAccount `xorm:"managedAccounts blob" json:"managedAccounts"`
+	ManagedAccounts []ManagedAccount `xorm:"managedAccounts blob" json:"-"`
 }
 
 type ClaimsShort struct {
@@ -225,8 +227,6 @@ func getUserWithoutThirdIdp(user *User) *UserWithoutThirdIdp {
 
 		Id:                user.Id,
 		Type:              user.Type,
-		Password:          user.Password,
-		PasswordSalt:      user.PasswordSalt,
 		PasswordType:      user.PasswordType,
 		DisplayName:       user.DisplayName,
 		FirstName:         user.FirstName,
@@ -244,7 +244,6 @@ func getUserWithoutThirdIdp(user *User) *UserWithoutThirdIdp {
 		Affiliation:       user.Affiliation,
 		Title:             user.Title,
 		IdCardType:        user.IdCardType,
-		IdCard:            user.IdCard,
 		Homepage:          user.Homepage,
 		Bio:               user.Bio,
 		Tag:               user.Tag,
@@ -279,27 +278,18 @@ func getUserWithoutThirdIdp(user *User) *UserWithoutThirdIdp {
 		Lark:     user.Lark,
 		Gitlab:   user.Gitlab,
 
-		CreatedIp:      user.CreatedIp,
 		LastSigninTime: user.LastSigninTime,
-		LastSigninIp:   user.LastSigninIp,
 
 		PreferredMfaType: user.PreferredMfaType,
-		RecoveryCodes:    user.RecoveryCodes,
-		TotpSecret:       user.TotpSecret,
 		MfaPhoneEnabled:  user.MfaPhoneEnabled,
 		MfaEmailEnabled:  user.MfaEmailEnabled,
 
 		Ldap:       user.Ldap,
-		Properties: user.Properties,
+		Properties: tokenSafeProperties(user.Properties),
 
 		Roles:       user.Roles,
 		Permissions: user.Permissions,
 		Groups:      user.Groups,
-
-		LastSigninWrongTime: user.LastSigninWrongTime,
-		SigninWrongTimes:    user.SigninWrongTimes,
-
-		ManagedAccounts: user.ManagedAccounts,
 	}
 
 	return res
@@ -337,6 +327,11 @@ func getClaimsWithoutThirdIdp(claims Claims) ClaimsWithoutThirdIdp {
 // getUserFieldValue gets the value of a user field by name, handling special cases like Roles and Permissions
 func getUserFieldValue(user *User, fieldName string) (interface{}, bool) {
 	if user == nil {
+		return nil, false
+	}
+
+	// Credentials, MFA secrets and personal data are never emitted (INV-7, I-3.2).
+	if IsForbiddenTokenField(fieldName) {
 		return nil, false
 	}
 
@@ -419,6 +414,10 @@ func getClaimsCustom(claims Claims, tokenField []string, tokenAttributes []*JwtI
 	}
 
 	for _, field := range tokenField {
+		// Credentials, MFA secrets and personal data are never emitted (INV-7, I-3.2).
+		if IsForbiddenTokenField(field) {
+			continue
+		}
 		if strings.HasPrefix(field, "Properties.") {
 			/*
 				Use selected properties fields as custom claims.

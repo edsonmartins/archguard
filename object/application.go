@@ -406,6 +406,11 @@ func UpdateApplication(id string, application *Application, isGlobalAdmin bool, 
 		return false, errors.New(i18n.Translate(lang, "auth:Unauthorized operation"))
 	}
 
+	// Before any side effect (the rename trigger below rewrites other tables).
+	if err = validateApplicationTokenFields(application); err != nil {
+		return false, err
+	}
+
 	if name == "app-built-in" {
 		application.Name = name
 	}
@@ -462,6 +467,9 @@ func UpdateApplication(id string, application *Application, isGlobalAdmin bool, 
 }
 
 func AddApplication(application *Application) (bool, error) {
+	if err := validateApplicationTokenFields(application); err != nil {
+		return false, err
+	}
 	if application.Owner == "" {
 		application.Owner = "admin"
 	}
