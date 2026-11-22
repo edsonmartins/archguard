@@ -18,8 +18,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
+
+	"github.com/beego/beego/v2/core/logs"
 
 	"github.com/casdoor/casdoor/util"
 	"github.com/golang-jwt/jwt/v5"
@@ -33,28 +34,18 @@ type LogoutTokenClaims struct {
 	jwt.RegisteredClaims
 }
 
+// logoutTokenTTL bounds the logout token's validity (spec §2.4 makes exp required):
+// it is posted immediately, so a short window only limits replay.
+const logoutTokenTTL = 2 * time.Minute
+
+// backchannelHTTPTimeout bounds each delivery; the default client has none, which
+// left a goroutine hanging per unresponsive RP.
+const backchannelHTTPTimeout = 5 * time.Second
+
+var backchannelClient = &http.Client{Timeout: backchannelHTTPTimeout}
+
 func generateLogoutToken(application *Application, user *User, sessionId string, host string) (string, error) {
-	nowTime := time.Now()
 	_, originBackend := getOriginFromHost(host)
-
-	events := map[string]interface{}{
-		"http://schemas.openid.net/event/backchannel-logout": map[string]interface{}{},
-	}
-
-	claims := LogoutTokenClaims{
-		Events: events,
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:   originBackend,
-			Subject:  user.Id,
-			Audience: []string{application.ClientId},
-			IssuedAt: jwt.NewNumericDate(nowTime),
-			ID:       util.GetId(application.Owner, util.GenerateId()),
-		},
-	}
-
-	if sessionId != "" {
-		claims.Sid = sessionId
-	}
 
 	cert, err := getCertByApplication(application)
 	if err != nil {
@@ -63,25 +54,44 @@ func generateLogoutToken(application *Application, user *User, sessionId string,
 	if cert == nil {
 		return "", fmt.Errorf("no cert found for application: %s", application.GetId())
 	}
+	return signLogoutToken(application, cert, user, sessionId, originBackend, time.Now())
+}
 
-	var (
-		token *jwt.Token
-		key   interface{}
-	)
-
-	signingMethod := application.TokenSigningMethod
-	if strings.Contains(signingMethod, "ES") {
-		token = jwt.NewWithClaims(jwt.SigningMethodES256, claims)
-		key, err = jwt.ParseECPrivateKeyFromPEM([]byte(cert.PrivateKey))
-	} else {
-		token = jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-		key, err = jwt.ParseRSAPrivateKeyFromPEM([]byte(cert.PrivateKey))
+// signLogoutToken builds and signs an OIDC Back-Channel Logout token
+// (https://openid.net/specs/openid-connect-backchannel-1_0.html §2.4) the same way
+// access tokens are signed: same algorithm, same kid, and the private key resolved
+// through the key custodian (CertPrivateKeyPEM) — never read straight from the cert
+// row, which only holds a reference when the key is sealed or vaulted (B5).
+func signLogoutToken(application *Application, cert *Cert, user *User, sessionId, issuer string, now time.Time) (string, error) {
+	claims := LogoutTokenClaims{
+		Events: map[string]interface{}{
+			"http://schemas.openid.net/event/backchannel-logout": map[string]interface{}{},
+		},
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    issuer,
+			Subject:   user.Id,
+			Audience:  []string{application.ClientId},
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(logoutTokenTTL)),
+			ID:        util.GetId(application.Owner, util.GenerateId()),
+		},
 	}
+	if sessionId != "" {
+		claims.Sid = sessionId
+	}
+
+	privateKeyPEM, err := CertPrivateKeyPEM(cert)
+	if err != nil {
+		return "", err
+	}
+	key, err := parseSigningKey(application.TokenSigningMethod, privateKeyPEM)
 	if err != nil {
 		return "", err
 	}
 
+	token := jwt.NewWithClaims(tokenSigningMethod(application.TokenSigningMethod), claims)
 	token.Header["kid"] = cert.Name
+	token.Header["typ"] = "logout+jwt" // spec §2.4: explicit typing
 	return token.SignedString(key)
 }
 
@@ -115,6 +125,8 @@ func SendBackchannelLogout(organization, username, sessionId, host string) {
 
 		logoutToken, err := generateLogoutToken(application, user, sessionId, host)
 		if err != nil {
+			// Was a silent continue: a sealed key or a bad cert meant no RP was ever told.
+			logs.Error("backchannel logout: token for %s not generated: %v", appId, err)
 			continue
 		}
 
@@ -124,9 +136,13 @@ func SendBackchannelLogout(organization, username, sessionId, host string) {
 
 func postBackchannelLogout(logoutUri, logoutToken string) {
 	body := url.Values{"logout_token": {logoutToken}}
-	resp, err := http.PostForm(logoutUri, body)
+	resp, err := backchannelClient.PostForm(logoutUri, body)
 	if err != nil {
+		logs.Warning("backchannel logout: POST %s failed: %v", logoutUri, err)
 		return
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		logs.Warning("backchannel logout: POST %s answered %d", logoutUri, resp.StatusCode)
+	}
 }

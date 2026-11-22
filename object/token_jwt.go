@@ -562,21 +562,7 @@ func generateJwtToken(application *Application, user *User, provider string, sig
 		application.TokenFormat = "JWT"
 	}
 
-	var jwtMethod jwt.SigningMethod
-
-	if application.TokenSigningMethod == "RS256" {
-		jwtMethod = jwt.SigningMethodRS256
-	} else if application.TokenSigningMethod == "RS512" {
-		jwtMethod = jwt.SigningMethodRS512
-	} else if application.TokenSigningMethod == "ES256" {
-		jwtMethod = jwt.SigningMethodES256
-	} else if application.TokenSigningMethod == "ES512" {
-		jwtMethod = jwt.SigningMethodES512
-	} else if application.TokenSigningMethod == "ES384" {
-		jwtMethod = jwt.SigningMethodES384
-	} else {
-		jwtMethod = jwt.SigningMethodRS256
-	}
+	jwtMethod := tokenSigningMethod(application.TokenSigningMethod)
 
 	// the JWT token length in "JWT-Empty" mode will be very short, as User object only has two properties: owner and name
 	if application.TokenFormat == "JWT" {
@@ -637,16 +623,7 @@ func generateJwtToken(application *Application, user *User, provider string, sig
 	if err != nil {
 		return "", "", "", err
 	}
-	if strings.Contains(application.TokenSigningMethod, "RS") || application.TokenSigningMethod == "" {
-		// RSA private key
-		key, err = jwt.ParseRSAPrivateKeyFromPEM([]byte(privateKeyPEM))
-	} else if strings.Contains(application.TokenSigningMethod, "ES") {
-		// ES private key
-		key, err = jwt.ParseECPrivateKeyFromPEM([]byte(privateKeyPEM))
-	} else if strings.Contains(application.TokenSigningMethod, "Ed") {
-		// Ed private key
-		key, err = jwt.ParseEdPrivateKeyFromPEM([]byte(privateKeyPEM))
-	}
+	key, err = parseSigningKey(application.TokenSigningMethod, privateKeyPEM)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -659,6 +636,36 @@ func generateJwtToken(application *Application, user *User, provider string, sig
 	refreshTokenString, err = refreshToken.SignedString(key)
 
 	return tokenString, refreshTokenString, name, err
+}
+
+// tokenSigningMethod maps the application's TokenSigningMethod to the JWS
+// algorithm. Shared by access tokens and back-channel logout tokens, so both are
+// always signed the same way (an RP verifies them with the same JWKS entry).
+func tokenSigningMethod(name string) jwt.SigningMethod {
+	switch name {
+	case "RS512":
+		return jwt.SigningMethodRS512
+	case "ES256":
+		return jwt.SigningMethodES256
+	case "ES512":
+		return jwt.SigningMethodES512
+	case "ES384":
+		return jwt.SigningMethodES384
+	default:
+		return jwt.SigningMethodRS256
+	}
+}
+
+// parseSigningKey parses the PEM private key for the application's signing method.
+func parseSigningKey(method, privateKeyPEM string) (interface{}, error) {
+	if strings.Contains(method, "RS") || method == "" {
+		return jwt.ParseRSAPrivateKeyFromPEM([]byte(privateKeyPEM))
+	} else if strings.Contains(method, "ES") {
+		return jwt.ParseECPrivateKeyFromPEM([]byte(privateKeyPEM))
+	} else if strings.Contains(method, "Ed") {
+		return jwt.ParseEdPrivateKeyFromPEM([]byte(privateKeyPEM))
+	}
+	return nil, nil
 }
 
 func ParseJwtTokenWithoutValidation(token string) (*jwt.Token, error) {
