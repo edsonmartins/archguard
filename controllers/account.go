@@ -443,6 +443,13 @@ func (c *ApiController) Logout() {
 		c.ResponseOk(user, application.HomepageUrl)
 		return
 	} else {
+		// Notify RPs BEFORE expiring the token: SendBackchannelLogout only sees tokens
+		// with expires_in > 0, so expiring first dropped the notification whenever
+		// this was the user's only session (same order as the session-logout path).
+		if bcToken, bcErr := object.GetTokenByAccessToken(accessToken); bcErr == nil && bcToken != nil && bcToken.ExpiresIn > 0 {
+			object.SendBackchannelLogout(bcToken.Organization, bcToken.User, "", c.Ctx.Request.Host)
+		}
+
 		_, application, token, err := object.ExpireTokenByAccessToken(accessToken)
 		if err != nil {
 			c.ResponseError(err.Error())
@@ -473,8 +480,7 @@ func (c *ApiController) Logout() {
 		// Propagate logout to external Custom OAuth2 providers
 		object.InvokeCustomProviderLogout(application, accessToken)
 
-		// Send OIDC Back-Channel Logout notifications (https://openid.net/specs/openid-connect-backchannel-1_0.html)
-		object.SendBackchannelLogout(token.Organization, token.User, "", c.Ctx.Request.Host)
+		// OIDC Back-Channel Logout notifications were sent above, before the token expired.
 
 		// "post_logout_redirect_uri" has been made optional, see: https://github.com/casdoor/casdoor/issues/2151
 		if redirectUri == "" {
